@@ -59,6 +59,19 @@ class SimplePrerequisiteParser:
         
         return None
 
+    def parse_complex_year_standing(self, text):
+        """Parse complex year standing expressions with logic."""
+        text_lower = text.lower()
+        
+        # Special case for ECOR3800 pattern: "third-year status ... or (second-year status ... and permission ...)"
+        ecor_pattern = r'third[- ]year\s+status.*?\s+or\s+\(second[- ]year\s+status.*?\s+and\s+permission'
+        if re.search(ecor_pattern, text_lower):
+            return "THIRD_YEAR || (SECOND_YEAR && PERMISSION)"
+        
+        # Could add more complex year standing patterns here in the future
+        
+        return None
+
     def parse_grade_requirements(self, text):
         """Parse minimum grade requirements."""
         # Handle HTML tags around grades like <span class="keeptogether">C-</span>
@@ -268,6 +281,11 @@ class SimplePrerequisiteParser:
             return None
         
         # Handle special cases first
+        # Check for complex year standing expressions first (they take precedence)
+        complex_year_req = self.parse_complex_year_standing(content)
+        if complex_year_req:
+            return complex_year_req
+            
         year_req = self.parse_year_standing(content)
         permission_req = self.parse_permissions(content)
         high_school_req = self.parse_high_school_prerequisites(content)
@@ -340,7 +358,15 @@ class SimplePrerequisiteParser:
                     year_in_parentheses = True
                     break
         
-        if year_req and not has_year_or_course and not year_in_parentheses:
+        # Check if year requirement is already included in course expressions
+        year_already_in_expression = False
+        if year_req and components:
+            for component in components:
+                if year_req in component:
+                    year_already_in_expression = True
+                    break
+        
+        if year_req and not has_year_or_course and not year_in_parentheses and not year_already_in_expression:
             components.append(year_req)
         
         # Add program requirement
@@ -770,6 +796,46 @@ class SimplePrerequisiteParser:
         clean_content = re.sub(r'<[^>]+>', '', content)
         clean_content = re.sub(r'\s+', ' ', clean_content).strip()
         content_lower = clean_content.lower()
+        
+        # Special case: Handle repeated course patterns in OR clauses
+        # Pattern: "A and B and year-status ..., or A and B and year-status with permission"
+        if ' or ' in content_lower and len(courses) <= 4:  # Limit to avoid false positives
+            # Split by 'or' to see if we have repeated course patterns
+            or_parts = [part.strip() for part in content_lower.split(' or ')]
+            if len(or_parts) == 2:
+                # Check if both parts contain the same courses
+                part1_courses = self.extract_course_codes(or_parts[0])
+                part2_courses = self.extract_course_codes(or_parts[1])
+                
+                if (set(part1_courses) == set(part2_courses) and 
+                    len(part1_courses) == len(courses) and 
+                    len(part1_courses) > 0):
+                    # Same courses in both parts - parse each part separately
+                    parsed_parts = []
+                    
+                    for part in or_parts:
+                        part_courses = self.extract_course_codes(part)
+                        part_components = []
+                        
+                        # Add courses
+                        part_components.extend(part_courses)
+                        
+                        # Add year standing if present
+                        year_req = self.parse_year_standing(part)
+                        if year_req:
+                            part_components.append(year_req)
+                            
+                        # Add permission if present
+                        if 'permission' in part:
+                            part_components.append('PERMISSION')
+                        
+                        if part_components:
+                            if len(part_components) == 1:
+                                parsed_parts.append(part_components[0])
+                            else:
+                                parsed_parts.append(' && '.join(part_components))
+                    
+                    return ' || '.join([f"({part})" for part in parsed_parts]) if len(parsed_parts) > 1 else parsed_parts[0]
         
         # Handle semicolon-separated groups first (like ENVE3004: "CHEM A or CHEM B; ENVE C")
         if ';' in content_lower:
