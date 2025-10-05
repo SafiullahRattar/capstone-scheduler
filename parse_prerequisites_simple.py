@@ -34,9 +34,21 @@ class SimplePrerequisiteParser:
     def parse_year_standing(self, text):
         """Parse year standing requirements."""
         text_lower = text.lower()
+        
+        # Check standard patterns
         for year, pattern in self.year_patterns.items():
             if re.search(pattern, text_lower):
                 return f"{year.upper()}_YEAR"
+        
+        # Check for program-specific year standing patterns
+        program_year_patterns = [
+            r'second[- ]year\s+standing\s+in\s+[^,.]+'
+        ]
+        
+        for pattern in program_year_patterns:
+            if re.search(pattern, text_lower):
+                return "SECOND_YEAR"  # Simplify to just the year level
+        
         return None
 
     def parse_grade_requirements(self, text):
@@ -44,6 +56,23 @@ class SimplePrerequisiteParser:
         grade_pattern = r'with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)'
         matches = re.findall(grade_pattern, text, re.IGNORECASE)
         return matches
+
+    def parse_high_school_prerequisites(self, text):
+        """Parse high school level prerequisites."""
+        text_lower = text.lower()
+        
+        high_school_patterns = [
+            r'ontario\s+4u/m',
+            r'grade\s+12',
+            r'secondary\s+school',
+            r'high\s+school'
+        ]
+        
+        for pattern in high_school_patterns:
+            if re.search(pattern, text_lower):
+                return "HIGH_SCHOOL_REQUIREMENT"
+        
+        return None
 
     def parse_permissions(self, text):
         """Check for permission requirements."""
@@ -72,7 +101,8 @@ class SimplePrerequisiteParser:
         coreq_patterns = [
             r'concurrent\s+registration\s+in',
             r'concurrent\s+enrolment\s+in',
-            r'concurrently\s+with'
+            r'concurrently\s+with',
+            r'completion\s+of,\s+or\s+concurrent\s+registration\s+in'  # New pattern for OR logic
         ]
         
         coreqs = []
@@ -85,6 +115,25 @@ class SimplePrerequisiteParser:
                     coreqs.extend(courses)
         
         return list(set(coreqs))  # Remove duplicates
+    
+    def has_completion_or_concurrent_pattern(self, text):
+        """Check if text has 'completion of, or concurrent registration in' pattern."""
+        text_lower = text.lower()
+        return bool(re.search(r'completion\s+of,\s+or\s+concurrent\s+registration\s+in', text_lower))
+    
+    def parse_completion_or_concurrent(self, text):
+        """Parse 'completion of, or concurrent registration in' requirements."""
+        text_lower = text.lower()
+        
+        pattern = r'completion\s+of,\s+or\s+concurrent\s+registration\s+in,?\s*([^.]+)'
+        match = re.search(pattern, text_lower)
+        
+        if match:
+            course_text = match.group(1)
+            courses = self.extract_course_codes(course_text)
+            return courses
+        
+        return []
 
     def parse_exclusions(self, text):
         """Parse exclusion/restriction requirements."""
@@ -117,10 +166,18 @@ class SimplePrerequisiteParser:
         # Handle special cases first
         year_req = self.parse_year_standing(content)
         permission_req = self.parse_permissions(content)
+        high_school_req = self.parse_high_school_prerequisites(content)
         
         # Extract courses and grade requirements
         courses = self.extract_course_codes(content)
         grade_requirements = self.parse_grade_requirements(content)
+        
+        # Handle special case: "completion of, or concurrent registration in"
+        completion_or_concurrent_courses = []
+        if self.has_completion_or_concurrent_pattern(content):
+            completion_or_concurrent_courses = self.parse_completion_or_concurrent(content)
+            # Remove these courses from the main course list since they're OR conditions
+            courses = [c for c in courses if c not in completion_or_concurrent_courses]
         
         # Build simple expression
         components = []
@@ -143,11 +200,16 @@ class SimplePrerequisiteParser:
         if permission_req:
             components.append("PERMISSION")
         
+        # Add high school requirement
+        if high_school_req:
+            components.append(high_school_req)
+        
         # Join with AND if multiple components
         if len(components) > 1:
-            return ' && '.join(components)
+            result = ' && '.join(components)
+            return self.ensure_proper_precedence(result)
         elif len(components) == 1:
-            return components[0]
+            return self.ensure_proper_precedence(components[0])
         else:
             return "OTHER_REQUIREMENT"
 
@@ -315,6 +377,29 @@ class SimplePrerequisiteParser:
         
         # Fallback for unclear mixed logic
         return f"({' || '.join(courses)})"
+    
+    def ensure_proper_precedence(self, expression):
+        """Ensure proper logical precedence by wrapping OR groups when followed by AND."""
+        if not expression or '||' not in expression or '&&' not in expression:
+            return expression
+        
+        # If we have a mix of || and && without proper grouping, wrap OR sequences
+        # Pattern: A || B || C && D should become (A || B || C) && D
+        parts = expression.split(' && ')
+        
+        if len(parts) > 1:
+            # Check each part - if it contains || and isn't already wrapped, wrap it
+            processed_parts = []
+            for part in parts:
+                part = part.strip()
+                if '||' in part and not (part.startswith('(') and part.endswith(')')):
+                    processed_parts.append(f"({part})")
+                else:
+                    processed_parts.append(part)
+            
+            return ' && '.join(processed_parts)
+        
+        return expression
 
     def parse_course_file(self, html_file):
         """Parse a single course HTML file."""
