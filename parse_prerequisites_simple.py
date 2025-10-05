@@ -163,6 +163,47 @@ class SimplePrerequisiteParser:
         
         return [ex.strip() for ex in exclusions]
 
+    def has_negative_constraint(self, content):
+        """Check if content contains negative constraints that should be ignored."""
+        content_lower = content.lower()
+        negative_patterns = [
+            r'may\s+not\s+be\s+taken\s+concurrently',
+            r'cannot\s+be\s+taken\s+concurrently',
+            r'not\s+open\s+to\s+students',
+            r'precludes\s+additional\s+credit',
+            r'excludes\s+students'
+        ]
+        
+        for pattern in negative_patterns:
+            if re.search(pattern, content_lower):
+                return True
+        return False
+
+    def filter_out_negative_constraints(self, content):
+        """Remove negative constraint text from content."""
+        # Remove "may not be taken concurrently" and similar phrases
+        content_lower = content.lower()
+        
+        # Pattern to match entire negative constraint phrases
+        negative_patterns = [
+            r'this\s+course\s+may\s+not\s+be\s+taken\s+concurrently\s+with[^.]*',
+            r'may\s+not\s+be\s+taken\s+concurrently\s+with[^.]*',
+            r'cannot\s+be\s+taken\s+concurrently\s+with[^.]*',
+            r'not\s+open\s+to\s+students[^.]*',
+            r'precludes\s+additional\s+credit[^.]*',
+            r'excludes\s+students[^.]*'
+        ]
+        
+        filtered_content = content
+        for pattern in negative_patterns:
+            filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
+        
+        # Clean up extra whitespace and punctuation
+        filtered_content = re.sub(r'\s*[,;]\s*$', '', filtered_content.strip())
+        filtered_content = re.sub(r'\s+', ' ', filtered_content)
+        
+        return filtered_content.strip()
+
     def simplify_prerequisites(self, prereq_text):
         """Convert prerequisite text to simple logical expression."""
         if not prereq_text or 'prerequisite' not in prereq_text.lower():
@@ -174,6 +215,13 @@ class SimplePrerequisiteParser:
             return None
         
         content = prereq_match.group(1).strip()
+        
+        # Filter out negative constraints first
+        content = self.filter_out_negative_constraints(content)
+        
+        # If content is empty after filtering, return None
+        if not content.strip():
+            return None
         
         # Handle special cases first
         year_req = self.parse_year_standing(content)
@@ -193,8 +241,6 @@ class SimplePrerequisiteParser:
             courses.extend(completion_or_concurrent_courses)
             courses = list(set(courses))  # Remove duplicates
         
-        # No longer handling concurrent courses - treat as regular prerequisites
-        
         # Build simple expression
         components = []
         
@@ -212,10 +258,6 @@ class SimplePrerequisiteParser:
         if year_req:
             components.append(year_req)
         
-        # Add permission requirement
-        if permission_req:
-            components.append("PERMISSION")
-        
         # Add high school requirement
         if high_school_req:
             components.append(high_school_req)
@@ -224,23 +266,41 @@ class SimplePrerequisiteParser:
         if program_req:
             components.append(program_req)
         
-        # Handle special case: "; or permission" makes permission an OR alternative
-        if permission_req and '; or permission' in content.lower():
+        # Check for various "or permission" patterns - these should make permission an OR alternative
+        permission_or_patterns = [
+            r';\s*or\s+permission',
+            r',\s*or\s+permission',
+            r'\s+or\s+permission\s+of\s+the\s+department',
+            r'\s+or\s+permission\s+of\s+the\s+school',
+            r'\s+or\s+by\s+permission',
+            r'\s+or\s+departmental\s+permission'
+        ]
+        
+        permission_is_or = False
+        for pattern in permission_or_patterns:
+            if re.search(pattern, content.lower()):
+                permission_is_or = True
+                break
+        
+        # Handle permission logic
+        if permission_req and permission_is_or:
             # Permission is an OR alternative to all other requirements
             non_permission_components = [c for c in components if c != "PERMISSION"]
             if len(non_permission_components) > 1:
                 base_requirements = ' && '.join(non_permission_components)
                 result = f"({base_requirements}) || PERMISSION"
             elif len(non_permission_components) == 1:
-                # If the component contains &&, wrap it for proper precedence with OR
                 single_component = non_permission_components[0]
-                if '&&' in single_component:
+                if '&&' in single_component and not (single_component.startswith('(') and single_component.endswith(')')):
                     result = f"({single_component}) || PERMISSION"
                 else:
                     result = f"{single_component} || PERMISSION"
             else:
                 result = "PERMISSION"
             return self.ensure_proper_precedence(result)
+        elif permission_req:
+            # Permission is an AND requirement (traditional case)
+            components.append("PERMISSION")
         
         # Join with AND if multiple components (standard case)
         if len(components) > 1:
@@ -268,7 +328,10 @@ class SimplePrerequisiteParser:
         elif ' or ' in content_lower and not ' and ' in content_lower:
             # All OR - check if commas are part of OR sequence
             if ',' in content and re.search(r',\s+or\s+', content_lower):
-                # Pattern like "A, or B, or C" - all OR
+                # Pattern like "CHEM 1006, CHEM 1002, or CHEM 1012" - all OR
+                return ' || '.join(courses)
+            elif len(courses) > 1 and re.search(r'\bor\b', content_lower):
+                # Multiple courses with 'or' keyword - all OR
                 return ' || '.join(courses)
             else:
                 # Standard OR
@@ -277,13 +340,25 @@ class SimplePrerequisiteParser:
             # All AND  
             return ' && '.join(courses)
         elif ',' in content and ' or ' not in content_lower:
-            # Comma-separated usually means AND
+            # Comma-separated usually means AND, but check for list patterns
+            # Pattern like "BIOL 1003, BIOL 1104" without 'and' is typically AND
             return ' && '.join(courses)
         else:
             # Default fallback - check for semicolon-separated groups
             if ';' in content:
                 return self.parse_mixed_logic(content, courses)
-            return ' && '.join(courses) if len(courses) > 1 else courses[0]
+            elif len(courses) > 1:
+                # Multiple courses without clear connectors - check context
+                # If it's a chemistry prerequisite pattern like "CHEM 1006 or CHEM 1002 or CHEM 1012"
+                # Look for repetitive course prefixes which usually indicate OR
+                course_prefixes = [course[:4] for course in courses]  # Get MATH, CHEM, etc.
+                if len(set(course_prefixes)) == 1 and len(courses) > 2:
+                    # Same subject, multiple courses - likely OR alternatives
+                    return ' || '.join(courses)
+                else:
+                    return ' && '.join(courses)
+            else:
+                return courses[0] if courses else ""
     
     def parse_grouped_logic(self, content, courses):
         """Parse parenthetical groups connected by logical operators."""
@@ -301,10 +376,27 @@ class SimplePrerequisiteParser:
             if group_courses:
                 has_course_groups = True
                 used_courses.update(group_courses)
-                if len(group_courses) > 1 and ' or ' in group.lower():
-                    parsed_groups.append(f"({' || '.join(group_courses)})")
+                group_lower = group.lower()
+                
+                if len(group_courses) > 1:
+                    if ' or ' in group_lower:
+                        # Explicit OR in group
+                        parsed_groups.append(f"({' || '.join(group_courses)})")
+                    elif ' and ' in group_lower:
+                        # Explicit AND in group
+                        parsed_groups.append(f"({' && '.join(group_courses)})")
+                    else:
+                        # No explicit connector - check if same subject (OR) or different (AND)
+                        course_prefixes = [course[:4] for course in group_courses]
+                        if len(set(course_prefixes)) == 1:
+                            # Same subject - likely OR alternatives
+                            parsed_groups.append(f"({' || '.join(group_courses)})")
+                        else:
+                            # Different subjects - likely AND requirements
+                            parsed_groups.append(f"({' && '.join(group_courses)})")
                 else:
-                    parsed_groups.append(' && '.join(group_courses))
+                    # Single course in group
+                    parsed_groups.append(group_courses[0])
         
         # If no parenthetical groups contain courses, fall back to mixed logic parsing
         if not has_course_groups:
@@ -313,13 +405,25 @@ class SimplePrerequisiteParser:
         # Handle any remaining courses not in parentheses
         remaining_courses = [c for c in courses if c not in used_courses]
         if remaining_courses:
-            parsed_groups.extend(remaining_courses)
+            # Check if remaining courses should be grouped
+            if len(remaining_courses) > 1:
+                # Apply same logic as for groups
+                remaining_prefixes = [course[:4] for course in remaining_courses]
+                if len(set(remaining_prefixes)) == 1:
+                    # Same subject - OR alternatives
+                    parsed_groups.append(f"({' || '.join(remaining_courses)})")
+                else:
+                    # Different subjects - individual AND components
+                    parsed_groups.extend(remaining_courses)
+            else:
+                parsed_groups.extend(remaining_courses)
         
         # Connect groups based on the logic between them
         if len(parsed_groups) > 1:
-            # Check if there are explicit ANDs between groups
-            if ' and ' in content_clean:
-                return ' && '.join(parsed_groups)
+            # Check for explicit OR between groups
+            group_connector_match = re.search(r'\)\s+(or|and)\s+\(', content_clean)
+            if group_connector_match and group_connector_match.group(1) == 'or':
+                return ' || '.join(parsed_groups)
             else:
                 # Default to AND for multiple groups
                 return ' && '.join(parsed_groups)
@@ -331,13 +435,17 @@ class SimplePrerequisiteParser:
     def add_grade_to_course(self, course, content, grade_requirements):
         """Add grade requirement to a course if present."""
         # Look for grade requirement associated with this course directly in content
-        course_pattern = course.replace('SYSC', 'SYSC\\s*').replace('COMP', 'COMP\\s*').replace('ELEC', 'ELEC\\s*').replace('MATH', 'MATH\\s*').replace('PHYS', 'PHYS\\s*')
+        course_num = course[-4:]  # Get just the number part
+        course_prefix = course[:4]  # Get just the prefix
         
         # Multiple patterns for different grade requirement formats
         grade_patterns = [
-            rf'{course_pattern}[^,;]*?with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
-            rf'{course_pattern}[^,;]*?with\s+a\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
-            rf'{course_pattern}[^,;]*?minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)'
+            rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+minimum\s+grade\s+of\s+<span[^>]*>([A-F][+-]?)</span>',
+            rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
+            rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
+            rf'{course_prefix}\s*{course_num}[^,;]*?minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
+            rf'{course_prefix}\s*{course_num}\([^)]*\)\s*with\s+a\s+minimum\s+grade\s+of\s+<span[^>]*>([A-F][+-]?)</span>',
+            rf'{course_prefix}\s*{course_num}\([^)]*\)\s*with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)'
         ]
         
         for grade_pattern in grade_patterns:
@@ -391,68 +499,69 @@ class SimplePrerequisiteParser:
                     elif len(part_courses) == 1:
                         parsed_parts.append(part_courses[0])
                     else:
-                        # Multiple courses without explicit OR - assume AND within part
-                        parsed_parts.append(' && '.join(part_courses))
+                        # Multiple courses without explicit OR - check if same subject
+                        course_prefixes = [course[:4] for course in part_courses]
+                        if len(set(course_prefixes)) == 1 and len(part_courses) > 1:
+                            # Same subject - likely OR alternatives
+                            parsed_parts.append(f"({' || '.join(part_courses)})")
+                        else:
+                            # Different subjects - likely AND
+                            parsed_parts.append(' && '.join(part_courses))
             
             return ' && '.join(parsed_parts) if parsed_parts else ' && '.join(courses)
         
-        # Original comma-based logic for non-semicolon cases
-        # First, check if we have a sequence like "A or B or C, and X"
-        # Split by comma and 'and' pattern to isolate OR groups  
-        parts = re.split(r',\s*and\s+|,\s*', content_lower)
+        # Handle patterns like "BIOL 1003 or BIOL 1103 and CHEM 1001 and CHEM 1002"
+        # Look for explicit OR groups first
+        or_groups = []
+        and_components = []
         
-        if len(parts) > 1:
-            parsed_parts = []
-            courses_used = set()
-            
-            for part in parts:
-                part_courses = self.extract_course_codes(part)
-                if part_courses:
-                    courses_used.update(part_courses)
-                    # Check if this part has OR logic
-                    if len(part_courses) > 1 and ' or ' in part:
-                        parsed_parts.append(f"({' || '.join(part_courses)})")
-                    elif len(part_courses) == 1:
-                        parsed_parts.append(part_courses[0])
-                    else:
-                        # Multiple courses without explicit OR - assume AND within part
-                        parsed_parts.append(' && '.join(part_courses))
-            
-            # Handle any courses not captured
-            remaining = [c for c in courses if c not in courses_used]
-            parsed_parts.extend(remaining)
-            
-            return ' && '.join(parsed_parts) 
-        
-        # Split by 'and' to find OR groups
+        # Split by 'and' to isolate potential OR groups
         and_parts = re.split(r'\s+and\s+', content_lower)
         
-        if len(and_parts) > 1:
-            # Multiple AND parts - each part might have OR logic
-            parsed_parts = []
-            courses_used = set()
-            
-            for part in and_parts:
-                part_courses = self.extract_course_codes(part)
-                if part_courses:
-                    courses_used.update(part_courses)
-                    if len(part_courses) > 1 and ' or ' in part:
-                        parsed_parts.append(f"({' || '.join(part_courses)})")
+        for part in and_parts:
+            part_courses = self.extract_course_codes(part)
+            if part_courses:
+                if ' or ' in part and len(part_courses) > 1:
+                    # This part has OR logic
+                    or_groups.append(f"({' || '.join(part_courses)})")
+                elif len(part_courses) == 1:
+                    and_components.append(part_courses[0])
+                else:
+                    # Multiple courses in same part without explicit OR
+                    # Check if they're alternatives (same subject) or requirements (different subjects)
+                    course_prefixes = [course[:4] for course in part_courses]
+                    if len(set(course_prefixes)) == 1:
+                        # Same subject - likely OR alternatives
+                        or_groups.append(f"({' || '.join(part_courses)})")
                     else:
-                        parsed_parts.extend(part_courses)
-            
-            # Add any courses not captured in parts
-            remaining = [c for c in courses if c not in courses_used]
-            parsed_parts.extend(remaining)
-            
-            return ' && '.join(parsed_parts)
+                        # Different subjects - likely AND requirements
+                        and_components.extend(part_courses)
+        
+        # Combine OR groups and AND components
+        all_components = or_groups + and_components
+        
+        if len(all_components) > 1:
+            return ' && '.join(all_components)
+        elif len(all_components) == 1:
+            return all_components[0]
+        
+        # Fallback: analyze the overall pattern
+        # Check for patterns like "CHEM 1006, CHEM 1002, or CHEM 1012" (comma-separated OR)
+        if re.search(r',\s+or\s+', content_lower):
+            return ' || '.join(courses)
+        
+        # Check for same-subject alternatives
+        course_prefixes = [course[:4] for course in courses]
+        if len(set(course_prefixes)) == 1 and len(courses) > 2:
+            # Same subject, multiple courses - likely OR alternatives
+            return ' || '.join(courses)
         
         # Check if it's a simple OR sequence
         if ' or ' in content_lower and content_lower.count(' or ') >= len(courses) - 1:
             return ' || '.join(courses)
         
-        # Fallback for unclear mixed logic
-        return f"({' || '.join(courses)})"
+        # Default to AND for multiple different courses
+        return ' && '.join(courses) if len(courses) > 1 else (courses[0] if courses else "")
     
     def ensure_proper_precedence(self, expression):
         """Ensure proper logical precedence by wrapping OR groups when followed by AND."""
