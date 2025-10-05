@@ -118,19 +118,21 @@ class SimplePrerequisiteParser:
         year_req = self.parse_year_standing(content)
         permission_req = self.parse_permissions(content)
         
-        # Extract courses
+        # Extract courses and grade requirements
         courses = self.extract_course_codes(content)
+        grade_requirements = self.parse_grade_requirements(content)
         
         # Build simple expression
         components = []
         
-        # Add courses with improved logic detection
+        # Add courses with improved logic detection and grade requirements
         if courses:
             if len(courses) == 1:
-                components.append(courses[0])
+                course_with_grade = self.add_grade_to_course(courses[0], content, grade_requirements)
+                components.append(course_with_grade)
             else:
                 # Better logic detection based on parentheses and keywords
-                course_expr = self.parse_course_logic(content, courses)
+                course_expr = self.parse_course_logic_with_grades(content, courses, grade_requirements)
                 components.append(course_expr)
         
         # Add year requirement
@@ -219,6 +221,40 @@ class SimplePrerequisiteParser:
         else:
             return ' && '.join(courses)
     
+    def add_grade_to_course(self, course, content, grade_requirements):
+        """Add grade requirement to a course if present."""
+        if not grade_requirements:
+            return course
+        
+        # Look for grade requirement associated with this course
+        course_pattern = course.replace('SYSC', 'SYSC\\s*').replace('COMP', 'COMP\\s*').replace('ELEC', 'ELEC\\s*').replace('MATH', 'MATH\\s*')
+        grade_pattern = rf'{course_pattern}[^,]*?with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)'
+        
+        match = re.search(grade_pattern, content, re.IGNORECASE)
+        if match:
+            grade = match.group(1)
+            return f"{course}[{grade}]"
+        
+        return course
+    
+    def parse_course_logic_with_grades(self, content, courses, grade_requirements):
+        """Parse course logic and incorporate grade requirements."""
+        # First get the basic logic structure
+        base_logic = self.parse_course_logic(content, courses)
+        
+        # If no grade requirements, return as-is
+        if not grade_requirements:
+            return base_logic
+        
+        # Apply grade requirements to individual courses
+        enhanced_logic = base_logic
+        for course in courses:
+            course_with_grade = self.add_grade_to_course(course, content, grade_requirements)
+            if course_with_grade != course:
+                enhanced_logic = enhanced_logic.replace(course, course_with_grade)
+        
+        return enhanced_logic
+
     def parse_mixed_logic(self, content, courses):
         """Handle mixed AND/OR logic without clear parentheses."""
         content_lower = content.lower()
