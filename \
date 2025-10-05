@@ -1,0 +1,62 @@
+#my own
+import re
+from bs4 import BeautifulSoup
+
+def extract_prerequisites(html_file_path):
+    """
+    Extract prerequisite information from HTML course file.
+    Returns None if no prerequisites found, otherwise returns text after 'Prerequisite(s):'
+    """
+    try:
+        with open(html_file_path, 'r', encoding='utf-8') as file:
+            html_content = file.read()
+        
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Find the coursedescadditional div
+        desc_div = soup.find('div', class_='coursedescadditional')
+        if not desc_div:
+            return None
+        
+        # Get the HTML content as string
+        html_string = str(desc_div)
+        
+        # Find everything from Prerequisite(s): to the next <br
+        prerequisite_match = re.search(r'Prerequisite\(s\): (.*?)<br', html_string)
+        
+        if prerequisite_match:
+            prerequisite_html = prerequisite_match.group(1).strip()
+            # Parse the HTML to get clean text
+            soup_prereq = BeautifulSoup(prerequisite_html, 'html.parser')
+            prerequisite_text = soup_prereq.get_text().strip()
+            return prerequisite_text if prerequisite_text else None
+        
+        return None
+        
+    
+    except Exception as e:
+        print(f"Error processing {html_file_path}: {e}")
+        return None 
+
+prereqs = extract_prerequisites('courses/sysc/sysc2001.html')
+print(prereqs)
+
+
+
+class Course:
+    def __init__(self, name, code):
+        self.name = name
+        self.code = code
+
+    def __str__(self):
+        return f"{self.name}{self.code}"
+
+    def __repr__(self):
+        return f"{self.name}{self.code}"
+
+
+class Status:
+    def __init__(self, year):
+        self.year = year
+
+
