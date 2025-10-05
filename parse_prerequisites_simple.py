@@ -57,6 +57,28 @@ class SimplePrerequisiteParser:
         matches = re.findall(grade_pattern, text, re.IGNORECASE)
         return matches
 
+    def parse_program_restrictions(self, text):
+        """Parse program registration requirements."""
+        text_lower = text.lower()
+        
+        program_patterns = [
+            (r'registration\s+in\s+the\s+bachelor\s+of\s+architectural\s+studies\s*\(\s*bas\s*\)', 'BAS'),
+            (r'registration\s+in\s+.*?\s*\(\s*([A-Z]+)\s*\)', None),  # Generic pattern
+            (r'bachelor\s+of\s+architectural\s+studies', 'BAS'),
+        ]
+        
+        for pattern, program_code in program_patterns:
+            match = re.search(pattern, text_lower)
+            if match:
+                if program_code:
+                    return f"PROGRAM_{program_code}"
+                elif match.groups():
+                    # Extract program code from parentheses
+                    code = match.group(1).upper()
+                    return f"PROGRAM_{code}"
+        
+        return None
+
     def parse_high_school_prerequisites(self, text):
         """Parse high school level prerequisites."""
         text_lower = text.lower()
@@ -119,19 +141,33 @@ class SimplePrerequisiteParser:
     def has_completion_or_concurrent_pattern(self, text):
         """Check if text has 'completion of, or concurrent registration in' pattern."""
         text_lower = text.lower()
-        return bool(re.search(r'completion\s+of,\s+or\s+concurrent\s+registration\s+in', text_lower))
+        patterns = [
+            r'completion\s+of,\s+or\s+concurrent\s+registration\s+in',
+            r'completion\s+of\s+or\s+concurrent\s+registration\s+in'
+        ]
+        for pattern in patterns:
+            if re.search(pattern, text_lower):
+                return True
+        return False
     
     def parse_completion_or_concurrent(self, text):
-        """Parse 'completion of, or concurrent registration in' requirements."""
+        """Parse 'completion of or concurrent registration in' requirements."""
         text_lower = text.lower()
         
-        pattern = r'completion\s+of,\s+or\s+concurrent\s+registration\s+in,?\s*([^.]+)'
-        match = re.search(pattern, text_lower)
+        patterns = [
+            r'completion\s+of,\s+or\s+concurrent\s+registration\s+in,?\s*([^)]+?)(?:,\s*or\s+permission)',
+            r'completion\s+of\s+or\s+concurrent\s+registration\s+in\s+([^)]+?)(?:,\s*or\s+permission)',
+            r'completion\s+of,\s+or\s+concurrent\s+registration\s+in,?\s*([^)]+)',
+            r'completion\s+of\s+or\s+concurrent\s+registration\s+in\s+([^)]+)'
+        ]
         
-        if match:
-            course_text = match.group(1)
-            courses = self.extract_course_codes(course_text)
-            return courses
+        for pattern in patterns:
+            match = re.search(pattern, text_lower)
+            if match:
+                course_text = match.group(1)
+                # Handle the format "AERO 4003, AERO 4842, ... or SREE 4001"
+                courses = self.extract_course_codes(course_text)
+                return courses
         
         return []
 
@@ -167,6 +203,7 @@ class SimplePrerequisiteParser:
         year_req = self.parse_year_standing(content)
         permission_req = self.parse_permissions(content)
         high_school_req = self.parse_high_school_prerequisites(content)
+        program_req = self.parse_program_restrictions(content)
         
         # Extract courses and grade requirements
         courses = self.extract_course_codes(content)
@@ -176,7 +213,7 @@ class SimplePrerequisiteParser:
         completion_or_concurrent_courses = []
         if self.has_completion_or_concurrent_pattern(content):
             completion_or_concurrent_courses = self.parse_completion_or_concurrent(content)
-            # Remove these courses from the main course list since they're OR conditions
+            # Remove these courses from the main course list since they're OR conditions with co-reqs
             courses = [c for c in courses if c not in completion_or_concurrent_courses]
         
         # Build simple expression
@@ -203,6 +240,10 @@ class SimplePrerequisiteParser:
         # Add high school requirement
         if high_school_req:
             components.append(high_school_req)
+        
+        # Add program requirement
+        if program_req:
+            components.append(program_req)
         
         # Join with AND if multiple components
         if len(components) > 1:
