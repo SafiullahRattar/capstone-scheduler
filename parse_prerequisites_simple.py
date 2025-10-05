@@ -87,6 +87,7 @@ class SimplePrerequisiteParser:
             (r'registration\s+in\s+the\s+bachelor\s+of\s+architectural\s+studies\s*\(\s*bas\s*\)', 'BAS'),
             (r'registration\s+in\s+.*?\s*\(\s*([A-Z]+)\s*\)', None),  # Generic pattern
             (r'bachelor\s+of\s+architectural\s+studies', 'BAS'),
+            (r'restricted\s+to\s+students\s+registered\s+in\s+the\s+(.+)', 'RESTRICTED'),  # Generic restriction pattern
         ]
         
         for pattern, program_code in program_patterns:
@@ -260,8 +261,9 @@ class SimplePrerequisiteParser:
             return None
         
         # Extract the actual prerequisite content
-        # Look for the prerequisite section and capture everything until </p> tag or sentence end
-        prereq_match = re.search(r'prerequisite\(s\):\s*(.+?)(?:</p>|\.\s*</p>|$)', prereq_text, re.IGNORECASE | re.DOTALL)
+        # Look for the prerequisite section and capture until the first sentence ending
+        # that's followed by non-prerequisite content (like program restrictions)
+        prereq_match = re.search(r'prerequisite\(s\):\s*(.+?)(?:\.\s*(?:[A-Z][^.]*(?:program|student|major|minor|department|school|lecture|tutorial|seminar|lab)|</p>|$))', prereq_text, re.IGNORECASE | re.DOTALL)
         if not prereq_match:
             return None
         
@@ -439,7 +441,7 @@ class SimplePrerequisiteParser:
             return self.parse_mixed_logic(content, courses)
         
         # Special case: "either X or (Y and Z)" pattern or "X or (Y and Z)" pattern
-        if re.search(r'(either\s+.*?\s+or\s+\(|[a-z]{4}\s+\d{4}.*?\s+or\s+\()', content_lower):
+        if re.search(r'(either\s+.*?\s+or\s+\(|^[a-z]{4}\s+\d{4}(?:\s+\[[^\]]+\])?\s+or\s+\()', content_lower):
             return self.parse_either_or_pattern(content, courses)
         
         # Handle explicit parenthetical groups connected by AND
@@ -492,15 +494,16 @@ class SimplePrerequisiteParser:
         content_lower = clean_content.lower()
         
         # Pattern 1: Simple "X or (Y and Z)" should be X || (Y && Z)  
-        simple_or_match = re.search(r'([a-z]{4}\s+\d{4}[^,]*?)\s+or\s+\((.*?)\)', content_lower, re.DOTALL)
+        # Make sure we only match single courses, not parenthetical groups
+        simple_or_match = re.search(r'^([a-z]{4}\s+\d{4}(?:\s+\[[^\]]+\])?)\s+or\s+\((.*?)\)', content_lower, re.DOTALL)
         if simple_or_match and 'either' not in content_lower:
             # Extract the single course before "or"
             before_or = simple_or_match.group(1).strip()
-            before_courses = self.extract_course_codes(before_or)
+            before_courses = self.get_graded_courses_for_text(before_or, courses)
             
             # Extract courses from the parenthetical part
-            paren_part = simple_or_match.group(2).strip()  
-            paren_courses = self.extract_course_codes(paren_part)
+            paren_part = simple_or_match.group(2).strip()
+            paren_courses = self.get_graded_courses_for_text(paren_part, courses)
             
             if before_courses and paren_courses:
                 # Apply grades to all courses found in content
@@ -524,11 +527,11 @@ class SimplePrerequisiteParser:
         if either_match:
             # Extract courses from the "either" part (between "either" and "or")
             either_part = either_match.group(1).strip()
-            either_courses = self.extract_course_codes(either_part)
+            either_courses = self.get_graded_courses_for_text(either_part, courses)
             
             # Extract courses from the parenthetical part  
             paren_part = either_match.group(2).strip()
-            paren_courses = self.extract_course_codes(paren_part)
+            paren_courses = self.get_graded_courses_for_text(paren_part, courses)
             
             # Find courses that come BEFORE the "either" (these are AND requirements)
             # Handle case where courses may already have grades applied
@@ -552,9 +555,18 @@ class SimplePrerequisiteParser:
                         course_with_grade = self.add_grade_to_course(course, content, [])
                         components.append(course_with_grade)
                 
-                # Build the either-or choice (these are extracted from clean content, so no grades yet)
-                either_with_grades = [self.add_grade_to_course(c, content, []) for c in either_courses]
-                paren_with_grades = [self.add_grade_to_course(c, content, []) for c in paren_courses]
+                # Build the either-or choice using already-graded courses from courses parameter
+                either_with_grades = []
+                for either_course in either_courses:
+                    # Find the matching course from the graded courses list
+                    matching_course = next((c for c in courses if re.sub(r'\[.*?\]', '', c) == either_course), either_course)
+                    either_with_grades.append(matching_course)
+                
+                paren_with_grades = []
+                for paren_course in paren_courses:
+                    # Find the matching course from the graded courses list
+                    matching_course = next((c for c in courses if re.sub(r'\[.*?\]', '', c) == paren_course), paren_course)
+                    paren_with_grades.append(matching_course)
                 
                 # Either part (single course or AND of multiple)
                 if len(either_with_grades) == 1:
@@ -581,6 +593,32 @@ class SimplePrerequisiteParser:
         """Parse parenthetical groups connected by logical operators."""
         content_clean = content.lower()
         
+        # Special case: "A or B and (C and D)" pattern - treat as (A || B) && (C && D)
+        # This handles precedence ambiguity where "or" before "and" should group with preceding terms
+        or_and_paren_pattern = r'^([A-Z\s\d]+?)\s+or\s+([A-Z\s\d]+?)\s+and\s+\(([^)]+)\)$'
+        match = re.search(or_and_paren_pattern, content, re.IGNORECASE)
+        if match:
+            first_part = match.group(1).strip()
+            second_part = match.group(2).strip()
+            paren_part = match.group(3).strip()
+            
+            # Extract courses from each part
+            first_courses = self.get_graded_courses_for_text(first_part, courses)
+            second_courses = self.get_graded_courses_for_text(second_part, courses)
+            paren_courses = self.get_graded_courses_for_text(paren_part, courses)
+            
+            if first_courses and second_courses and paren_courses:
+                # Create OR group for first two parts
+                or_group = f"({' || '.join(first_courses + second_courses)})"
+                
+                # Handle parenthetical part
+                if ' and ' in paren_part.lower() and len(paren_courses) > 1:
+                    paren_group = f"({' && '.join(paren_courses)})"
+                else:
+                    paren_group = ' || '.join(paren_courses) if len(paren_courses) > 1 else paren_courses[0]
+                
+                return f"{or_group} && {paren_group}"
+        
         # Special handling for comma-separated AND pattern with mixed OR groups
         # Pattern: "X or Y, Z (or W), and Q" where commas indicate AND between groups
         if ',' in content and 'and' in content_clean and '(' in content:
@@ -596,18 +634,45 @@ class SimplePrerequisiteParser:
                 paren_match = re.search(r'([A-Z]{4}\s+\d{4})\s*\(\s*or\s+([A-Z]{4}\s+\d{4})\s*\)', part, re.IGNORECASE)
                 if paren_match:
                     # Pattern like "PHYS 3606 (or PHYS 3608)"
-                    course1 = self.extract_course_codes(paren_match.group(1))[0]
-                    course2 = self.extract_course_codes(paren_match.group(2))[0]
+                    course1 = self.get_graded_courses_for_text(paren_match.group(1), courses)[0]
+                    course2 = self.get_graded_courses_for_text(paren_match.group(2), courses)[0]
                     parsed_components.append(f"({course1} || {course2})")
                 else:
-                    part_courses = self.extract_course_codes(part)
+                    part_courses = self.get_graded_courses_for_text(part, courses)
                     if part_courses:
-                        if ' or ' in part.lower() and len(part_courses) > 1:
-                            # OR within this comma-separated part
+                        # Special case: (A and B) or (C and D) pattern within comma part
+                        paren_or_pattern = r'\(([^)]+)\)\s+or\s+\(([^)]+)\)'
+                        paren_or_match = re.search(paren_or_pattern, part, re.IGNORECASE)
+                        if paren_or_match:
+                            # Parse each parenthetical group separately
+                            group1 = paren_or_match.group(1).strip()
+                            group2 = paren_or_match.group(2).strip()
+                            
+                            group1_courses = self.get_graded_courses_for_text(group1, courses)
+                            group2_courses = self.get_graded_courses_for_text(group2, courses)
+                            
+                            # Create AND groups for each parenthesis, then OR them together
+                            if group1_courses and group2_courses:
+                                if len(group1_courses) > 1:
+                                    group1_expr = f"({' && '.join(group1_courses)})"
+                                else:
+                                    group1_expr = group1_courses[0]
+                                    
+                                if len(group2_courses) > 1:
+                                    group2_expr = f"({' && '.join(group2_courses)})"
+                                else:
+                                    group2_expr = group2_courses[0]
+                                    
+                                parsed_components.append(f"({group1_expr} || {group2_expr})")
+                        elif ' or ' in part.lower() and len(part_courses) > 1:
+                            # Simple OR within this comma-separated part
                             parsed_components.append(f"({' || '.join(part_courses)})")
                         elif len(part_courses) == 1:
                             # Single course
                             parsed_components.append(part_courses[0])
+                        elif '(' in part and ')' in part:
+                            # Parenthetical group with multiple courses - treat as AND
+                            parsed_components.append(f"({' && '.join(part_courses)})")
                         else:
                             # Multiple courses without explicit OR - treat as individual AND components
                             parsed_components.extend(part_courses)
@@ -625,7 +690,7 @@ class SimplePrerequisiteParser:
         has_course_groups = False
         
         for group in groups:
-            group_courses = self.extract_course_codes(group)
+            group_courses = self.get_graded_courses_for_text(group, courses)
             group_year = self.parse_year_standing(group)  # Check if group contains year requirement
             
             if group_courses or group_year:
@@ -746,6 +811,7 @@ class SimplePrerequisiteParser:
         # Multiple patterns for different grade requirement formats
         grade_patterns = [
             rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+minimum\s+grade\s+of\s+<span[^>]*>([A-F][+-]?)</span>',
+            rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+grade\s+of\s+<span[^>]*>([A-F][+-]?)</span>',
             rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
             rf'{course_prefix}\s*{course_num}[^,;]*?with\s+a\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
             rf'{course_prefix}\s*{course_num}[^,;]*?minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)',
@@ -764,6 +830,16 @@ class SimplePrerequisiteParser:
             return f"{course}[{grade_requirements[0]}]"
             
         return course
+    
+    def get_graded_courses_for_text(self, text, graded_courses):
+        """Extract course codes from text and return matching graded courses from the graded_courses list."""
+        base_courses = self.extract_course_codes(text)
+        result = []
+        for base_course in base_courses:
+            # Find matching graded course (course might have grade suffix like [B-])
+            matching_course = next((c for c in graded_courses if re.sub(r'\[.*?\]', '', c) == base_course), base_course)
+            result.append(matching_course)
+        return result
     
     def parse_course_logic_with_grades(self, content, courses, grade_requirements):
         """Parse course logic and incorporate grade requirements."""
@@ -804,8 +880,8 @@ class SimplePrerequisiteParser:
             or_parts = [part.strip() for part in content_lower.split(' or ')]
             if len(or_parts) == 2:
                 # Check if both parts contain the same courses
-                part1_courses = self.extract_course_codes(or_parts[0])
-                part2_courses = self.extract_course_codes(or_parts[1])
+                part1_courses = self.get_graded_courses_for_text(or_parts[0], courses)
+                part2_courses = self.get_graded_courses_for_text(or_parts[1], courses)
                 
                 if (set(part1_courses) == set(part2_courses) and 
                     len(part1_courses) == len(courses) and 
@@ -814,7 +890,7 @@ class SimplePrerequisiteParser:
                     parsed_parts = []
                     
                     for part in or_parts:
-                        part_courses = self.extract_course_codes(part)
+                        part_courses = self.get_graded_courses_for_text(part, courses)
                         part_components = []
                         
                         # Add courses
@@ -848,7 +924,7 @@ class SimplePrerequisiteParser:
                 if 'permission' in part and not any(course in part for course in [c.lower() for c in courses]):
                     continue
                     
-                part_courses = self.extract_course_codes(part)
+                part_courses = self.get_graded_courses_for_text(part, courses)
                 if part_courses:
                     # Check if this part has OR logic
                     if ' or ' in part:
@@ -881,7 +957,7 @@ class SimplePrerequisiteParser:
             for part in comma_parts:
                 # Remove "and" from beginning of parts
                 part = re.sub(r'^\s*and\s+', '', part)
-                part_courses = self.extract_course_codes(part)
+                part_courses = self.get_graded_courses_for_text(part, courses)
                 
                 if part_courses:
                     if ' or ' in part and len(part_courses) > 1:
@@ -913,13 +989,44 @@ class SimplePrerequisiteParser:
                 return ' && '.join(all_components)
         
         # Handle patterns split by 'and' without commas
-        and_parts = re.split(r'\s+and\s+', content_lower)
+        # But don't split on 'and' inside parentheses
+        def split_respecting_parentheses(text, delimiter):
+            """Split text by delimiter but not inside parentheses."""
+            parts = []
+            current_part = ""
+            paren_count = 0
+            i = 0
+            
+            while i < len(text):
+                char = text[i]
+                if char == '(':
+                    paren_count += 1
+                    current_part += char
+                elif char == ')':
+                    paren_count -= 1
+                    current_part += char
+                elif paren_count == 0 and text[i:i+len(delimiter)] == delimiter:
+                    # Found delimiter outside parentheses
+                    if current_part.strip():
+                        parts.append(current_part.strip())
+                    current_part = ""
+                    i += len(delimiter) - 1  # Skip the delimiter
+                else:
+                    current_part += char
+                i += 1
+            
+            if current_part.strip():
+                parts.append(current_part.strip())
+            
+            return parts
+        
+        and_parts = split_respecting_parentheses(content_lower, ' and ')
         
         if len(and_parts) > 1:
             parsed_parts = []
             
             for part in and_parts:
-                part_courses = self.extract_course_codes(part)
+                part_courses = self.get_graded_courses_for_text(part, courses)
                 if part_courses:
                     if ' or ' in part and len(part_courses) > 1:
                         # This part has OR logic
@@ -928,13 +1035,19 @@ class SimplePrerequisiteParser:
                         parsed_parts.append(part_courses[0])
                     else:
                         # Multiple courses in same 'and' part without explicit OR
-                        course_prefixes = [course[:4] for course in part_courses]
-                        if len(set(course_prefixes)) == 1:
-                            # Same subject - likely OR alternatives
-                            parsed_parts.append(f"({' || '.join(part_courses)})")
+                        # Check if this part explicitly contains 'and' - if so, treat as AND
+                        if ' and ' in part:
+                            # Explicit AND in this part - treat as AND requirements
+                            parsed_parts.append(f"({' && '.join(part_courses)})")
                         else:
-                            # Different subjects - likely AND requirements
-                            parsed_parts.extend(part_courses)
+                            # No explicit AND/OR - use heuristics based on subject
+                            course_prefixes = [course[:4] for course in part_courses]
+                            if len(set(course_prefixes)) == 1:
+                                # Same subject - likely OR alternatives
+                                parsed_parts.append(f"({' || '.join(part_courses)})")
+                            else:
+                                # Different subjects - likely AND requirements
+                                parsed_parts.extend(part_courses)
             
             return ' && '.join(parsed_parts) if parsed_parts else ' && '.join(courses)
         
