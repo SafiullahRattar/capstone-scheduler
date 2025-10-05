@@ -224,6 +224,22 @@ class SimplePrerequisiteParser:
         filtered_content = re.sub(recommended_pattern2, '', filtered_content, flags=re.IGNORECASE)
         
         return filtered_content.strip().strip()
+    
+    def filter_out_graduate_level_content(self, content):
+        """Remove 'Also offered at the graduate level' content and similar non-prerequisite mentions."""
+        # Pattern to match "Also offered at the graduate level" and everything after until period
+        graduate_level_patterns = [
+            r'also\s+offered\s+at\s+the\s+graduate\s+level[^.]*\.',
+            r'offered\s+at\s+the\s+graduate\s+level[^.]*\.',
+            r'cross-listed\s+with[^.]*\.',
+            r'cross\s+listed\s+with[^.]*\.'
+        ]
+        
+        filtered_content = content
+        for pattern in graduate_level_patterns:
+            filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
+        
+        return filtered_content.strip()
 
     def simplify_prerequisites(self, prereq_text):
         """Convert prerequisite text to simple logical expression."""
@@ -243,6 +259,9 @@ class SimplePrerequisiteParser:
         
         # Filter out recommended background/additional content
         content = self.filter_out_recommended_content(content)
+        
+        # Filter out graduate level content and cross-listings
+        content = self.filter_out_graduate_level_content(content)
         
         # If content is empty after filtering, return None
         if not content.strip():
@@ -536,6 +555,42 @@ class SimplePrerequisiteParser:
         """Parse parenthetical groups connected by logical operators."""
         content_clean = content.lower()
         
+        # Special handling for comma-separated AND pattern with mixed OR groups
+        # Pattern: "X or Y, Z (or W), and Q" where commas indicate AND between groups
+        if ',' in content and 'and' in content_clean and '(' in content:
+            # Split by commas to identify AND components
+            comma_parts = [part.strip() for part in content.split(',')]
+            parsed_components = []
+            
+            for i, part in enumerate(comma_parts):
+                # Remove leading "and" from parts
+                part = re.sub(r'^\s*and\s+', '', part, flags=re.IGNORECASE)
+                
+                # Check if this part has a parenthetical OR structure
+                paren_match = re.search(r'([A-Z]{4}\s+\d{4})\s*\(\s*or\s+([A-Z]{4}\s+\d{4})\s*\)', part, re.IGNORECASE)
+                if paren_match:
+                    # Pattern like "PHYS 3606 (or PHYS 3608)"
+                    course1 = self.extract_course_codes(paren_match.group(1))[0]
+                    course2 = self.extract_course_codes(paren_match.group(2))[0]
+                    parsed_components.append(f"({course1} || {course2})")
+                else:
+                    part_courses = self.extract_course_codes(part)
+                    if part_courses:
+                        if ' or ' in part.lower() and len(part_courses) > 1:
+                            # OR within this comma-separated part
+                            parsed_components.append(f"({' || '.join(part_courses)})")
+                        elif len(part_courses) == 1:
+                            # Single course
+                            parsed_components.append(part_courses[0])
+                        else:
+                            # Multiple courses without explicit OR - treat as individual AND components
+                            parsed_components.extend(part_courses)
+            
+            if len(parsed_components) > 1:
+                return ' && '.join(parsed_components)
+            elif len(parsed_components) == 1:
+                return parsed_components[0]
+        
         # Find all parenthetical groups that contain course codes
         groups = re.findall(r'\(([^)]+)\)', content)
         
@@ -678,14 +733,28 @@ class SimplePrerequisiteParser:
     
     def parse_course_logic_with_grades(self, content, courses, grade_requirements):
         """Parse course logic and incorporate grade requirements."""
+        # Remove permission clauses from content before parsing course logic to avoid confusion
+        content_for_logic = content
+        permission_or_patterns = [
+            r';\s*or\s+permission[^.]*',
+            r',\s*or\s+permission[^.]*',
+            r'\s+or\s+permission\s+of\s+the\s+department[^.]*',
+            r'\s+or\s+permission\s+of\s+the\s+school[^.]*',
+            r'\s+or\s+by\s+permission[^.]*',
+            r'\s+or\s+departmental\s+permission[^.]*'
+        ]
+        
+        for pattern in permission_or_patterns:
+            content_for_logic = re.sub(pattern, '', content_for_logic, flags=re.IGNORECASE)
+        
         # First, create course list with grades applied once
         courses_with_grades = []
         for course in courses:
             course_with_grade = self.add_grade_to_course(course, content, grade_requirements)
             courses_with_grades.append(course_with_grade)
         
-        # Now get the basic logic structure using the courses with grades
-        return self.parse_course_logic(content, courses_with_grades)
+        # Now get the basic logic structure using the courses with grades and cleaned content
+        return self.parse_course_logic(content_for_logic, courses_with_grades)
 
     def parse_mixed_logic(self, content, courses):
         """Handle mixed AND/OR logic without clear parentheses."""
