@@ -112,41 +112,7 @@ class SimplePrerequisiteParser:
                 return True
         return False
 
-    def parse_corequisites(self, text):
-        """Parse co-requisite requirements."""
-        text_lower = text.lower()
-        
-        # Skip negative concurrent requirements
-        if 'may not be taken concurrently' in text_lower or re.search(r'not.*concurrently', text_lower):
-            return []
-        
-        coreq_patterns = [
-            r'concurrent\s+registration\s+in',
-            r'concurrent\s+enrolment\s+in',
-            r'concurrently\s+with',
-            r'completion\s+of,\s+or\s+concurrent\s+registration\s+in',  # New pattern for OR logic
-            r'may\s+be\s+taken\s+concurrently'  # New pattern for "may be taken concurrently"
-        ]
-        
-        coreqs = []
-        for pattern in coreq_patterns:
-            if re.search(pattern, text_lower):
-                if pattern == r'may\s+be\s+taken\s+concurrently':
-                    # Special handling for "may be taken concurrently"
-                    # Look for courses before this phrase within parentheses
-                    match = re.search(r'([A-Z]{4}\s*\d{4}[^(]*?)\s*\([^)]*may\s+be\s+taken\s+concurrently', text_lower)
-                    if match:
-                        concurrent_text = match.group(1)
-                        courses = self.extract_course_codes(concurrent_text)
-                        coreqs.extend(courses)
-                else:
-                    match = re.search(pattern + r'\s*([^.]+)', text_lower)
-                    if match:
-                        concurrent_text = match.group(1)
-                        courses = self.extract_course_codes(concurrent_text)
-                        coreqs.extend(courses)
-        
-        return list(set(coreqs))  # Remove duplicates
+
     
     def has_completion_or_concurrent_pattern(self, text):
         """Check if text has 'completion of, or concurrent registration in' pattern."""
@@ -223,17 +189,11 @@ class SimplePrerequisiteParser:
         completion_or_concurrent_courses = []
         if self.has_completion_or_concurrent_pattern(content):
             completion_or_concurrent_courses = self.parse_completion_or_concurrent(content)
-            # Remove these courses from the main course list since they're OR conditions with co-reqs
-            courses = [c for c in courses if c not in completion_or_concurrent_courses]
+            # Add these courses to the main course list (treat concurrent as regular prerequisites)
+            courses.extend(completion_or_concurrent_courses)
+            courses = list(set(courses))  # Remove duplicates
         
-        # Handle "may be taken concurrently" courses
-        may_be_concurrent_courses = []
-        if 'may be taken concurrently' in content.lower():
-            # Parse co-requisites to get the concurrent courses
-            coreqs = self.parse_corequisites(content)
-            may_be_concurrent_courses = coreqs
-            # Remove concurrent courses from required courses for this special case
-            courses = [c for c in courses if c not in may_be_concurrent_courses]
+        # No longer handling concurrent courses - treat as regular prerequisites
         
         # Build simple expression
         components = []
@@ -551,14 +511,12 @@ class SimplePrerequisiteParser:
             
             # Parse components
             prerequisites = self.simplify_prerequisites(text_content)
-            corequisites = self.parse_corequisites(text_content)
             exclusions = self.parse_exclusions(text_content)
             
             # Create simple course data
             course_data = {
                 'course': course_code,
                 'required': prerequisites,
-                'concurrent': corequisites,
                 'restricted': exclusions
             }
             
@@ -594,7 +552,6 @@ class SimplePrerequisiteParser:
                     if course_data:
                         all_courses[course_data['course']] = {
                             'required': course_data['required'],
-                            'concurrent': course_data['concurrent'],
                             'restricted': course_data['restricted']
                         }
                         successful += 1
@@ -628,8 +585,6 @@ def main():
         if data['required'] and count < 10:  # Show first 10 courses with requirements
             print(f"{course_code}:")
             print(f"  required: {data['required']}")
-            if data['concurrent']:
-                print(f"  concurrent: {data['concurrent']}")
             if data['restricted']:
                 print(f"  restricted: {data['restricted']}")
             print()
@@ -638,13 +593,11 @@ def main():
     # Print statistics
     total_courses = len(all_courses)
     courses_with_reqs = sum(1 for course in all_courses.values() if course['required'])
-    courses_with_coreqs = sum(1 for course in all_courses.values() if course['concurrent'])
     courses_with_restrictions = sum(1 for course in all_courses.values() if course['restricted'])
     
     print(f"=== STATISTICS ===")
     print(f"Total courses: {total_courses}")
     print(f"Courses with requirements: {courses_with_reqs}")
-    print(f"Courses with co-requisites: {courses_with_coreqs}")
     print(f"Courses with restrictions: {courses_with_restrictions}")
     print(f"Output saved to: {output_file}")
 
