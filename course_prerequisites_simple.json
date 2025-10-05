@@ -1,22 +1,262 @@
 {
+  "CIVE4301": {
+    "required": "CIVE4208",
+    "restricted": []
+  },
+  "CIVE3205": {
+    "required": "CIVE2200 && CIVE2700 && CIVE3204",
+    "restricted": []
+  },
+  "CIVE3207": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "MECH4104": {
+    "required": "(MAAE3004 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "CIVE3999": {
+    "required": null,
+    "restricted": []
+  },
+  "AERO4306": {
+    "required": "(MAAE3300 || MECH3310) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4307": {
+    "required": "MAAE2300",
+    "restricted": []
+  },
+  "CIVE4403": {
+    "required": "(CIVE3204 && CIVE3206 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
   "CIVE3206": {
-    "required": "CIVE2200 && CIVE2700",
+    "required": "CIVE2200 && CIVE2700 && CIVE3204",
     "restricted": []
   },
-  "MECH4013": {
-    "required": "MECH3710 && MAAE3202 && MECH4210 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "CIVE3204": {
+  "CIVE3202": {
     "required": "CIVE2200",
+    "restricted": []
+  },
+  "AERO3841": {
+    "required": "AERO3240",
+    "restricted": []
+  },
+  "AERO4446": {
+    "required": "MAAE2400 && (MAAE3300 || MECH3310) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4303": {
+    "required": "SECOND_YEAR || PERMISSION",
+    "restricted": []
+  },
+  "AERO4308": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "MECH3710": {
+    "required": "MAAE2700",
+    "restricted": []
+  },
+  "AERO4608": {
+    "required": "MAAE2202 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "MECH4503": {
+    "required": "((MAAE3500 || SYSC4505) && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "CIVE5200": {
+    "required": null,
+    "restricted": []
+  },
+  "CIVE2004": {
+    "required": "SECOND_YEAR || GEOM1004",
+    "restricted": []
+  },
+  "AERO4609": {
+    "required": "(MAAE2700 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "CIVE3209": {
+    "required": "MAAE2400 && THIRD_YEAR",
+    "restricted": []
+  },
+  "CIVE4202": {
+    "required": "CIVE2200 && CIVE2700 && THIRD_YEAR",
+    "restricted": []
+  },
+  "AERO3240": {
+    "required": "MAAE2101",
+    "restricted": []
+  },
+  "ARCN4100": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
+  "CIVE3407": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "AERO4842": {
+    "required": "AERO3841 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4302": {
+    "required": "CIVE3203 && CIVE3206",
+    "restricted": []
+  },
+  "AERO3101": {
+    "required": "MAAE3202",
+    "restricted": []
+  },
+  "AERO4003": {
+    "required": "AERO3002 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4200": {
+    "required": "CIVE3203",
+    "restricted": []
+  },
+  "GEOG4304": {
+    "required": "THIRD_YEAR || PERMISSION",
+    "restricted": []
+  },
+  "AERO3002": {
+    "required": "AERO2001 && THIRD_YEAR",
+    "restricted": []
+  },
+  "ARCN4200": {
+    "required": "ARCN4100 && THIRD_YEAR",
+    "restricted": []
+  },
+  "CIVE3305": {
+    "required": "CIVE3304 || PERMISSION",
+    "restricted": []
+  },
+  "CIVE4407": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "GEOG4103": {
+    "required": "MAAE2300 && PERMISSION",
+    "restricted": []
+  },
+  "CIVE3210": {
+    "required": "CIVE3208",
+    "restricted": []
+  },
+  "AERO4540": {
+    "required": "AERO3240 && MAAE3500 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE5103": {
+    "required": null,
+    "restricted": []
+  },
+  "MECH4406": {
+    "required": "(FOURTH_YEAR || MAAE2400) && MAAE3300 && MECH3310 && ENVE3001 && PERMISSION",
+    "restricted": []
+  },
+  "CIVE4917": {
+    "required": "CIVE4918 && PERMISSION",
+    "restricted": []
+  },
+  "CIVE4208": {
+    "required": "CIVE3208",
+    "restricted": []
+  },
+  "MECH4604": {
+    "required": "(MAAE3202 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "CIVE2101": {
+    "required": "MATH1004 && MATH1104 && SECOND_YEAR",
+    "restricted": []
+  },
+  "CIVE4907": {
+    "required": "FOURTH_YEAR && PERMISSION",
+    "restricted": []
+  },
+  "AERO2001": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
+  "AERO4442": {
+    "required": "MAAE2400 && (MAAE3300 || MECH3310) && FOURTH_YEAR",
     "restricted": []
   },
   "CIVE4400": {
     "required": "FOURTH_YEAR",
     "restricted": []
   },
-  "CIVE5200": {
+  "CIVE4209": {
+    "required": "CIVE3304 || PERMISSION",
+    "restricted": []
+  },
+  "MECH4401": {
+    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "GEOM1004": {
     "required": null,
+    "restricted": []
+  },
+  "CIVE3203": {
+    "required": "CIVE2200 && MATH1004",
+    "restricted": []
+  },
+  "ECON4004": {
+    "required": "ECON1402[C-]",
+    "restricted": []
+  },
+  "CIVE4500": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4308": {
+    "required": "CIVE3205 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4205": {
+    "required": "(CIVE4209 || CIVE3305) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE3204": {
+    "required": "CIVE2200",
+    "restricted": []
+  },
+  "STAT3502": {
+    "required": "MATH2004",
+    "restricted": []
+  },
+  "CIVE4918": {
+    "required": "ECOR3800 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "AERO4602": {
+    "required": "SYSC3600 && (MAAE3300 || MECH3310) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "MECH4013": {
+    "required": "MECH3710 && MAAE3202 && MECH4210 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "CIVE4204": {
+    "required": "CIVE4209 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "STAT2605": {
+    "required": "(MATH1007 || MATH1004 || MATH1002 || MATH1052) && (MATH1104 || MATH1107 || MATH1102 || MATH1152)",
+    "restricted": []
+  },
+  "CIVE2200": {
+    "required": "MATH1004 && SECOND_YEAR",
+    "restricted": []
+  },
+  "MECH3310": {
+    "required": "MATH2004 && MAAE2300",
     "restricted": []
   },
   "MECH3002": {
@@ -27,76 +267,32 @@
     "required": "SECOND_YEAR",
     "restricted": []
   },
-  "GEOM1004": {
-    "required": null,
-    "restricted": []
-  },
-  "AERO4607": {
-    "required": "((MAAE3300 || MECH3310) && MAAE3004 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "CIVE3208": {
-    "required": "THIRD_YEAR || PERMISSION",
-    "restricted": []
-  },
-  "ECON4004": {
-    "required": "ECON1402[C-]",
-    "restricted": []
-  },
-  "CIVE2004": {
-    "required": "GEOM1004 && SECOND_YEAR",
-    "restricted": []
-  },
-  "MECH4210": {
-    "required": "MAAE2101 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "CIVE4614": {
-    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "CIVE4308": {
-    "required": "CIVE3205 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "STAT3502": {
-    "required": "MATH2004",
-    "restricted": []
-  },
-  "MECH4103": {
-    "required": "(MAAE3202 && FOURTH_YEAR) || PERMISSION",
+  "AERO3700": {
+    "required": "MAAE2700",
     "restricted": []
   },
   "MECH5704": {
     "required": null,
     "restricted": []
   },
-  "CIVE4918": {
-    "required": "ECOR3800 && FOURTH_YEAR",
+  "AERO4607": {
+    "required": "(MAAE3004 && (MAAE3300 || MECH3310) && FOURTH_YEAR) || PERMISSION",
     "restricted": []
   },
-  "STAT2605": {
-    "required": "(MATH1007 || MATH1004 || MATH1002 || MATH1052) && (MATH1104 || MATH1107 || MATH1102 || MATH1152)",
+  "AERO4402": {
+    "required": "(MAAE2400 && (MAAE3300 || MECH3310) && FOURTH_YEAR) || PERMISSION",
     "restricted": []
   },
-  "MECH4503": {
-    "required": "((MAAE3500 || SYSC4505) && FOURTH_YEAR) || PERMISSION",
+  "CIVE3304": {
+    "required": "THIRD_YEAR || PERMISSION",
     "restricted": []
   },
-  "CIVE4204": {
-    "required": "CIVE4209 && FOURTH_YEAR",
+  "CIVE3208": {
+    "required": "THIRD_YEAR || PERMISSION",
     "restricted": []
   },
-  "CIVE3999": {
-    "required": null,
-    "restricted": []
-  },
-  "AERO4446": {
-    "required": "(MAAE3300 || MECH3310) && MAAE2400 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "MECH4104": {
-    "required": "(MAAE3004 && FOURTH_YEAR) || PERMISSION",
+  "MECH4210": {
+    "required": "MAAE2101 && FOURTH_YEAR",
     "restricted": []
   },
   "AERO4504": {
@@ -105,564 +301,368 @@
       "Electrical Engineering, Computer Systems Engineering, Engineering Physics or Communications Engineering"
     ]
   },
-  "AERO4842": {
-    "required": "AERO3841 && FOURTH_YEAR",
+  "MECH4003": {
+    "required": "MECH3002 && FOURTH_YEAR",
     "restricted": []
   },
-  "AERO4308": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "CIVE3407": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "CIVE4302": {
-    "required": "CIVE3203 && CIVE3206",
-    "restricted": []
-  },
-  "AERO4608": {
-    "required": "MAAE2202 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "AERO3240": {
-    "required": "MAAE2101",
-    "restricted": []
-  },
-  "CIVE4200": {
-    "required": "CIVE3203",
-    "restricted": []
-  },
-  "AERO4609": {
-    "required": "(MAAE2700 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "AERO2001": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "CIVE4407": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "PHYS4708": {
-    "required": "PHYS4707 || PERMISSION",
-    "restricted": []
-  },
-  "ARCN4200": {
-    "required": "ARCN4100",
-    "restricted": []
-  },
-  "AERO3101": {
-    "required": "MAAE3202",
-    "restricted": []
-  },
-  "CIVE5103": {
-    "required": null,
-    "restricted": []
-  },
-  "AERO3002": {
-    "required": "AERO2001 && THIRD_YEAR",
-    "restricted": []
-  },
-  "CIVE4303": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "ARCN4100": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "CIVE3304": {
-    "required": "THIRD_YEAR || PERMISSION",
-    "restricted": []
-  },
-  "AERO4003": {
-    "required": "AERO3002 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "CIVE4205": {
-    "required": "(CIVE4209 || CIVE3305) && FOURTH_YEAR",
+  "CIVE4614": {
+    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
     "restricted": []
   },
   "CIVE4201": {
     "required": "FOURTH_YEAR",
     "restricted": []
   },
-  "CIVE4208": {
-    "required": "CIVE3208",
+  "AERO4302": {
+    "required": "MAAE3300 || MECH3310",
     "restricted": []
   },
   "CIVE5305": {
     "required": null,
     "restricted": []
   },
-  "CIVE4907": {
-    "required": "FOURTH_YEAR && PERMISSION",
-    "restricted": []
-  },
-  "CIVE4301": {
-    "required": "CIVE4208",
-    "restricted": []
-  },
-  "CIVE3202": {
-    "required": "CIVE2200",
-    "restricted": []
-  },
-  "AERO4442": {
-    "required": "(MAAE3300 || MECH3310) && MAAE2400 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "GEOG4304": {
-    "required": "PERMISSION",
-    "restricted": []
-  },
-  "CIVE3205": {
-    "required": "CIVE2200 && CIVE2700",
-    "restricted": []
-  },
-  "CIVE3207": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "MECH4406": {
-    "required": "(MAAE3300 || MECH3310 || ENVE3001) && MAAE2400 && FOURTH_YEAR && PERMISSION",
-    "restricted": []
-  },
-  "CIVE4403": {
-    "required": "((CIVE3204 || CIVE3206) && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "AERO4402": {
-    "required": "((MAAE3300 || MECH3310) && MAAE2400 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "AERO4602": {
-    "required": "(MAAE3300 || MECH3310) && SYSC3600 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "CIVE2200": {
-    "required": "MATH1004 && SECOND_YEAR",
-    "restricted": []
-  },
-  "AERO4306": {
-    "required": "(MAAE3300 || MECH3310) && FOURTH_YEAR",
-    "restricted": []
-  },
-  "AERO3700": {
-    "required": "MAAE2700",
-    "restricted": []
-  },
-  "CIVE4307": {
-    "required": "MAAE2300",
-    "restricted": []
-  },
-  "CIVE3209": {
-    "required": "MAAE2400 && THIRD_YEAR",
-    "restricted": []
-  },
-  "MECH4401": {
-    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "CIVE3305": {
-    "required": "CIVE3304 || PERMISSION",
-    "restricted": []
-  },
-  "CIVE4202": {
-    "required": "CIVE2200 && CIVE2700 && THIRD_YEAR",
-    "restricted": []
-  },
-  "AERO3841": {
-    "required": "AERO3240",
-    "restricted": []
-  },
-  "MECH4407": {
-    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "CIVE4209": {
-    "required": "CIVE3304 || PERMISSION",
-    "restricted": []
-  },
-  "CIVE3210": {
-    "required": "CIVE3208",
-    "restricted": []
-  },
-  "CIVE4917": {
-    "required": "CIVE4918 && PERMISSION",
-    "restricted": []
-  },
-  "MECH3700": {
-    "required": "MAAE2700",
-    "restricted": []
-  },
-  "CIVE3203": {
-    "required": "CIVE2200 && MATH1004",
-    "restricted": []
-  },
-  "AERO4540": {
-    "required": "AERO3240 && MAAE3500 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "MECH4403": {
-    "required": "(MAAE2300 && MAAE2400 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "CIVE4500": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "CIVE2101": {
-    "required": "MATH1004 && MATH1104 && SECOND_YEAR",
-    "restricted": []
-  },
-  "AERO4302": {
-    "required": "MAAE3300 || MECH3310",
-    "restricted": []
-  },
-  "PHYS4508": {
-    "required": "((PHYS3606 || PHYS3608) && PHYS3701) || PERMISSION",
+  "MECT3999": {
+    "required": "OTHER_REQUIREMENT",
     "restricted": []
   },
   "PHYS4203": {
     "required": "MATH3705 || PERMISSION",
     "restricted": []
   },
-  "PHYS3807": {
-    "required": "ELEC2501 || PHYS2305 || MATH2004 || MATH3705 || PERMISSION",
-    "restricted": []
-  },
-  "MECH3710": {
-    "required": "MAAE2700",
-    "restricted": []
-  },
-  "PHYS1002": {
-    "required": "(PHYS1001 || PHYS1003 || PHYS1007[B-]) && (MATH1004 || MATH2052) || PERMISSION",
-    "restricted": []
-  },
-  "MECH4003": {
-    "required": "MECH3002 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "PHYS4208": {
-    "required": "(PHYS3608 && (PHYS2212 || PHYS2202 || PHYS3606 || PHYS3308)) || PERMISSION",
-    "restricted": []
-  },
-  "PHYS4007": {
-    "required": "PHYS3608 && PHYS3606",
-    "restricted": []
-  },
-  "PHYS3701": {
-    "required": "PHYS2605 || PHYS2604 || MATH2000",
-    "restricted": []
-  },
-  "MECH4604": {
-    "required": "(MAAE3202 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "PHYS2007": {
-    "required": "PHYS1008 && (PHYS1002 || PHYS1004)",
-    "restricted": []
-  },
-  "BIOL4309": {
-    "required": "BIOL3307 || PERMISSION",
-    "restricted": []
-  },
-  "MECT3999": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "PHYS1004": {
-    "required": "((ECOR1045 && ECOR1048) || (ECOR1033 && ECOR1034) || PHYS1007 || MATH1004 || ECOR1101 || ECOR1053 || PHYS1001 || PHYS1003) || PERMISSION",
-    "restricted": []
-  },
-  "BIOL2005": {
-    "required": "(CHEM1001 && CHEM1002) && (BIOL1003 || BIOL1103)",
-    "restricted": []
-  },
-  "BIOL1104": {
-    "required": "BIOL1103 && HIGH_SCHOOL_REQUIREMENT",
-    "restricted": []
-  },
-  "MECH3310": {
-    "required": "MATH2004 && MAAE2300",
-    "restricted": []
-  },
-  "SREE3001": {
-    "required": "ELEC2602 && ENVE2001 && MAAE2300 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "PHYS2605": {
-    "required": "(PHYS1007 && PHYS1008) && PHYS1001 && PHYS1002 && PHYS1003 && PHYS1004 && MATH1004 && MATH1104 && MATH2052 && MATH2152",
-    "restricted": []
-  },
-  "PHYS1001": {
-    "required": "(MATH1004 || MATH1052) && HIGH_SCHOOL_REQUIREMENT",
-    "restricted": []
-  },
-  "PHYS4409": {
-    "required": "(PHYS3701 && MATH2004 && MATH3705) || PERMISSION",
-    "restricted": []
-  },
-  "GEOG4103": {
-    "required": "PERMISSION",
-    "restricted": []
-  },
-  "MECH4408": {
-    "required": "MAAE3400 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "ECOR1041": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1052": {
-    "required": "ECOR1051",
-    "restricted": []
-  },
-  "ECOR1101": {
-    "required": "MATH1004 && MATH1104",
-    "restricted": []
-  },
-  "BIOL1103": {
-    "required": "HIGH_SCHOOL_REQUIREMENT",
-    "restricted": []
-  },
-  "ECOR1010": {
-    "required": null,
-    "restricted": []
-  },
-  "PHYS3308": {
-    "required": "((PHYS2305 || MATH2004 || MATH2008) && MATH3705) || PERMISSION",
-    "restricted": []
-  },
-  "CSEC3108": {
-    "required": "(COMP3000 || SYSC4001) && (COMP3203 || SYSC4602) && CSEC2108",
-    "restricted": []
-  },
-  "ECOR3800": {
-    "required": "SECOND_YEAR && PERMISSION",
-    "restricted": []
-  },
-  "MECT4907": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "SREE4002": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "ECOR1031": {
-    "required": null,
-    "restricted": []
-  },
-  "SREE3003": {
-    "required": "(ELEC2602 || ELEC3605) && SREE3001",
-    "restricted": []
-  },
-  "ECOR1044": {
-    "required": null,
-    "restricted": []
-  },
-  "PHYS4807": {
-    "required": "PERMISSION",
-    "restricted": []
-  },
-  "ECOR1047": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1034": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1046": {
-    "required": null,
-    "restricted": []
-  },
-  "BIOL2201": {
-    "required": "(BIOL1003 || BIOL1103) && (CHEM1002 || CHEM1006)",
-    "restricted": []
-  },
-  "SREE3002": {
-    "required": "(ELEC2602 || ELEC3605) && SREE3001",
-    "restricted": []
-  },
-  "ECOR1054": {
-    "required": "ECOR1053",
-    "restricted": []
-  },
-  "ECOR4995": {
-    "required": "ECOR2995 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "PHYS3606": {
-    "required": "((PHYS2605 || PHYS2604) && PHYS2007 && PHYS3701) || PERMISSION",
-    "restricted": []
-  },
-  "ECOR1056": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1057": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR2995": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1032": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1051": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1048": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1053": {
-    "required": null,
-    "restricted": []
-  },
-  "ERTH4107": {
-    "required": "ERTH3405",
-    "restricted": []
-  },
-  "ECOR4907": {
-    "required": "(ECOR3800 || SYSC4106) && FOURTH_YEAR",
-    "restricted": []
-  },
-  "ECOR1042": {
-    "required": "ECOR1041[C-] && MATH1004",
-    "restricted": []
-  },
-  "BIOL3306": {
-    "required": "(BIOL1003 && BIOL1004) || (BIOL1103 && BIOL1104) || (CHEM1001 && CHEM1002)",
+  "MECH4403": {
+    "required": "(MAAE2300 && MAAE2400 && FOURTH_YEAR) || PERMISSION",
     "restricted": []
   },
   "PHYS4707": {
     "required": "(PHYS3701 && PHYS3807) || PERMISSION",
     "restricted": []
   },
-  "CCDP2100": {
-    "required": "SECOND_YEAR",
+  "PHYS1002": {
+    "required": "(PHYS1001 || PHYS1003 || PHYS1007) && (MATH1004 || MATH2052) || PERMISSION",
     "restricted": []
   },
-  "ECOR1606": {
-    "required": null,
+  "PHYS4708": {
+    "required": "PHYS4707 || PERMISSION",
     "restricted": []
   },
-  "MATH3801": {
-    "required": "MATH2152 || MATH2107 || PERMISSION",
+  "MECH3700": {
+    "required": "MAAE2700",
     "restricted": []
   },
-  "ECOR1043": {
-    "required": null,
+  "MECT4907": {
+    "required": "FOURTH_YEAR",
     "restricted": []
   },
-  "COMP1805": {
+  "PHYS4508": {
+    "required": "((PHYS3606 || PHYS3608) && PHYS3701) || PERMISSION",
+    "restricted": []
+  },
+  "MECH4103": {
+    "required": "(MAAE3202 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "BIOL1103": {
     "required": "HIGH_SCHOOL_REQUIREMENT",
     "restricted": []
   },
-  "MATH1104": {
-    "required": "(MATH0005 && HIGH_SCHOOL_REQUIREMENT) || PERMISSION",
+  "BIOL4319": {
+    "required": "(BIOL3307 && FOURTH_YEAR) || PERMISSION",
     "restricted": []
   },
-  "ECOR2606": {
-    "required": "(ECOR1606 || SYSC1005) && (ECOR1010 || ELEC1908) && MATH1005",
+  "PHYS1001": {
+    "required": "(MATH1004 || MATH1052) && HIGH_SCHOOL_REQUIREMENT",
     "restricted": []
   },
-  "SREE4907": {
-    "required": "SREE3002 && SREE3003 && FOURTH_YEAR",
+  "BIOL2201": {
+    "required": "(BIOL1003 || BIOL1103) && (CHEM1002 || CHEM1006)",
     "restricted": []
   },
-  "ECOR1033": {
-    "required": null,
-    "restricted": []
-  },
-  "ECOR1045": {
-    "required": null,
-    "restricted": []
-  },
-  "COMP3106": {
-    "required": "(COMP2404 || SYSC3010 || SYSC3110) && (COMP2402 || COMP2804)",
-    "restricted": []
-  },
-  "ECOR2050": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "BIOL2303": {
-    "required": "BIOL1003 || BIOL1103",
+  "PHYS3807": {
+    "required": "ELEC2501 || PHYS2305 || MATH2004 || MATH3705 || PERMISSION",
     "restricted": []
   },
   "PHYS1003": {
     "required": "(MATH1004 || MATH1052) && HIGH_SCHOOL_REQUIREMENT",
     "restricted": []
   },
-  "COMP1006": {
-    "required": "COMP1005 || COMP1405",
+  "PHYS2605": {
+    "required": "(PHYS1001 || PHYS1002 || PHYS1003 || PHYS1004 || PHYS1007 || PHYS1008) && (MATH1004 || MATH1104 || MATH2052 || MATH2152)",
     "restricted": []
   },
-  "COMP3000": {
-    "required": "COMP2401[C-] && COMP2402",
+  "SREE3001": {
+    "required": "(ENVE2001 || MAAE2300 || ELEC2602)",
+    "restricted": []
+  },
+  "SREE4002": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "BIOL3306": {
+    "required": "(BIOL1003 || (BIOL1103 && BIOL1104)) && THIRD_YEAR",
+    "restricted": []
+  },
+  "MECH4407": {
+    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "BIOL2303": {
+    "required": "BIOL1003 || BIOL1103",
+    "restricted": []
+  },
+  "PHYS3606": {
+    "required": "(PHYS2007 && PHYS2605 && PHYS2604 && PHYS3701) || PERMISSION",
+    "restricted": []
+  },
+  "PHYS4409": {
+    "required": "(PHYS3701 && MATH2004 && MATH3705) || PERMISSION",
+    "restricted": []
+  },
+  "MECH4408": {
+    "required": "MAAE3400 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "BIOL2005": {
+    "required": "BIOL1003 && BIOL1103 && (CHEM1001 && CHEM1002)",
+    "restricted": []
+  },
+  "SREE3002": {
+    "required": "(SREE3001 || ELEC2602 || ELEC3605)",
+    "restricted": []
+  },
+  "ECOR1010": {
+    "required": null,
+    "restricted": []
+  },
+  "ECOR1041": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "ECOR1045": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "PHYS2007": {
+    "required": "PHYS1008 && (PHYS1002 || PHYS1004)",
+    "restricted": []
+  },
+  "ECOR1053": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "PHYS3701": {
+    "required": "((PHYS2605 || PHYS2604) && MATH2000 && (MATH2004 || MATH2008) && MATH3705) || PERMISSION",
+    "restricted": []
+  },
+  "ECOR1055": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "PHYS4208": {
+    "required": "((PHYS2212 || PHYS2202) && (PHYS3606 || PHYS3608) && PHYS3308) || PERMISSION",
+    "restricted": []
+  },
+  "PHYS4807": {
+    "required": "THIRD_YEAR && PERMISSION",
+    "restricted": []
+  },
+  "ECOR1033": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "ECOR1048": {
+    "required": "ECOR1045",
+    "restricted": []
+  },
+  "ECOR1034": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "ECOR1046": {
+    "required": "ECOR1045",
+    "restricted": []
+  },
+  "PHYS1004": {
+    "required": "(ECOR1101 || (ECOR1045 && ECOR1048)) || PERMISSION",
+    "restricted": []
+  },
+  "CSEC3108": {
+    "required": "CSEC2108 && (COMP3000 || SYSC4001) && (COMP3203 || SYSC4602)",
+    "restricted": []
+  },
+  "ECOR2995": {
+    "required": null,
+    "restricted": []
+  },
+  "SREE3003": {
+    "required": "(SREE3001 || ELEC2602 || ELEC3605)",
+    "restricted": []
+  },
+  "ECOR1047": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "PHYS4007": {
+    "required": "(PHYS3606 || PHYS3608)",
+    "restricted": []
+  },
+  "PHYS3308": {
+    "required": "(PHYS2305 && (MATH2004 || MATH2008) && MATH3705) || PERMISSION",
+    "restricted": []
+  },
+  "ECOR1031": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "ECOR1032": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "BIOL1104": {
+    "required": "HIGH_SCHOOL_REQUIREMENT || BIOL1103",
+    "restricted": []
+  },
+  "BIOL4309": {
+    "required": "(BIOL3307 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "ECOR1606": {
+    "required": null,
+    "restricted": []
+  },
+  "ECOR2050": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
+  "ECOR3800": {
+    "required": "PERMISSION",
+    "restricted": []
+  },
+  "ECOR4995": {
+    "required": "ECOR2995 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "MATH1005": {
+    "required": "(MATH1004 && (MATH1104 || MATH1107)) || PERMISSION",
+    "restricted": []
+  },
+  "ECOR4907": {
+    "required": "(ECOR3800 || SYSC4106) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "ECOR1052": {
+    "required": "ECOR1051",
+    "restricted": []
+  },
+  "ECOR1042": {
+    "required": "ECOR1041 && MATH1004",
+    "restricted": []
+  },
+  "ERTH2404": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "SREE4907": {
+    "required": "SREE3002 && SREE3003 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "COMP1805": {
+    "required": "HIGH_SCHOOL_REQUIREMENT",
+    "restricted": []
+  },
+  "ECOR1051": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "COMP4108": {
+    "required": "COMP2108 && (COMP3000 || SYSC4001)",
+    "restricted": []
+  },
+  "ERTH4107": {
+    "required": "ERTH3405",
+    "restricted": []
+  },
+  "MATH3705": {
+    "required": "(MATH1005 || MATH2404) && (MATH2004 || MATH2008 || MATH2009) || PERMISSION",
+    "restricted": []
+  },
+  "ECOR1101": {
+    "required": "MATH1004 && MATH1104",
+    "restricted": []
+  },
+  "ECOR1043": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "MATH3801": {
+    "required": "(MATH2152 || MATH2107) || PERMISSION",
+    "restricted": []
+  },
+  "ECOR1044": {
+    "required": "ECOR1041 && ECOR1043",
+    "restricted": []
+  },
+  "COMP2404": {
+    "required": "COMP2401[C-]",
+    "restricted": []
+  },
+  "COMP1405": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "COMP2401": {
+    "required": "(COMP1006 || COMP1406)",
+    "restricted": []
+  },
+  "MATH2004": {
+    "required": "(MATH1005 || MATH2007) && (MATH1104 || MATH1107) || PERMISSION",
+    "restricted": []
+  },
+  "COMP3007": {
+    "required": "COMP1805 && COMP2401 && COMP2402 && (COMP2404 || SYSC3010 || SYSC3110 || COMP2406 || SYSC4504)",
     "restricted": []
   },
   "COMP1005": {
     "required": null,
     "restricted": []
   },
-  "SREE4001": {
-    "required": "MAAE2300 && MAAE2400 && FOURTH_YEAR",
+  "ECOR2606": {
+    "required": "(MATH1005 || ECOR1606 || SYSC1005 || ECOR1010 || ELEC1908)",
     "restricted": []
   },
-  "COMP3004": {
-    "required": "(COMP2404[C-] || SYSC3010[C-] || SYSC3110[C-]) && (COMP2406 || SYSC4504) && COMP2401[C-]",
-    "restricted": []
-  },
-  "COMP3007": {
-    "required": "(COMP2404 || SYSC3010 || SYSC3110) && (COMP2406 || SYSC4504) && (COMP1805[C-] || COMP2401[C-] || COMP2402)",
-    "restricted": []
-  },
-  "COMP4004": {
-    "required": "COMP3004",
+  "COMP1406": {
+    "required": "(COMP1005 || COMP1405)",
     "restricted": []
   },
   "COMP2804": {
     "required": "COMP1805[C-] || PERMISSION",
     "restricted": []
   },
-  "COMP3005": {
-    "required": "(SYSC2004 && SYSC2100) && (COMP1805[C-] || COMP2402)",
+  "COMP3106": {
+    "required": "COMP2402 && COMP2804 && (COMP2404 || SYSC3010 || SYSC3110)",
     "restricted": []
   },
-  "COMP2402": {
-    "required": "(COMP1006[C-] || COMP1406[C-])",
+  "MAAE3300": {
+    "required": "MATH2004 && MAAE2300",
     "restricted": []
   },
-  "MAAE2300": {
+  "MAAE4706": {
+    "required": "MAAE3505",
+    "restricted": []
+  },
+  "COMP3000": {
+    "required": "COMP2401[C-] && COMP2402",
+    "restricted": []
+  },
+  "ECOR1054": {
+    "required": "ECOR1053",
+    "restricted": []
+  },
+  "MAAE3004": {
+    "required": "MAAE2101 && MATH1005",
+    "restricted": []
+  },
+  "MAAE2203": {
     "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "COMP3008": {
-    "required": "(COMP2404 || SYSC3010 || SYSC3110) && (COMP2406 || SYSC4504)",
-    "restricted": []
-  },
-  "MAAE2202": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "COMP2401": {
-    "required": "(COMP1006[C-] || COMP1406[C-])",
-    "restricted": []
-  },
-  "BIOL4319": {
-    "required": "BIOL3307 || PERMISSION",
     "restricted": []
   },
   "MAAE3999": {
@@ -673,160 +673,128 @@
     "required": "MATH1005 && MAAE2400",
     "restricted": []
   },
-  "COMP1406": {
-    "required": "COMP1005 || COMP1405",
+  "MAAE4102": {
+    "required": "MAAE2202 && MAAE2700 && FOURTH_YEAR",
     "restricted": []
   },
-  "MAAE2001": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "COMP2406": {
-    "required": "(COMP1006[C-] || COMP1406[C-])",
-    "restricted": []
-  },
-  "MAAE3505": {
-    "required": "ELEC3508 && ELEC4709 && MAAE3002",
-    "restricted": []
-  },
-  "ECOR1055": {
-    "required": null,
+  "COMP3105": {
+    "required": "COMP2402 && COMP2804 && (COMP2404 || SYSC3010 || SYSC3110) && (MATH1104 || MATH1107)",
     "restricted": []
   },
   "MAAE2700": {
     "required": "SECOND_YEAR",
     "restricted": []
   },
-  "COMP3105": {
-    "required": "(COMP2404 || SYSC3010 || SYSC3110) && (MATH1104 || MATH1107) && (COMP2402 || COMP2804)",
-    "restricted": []
-  },
-  "MATH1004": {
-    "required": "MATH0005 && MATH0006 && HIGH_SCHOOL_REQUIREMENT",
-    "restricted": []
-  },
-  "MAAE3300": {
-    "required": "MATH2004 && MAAE2300",
-    "restricted": []
-  },
-  "MATH2004": {
-    "required": "(MATH1005 || MATH2007) && (MATH1104 || MATH1107) || PERMISSION",
-    "restricted": []
-  },
-  "MATH3705": {
-    "required": "(MATH1005 || MATH2404 || MATH2004 || MATH2008 || MATH2009) || PERMISSION",
-    "restricted": []
-  },
-  "MAAE4102": {
-    "required": "MAAE2202 && MAAE2700 && FOURTH_YEAR",
+  "MAAE2101": {
+    "required": "SECOND_YEAR",
     "restricted": []
   },
   "MAAE3202": {
     "required": "MAAE2202 && MATH1005",
     "restricted": []
   },
-  "COMP2404": {
-    "required": "COMP2401[C-]",
+  "MATH1004": {
+    "required": "MATH0005 && MATH0006 && HIGH_SCHOOL_REQUIREMENT",
     "restricted": []
   },
-  "MAAE4907": {
-    "required": "((AERO4003 || AERO4842 || MECH4003 || MECH4013 || SREE4001) && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "MAAE2203": {
+  "MAAE2401": {
     "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "ENVE4005": {
-    "required": "ENVE3001 && ENVE3002",
-    "restricted": []
-  },
-  "ENVE5101": {
-    "required": null,
-    "restricted": []
-  },
-  "ARCC2203": {
-    "required": "ARCC2202",
-    "restricted": []
-  },
-  "ENVE4918": {
-    "required": "ECOR3800 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "ERTH2404": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "ENVE3003": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "ENVE4002": {
-    "required": "ENVE3004 && CIVE3208",
-    "restricted": []
-  },
-  "COMP3203": {
-    "required": "COMP2401[C-] && COMP2402",
-    "restricted": []
-  },
-  "ENVE5200": {
-    "required": null,
     "restricted": []
   },
   "MAAE2400": {
     "required": "SECOND_YEAR",
     "restricted": []
   },
-  "ENVE4200": {
-    "required": "FOURTH_YEAR",
+  "MAAE3500": {
+    "required": "(MATH3705 || SYSC3600 || SYSC3610)",
+    "restricted": []
+  },
+  "ECOR1057": {
+    "required": null,
+    "restricted": []
+  },
+  "ARCC2203": {
+    "required": "ARCC2202 && THIRD_YEAR",
+    "restricted": []
+  },
+  "ARCC2202": {
+    "required": "PERMISSION",
+    "restricted": []
+  },
+  "ENVE4005": {
+    "required": "ENVE3001 && ENVE3002",
+    "restricted": []
+  },
+  "CCDP2100": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
+  "ENVE3004": {
+    "required": "(CHEM1002 || CHEM1101) && ENVE3002",
+    "restricted": []
+  },
+  "COMP3008": {
+    "required": "(COMP2404 || SYSC3010 || SYSC3110) && (COMP2406 || SYSC4504)",
+    "restricted": []
+  },
+  "ENVE5301": {
+    "required": null,
+    "restricted": []
+  },
+  "ENVE5101": {
+    "required": null,
+    "restricted": []
+  },
+  "ENVE5200": {
+    "required": null,
+    "restricted": []
+  },
+  "ENVE4918": {
+    "required": "ECOR3800 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "COMP3005": {
+    "required": "COMP1805[C-] && (COMP2402 || (SYSC2004 && SYSC2100))",
+    "restricted": []
+  },
+  "COMP1006": {
+    "required": "(COMP1005 || COMP1405)",
+    "restricted": []
+  },
+  "ENVE4907": {
+    "required": "FOURTH_YEAR && PERMISSION",
     "restricted": []
   },
   "ENVE4105": {
     "required": "THIRD_YEAR",
     "restricted": []
   },
-  "COMP4108": {
-    "required": "(COMP3000 || SYSC4001) && COMP2108",
-    "restricted": []
-  },
-  "CDNS2400": {
-    "required": "PERMISSION",
-    "restricted": []
-  },
-  "ENVE5008": {
-    "required": null,
-    "restricted": []
-  },
-  "MAAE3500": {
-    "required": "(SYSC3600 || SYSC3610) && MATH3705",
-    "restricted": []
-  },
-  "COMP1405": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "ENVE5201": {
-    "required": null,
-    "restricted": []
-  },
-  "ESLA1300": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "ESLA1500": {
-    "required": "ESLA1300",
-    "restricted": []
-  },
-  "MAAE2101": {
+  "MAAE2202": {
     "required": "SECOND_YEAR",
     "restricted": []
   },
-  "MATH1005": {
-    "required": "(MATH1107 && (MATH1004 || MATH1104)) || PERMISSION",
+  "MAAE2001": {
+    "required": "SECOND_YEAR",
     "restricted": []
   },
-  "ENVE3001": {
-    "required": "ENVE3002",
+  "ENVE4101": {
+    "required": "ENVE3001 && ENVE3002 && ENVE3004",
+    "restricted": []
+  },
+  "COMP2406": {
+    "required": "(COMP1006 || COMP1406)",
+    "restricted": []
+  },
+  "ENVE3999": {
+    "required": null,
+    "restricted": []
+  },
+  "ENVE2001": {
+    "required": "(CHEM1002 || CHEM1101) && MAAE2400 && SECOND_YEAR",
+    "restricted": []
+  },
+  "ENVE3002": {
+    "required": "(CHEM1002 || CHEM1101) && MATH2004 && SECOND_YEAR",
     "restricted": []
   },
   "ENVE4104": {
@@ -837,19 +805,191 @@
     "required": "ENVE4918 && PERMISSION",
     "restricted": []
   },
-  "ENVE5301": {
-    "required": null,
+  "COMP4004": {
+    "required": "COMP3004",
     "restricted": []
   },
-  "ELEC4907": {
-    "required": "(ELEC3907 || SYSC3010) && FOURTH_YEAR",
+  "MAAE3505": {
+    "required": "ELEC3508 && ELEC4709 && MAAE3002",
+    "restricted": []
+  },
+  "MAAE4907": {
+    "required": "(AERO4842 && MECH4003 && MECH4013 && SREE4001 && AERO4003 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "ELEC4602": {
+    "required": "ELEC2602",
+    "restricted": []
+  },
+  "ELEC2501": {
+    "required": "(MATH1005 || PHYS1004 || PHYS1002) && SECOND_YEAR",
+    "restricted": []
+  },
+  "ENVE3003": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "COMP3203": {
+    "required": "COMP2401[C-] && COMP2402",
     "restricted": []
   },
   "ELEC3508": {
     "required": "ELEC2507 && ELEC2602",
     "restricted": []
   },
-  "ELEC4506": {
+  "ENVE4002": {
+    "required": "ENVE3004 && CIVE3208",
+    "restricted": []
+  },
+  "COMP3004": {
+    "required": "COMP2401 && (COMP2404 || SYSC3010 || SYSC3110) && (COMP2406 || SYSC4504)",
+    "restricted": []
+  },
+  "SREE4001": {
+    "required": "MAAE2300 && MAAE2400 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "BIOM5406": {
+    "required": "SYSC4202",
+    "restricted": []
+  },
+  "ELEC2602": {
+    "required": "PHYS1004 && ELEC2501 && SECOND_YEAR",
+    "restricted": []
+  },
+  "ELEC4703": {
+    "required": "ELEC2501 && ELEC2507 && ELEC2501 && ELEC2507 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "ENVE4003": {
+    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "MATH1104": {
+    "required": "(MATH0005 && HIGH_SCHOOL_REQUIREMENT) || PERMISSION",
+    "restricted": []
+  },
+  "ELEC4601": {
+    "required": "(ELEC2607 || SYSC2003 || SYSC3003 || SYSC3006) || PERMISSION",
+    "restricted": []
+  },
+  "ELEC3605": {
+    "required": "(MATH1005 || PHYS1004 || PHYS1002) && SECOND_YEAR",
+    "restricted": []
+  },
+  "ELEC3500": {
+    "required": "ELEC2507 && ELEC2607",
+    "restricted": []
+  },
+  "ELEC4907": {
+    "required": "(ELEC3907 || SYSC3010) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "ELEC4706": {
+    "required": "ELEC3500",
+    "restricted": []
+  },
+  "ELEC3999": {
+    "required": null,
+    "restricted": []
+  },
+  "ENVE5201": {
+    "required": null,
+    "restricted": []
+  },
+  "ELEC2507": {
+    "required": "MATH1005 && ELEC2501 && SECOND_YEAR",
+    "restricted": []
+  },
+  "ENVE4006": {
+    "required": "ENVE3004 && MAAE2300",
+    "restricted": []
+  },
+  "ELEC3105": {
+    "required": "MATH1005 && MATH2004 && (PHYS1004 || PHYS1002) && SECOND_YEAR",
+    "restricted": []
+  },
+  "ELEC4509": {
+    "required": "FOURTH_YEAR || PERMISSION",
+    "restricted": []
+  },
+  "ELEC2607": {
+    "required": "(PHYS1004 || PHYS1002) && SECOND_YEAR",
+    "restricted": []
+  },
+  "ELEC4502": {
+    "required": "ELEC4503",
+    "restricted": []
+  },
+  "ELEC4708": {
+    "required": "(ELEC3500 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "ELEC4600": {
+    "required": "FOURTH_YEAR || PERMISSION",
+    "restricted": []
+  },
+  "ELEC4503": {
+    "required": "ELEC3909",
+    "restricted": []
+  },
+  "ELEC3907": {
+    "required": "ELEC2507 && ELEC2607 && THIRD_YEAR",
+    "restricted": []
+  },
+  "ELEC4705": {
+    "required": "ELEC3908",
+    "restricted": []
+  },
+  "ELEC3509": {
+    "required": "ELEC2507",
+    "restricted": []
+  },
+  "ACSE3201": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "ACSE4107": {
+    "required": "CIVE3209 && ENVE4105",
+    "restricted": []
+  },
+  "CDNS2400": {
+    "required": "SECOND_YEAR || PERMISSION",
+    "restricted": []
+  },
+  "ACSE4907": {
+    "required": "FOURTH_YEAR && PERMISSION",
+    "restricted": []
+  },
+  "ENVE4200": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "ENVE5008": {
+    "required": null,
+    "restricted": []
+  },
+  "ACSE4106": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "ACSE4917": {
+    "required": "ACSE4918 && PERMISSION",
+    "restricted": []
+  },
+  "ACSE2001": {
+    "required": null,
+    "restricted": []
+  },
+  "ELEC4707": {
+    "required": "ELEC3509",
+    "restricted": []
+  },
+  "ELEC4609": {
+    "required": "(ELEC3500 || ELEC3908)",
+    "restricted": []
+  },
+  "ELEC4709": {
     "required": "FOURTH_YEAR",
     "restricted": []
   },
@@ -857,12 +997,40 @@
     "required": "ELEC2602",
     "restricted": []
   },
-  "ELEC4703": {
-    "required": "ELEC2501 && ELEC2507 && ELEC2501 && ELEC2507 && FOURTH_YEAR",
+  "ESLA1300": {
+    "required": "OTHER_REQUIREMENT",
     "restricted": []
   },
-  "ENVE4101": {
-    "required": "ENVE3001 && ENVE3002 && ENVE3004",
+  "ACSE3105": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "MAAE2300": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
+  "ARCH2222": {
+    "required": "ARCH2221",
+    "restricted": []
+  },
+  "ACSE4601": {
+    "required": "ACSE3207 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC3501": {
+    "required": "SYSC3600 || SYSC3610",
+    "restricted": []
+  },
+  "SYSC4810": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "ESLA1500": {
+    "required": "ESLA1300",
+    "restricted": []
+  },
+  "ARCH3881": {
+    "required": "SECOND_YEAR",
     "restricted": []
   },
   "ELEC4504": {
@@ -871,456 +1039,204 @@
       "Electrical Engineering, Computer Systems Engineering, Engineering Physics or Communications Engineering"
     ]
   },
-  "ELEC4601": {
-    "required": "((SYSC2003 || SYSC3003 || SYSC3006) && ELEC2607) || PERMISSION",
-    "restricted": []
-  },
-  "ENVE4006": {
-    "required": "ENVE3004 && MAAE2300",
-    "restricted": []
-  },
-  "ENVE3999": {
-    "required": null,
-    "restricted": []
-  },
-  "MAAE3004": {
-    "required": "MAAE2101 && MATH1005",
-    "restricted": []
-  },
-  "ELEC3509": {
-    "required": "ELEC2507",
-    "restricted": []
-  },
-  "ELEC3908": {
-    "required": "ELEC2507",
-    "restricted": []
-  },
-  "ELEC4706": {
-    "required": "ELEC3500",
-    "restricted": []
-  },
-  "ELEC2607": {
-    "required": "(PHYS1004 || PHYS1002) && SECOND_YEAR",
-    "restricted": []
-  },
-  "ELEC4908": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "ELEC3105": {
-    "required": "(PHYS1004 || PHYS1002) && (MATH1005 || MATH2004) && SECOND_YEAR",
-    "restricted": []
-  },
-  "ELEC4509": {
-    "required": "FOURTH_YEAR || PERMISSION",
-    "restricted": []
-  },
-  "ELEC4609": {
-    "required": "ELEC3500 || ELEC3908",
-    "restricted": []
-  },
-  "ELEC4709": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "ELEC4708": {
-    "required": "(ELEC3500 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "BIOM5406": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "ARCC2202": {
-    "required": "PERMISSION",
-    "restricted": []
-  },
-  "MAAE2401": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "ELEC3909": {
-    "required": "ELEC3105 || PERMISSION",
-    "restricted": []
-  },
-  "ELEC4707": {
-    "required": "ELEC3509",
-    "restricted": []
-  },
-  "ELEC3500": {
-    "required": "ELEC2507 && ELEC2607",
-    "restricted": []
-  },
-  "ELEC4600": {
-    "required": "FOURTH_YEAR || PERMISSION",
-    "restricted": []
-  },
-  "ACSE3999": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "ACSE4907": {
-    "required": "FOURTH_YEAR && PERMISSION",
-    "restricted": []
-  },
-  "MAAE4706": {
-    "required": "MAAE3505",
-    "restricted": []
-  },
-  "ELEC3605": {
-    "required": "(PHYS1004 || PHYS1002) && MATH1005 && SECOND_YEAR",
-    "restricted": []
-  },
-  "ACSE4106": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "ENVE4907": {
-    "required": "FOURTH_YEAR && PERMISSION",
-    "restricted": []
-  },
-  "ELEC3999": {
-    "required": null,
-    "restricted": []
-  },
   "ACSE4918": {
     "required": "ECOR3800 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "ELEC4602": {
-    "required": "ELEC2602",
-    "restricted": []
-  },
-  "ACSE4917": {
-    "required": "ACSE4918 && PERMISSION",
-    "restricted": []
-  },
-  "ENVE3002": {
-    "required": "(CHEM1002 || CHEM1101 || MATH2004) && SECOND_YEAR",
-    "restricted": []
-  },
-  "ARCH1000": {
-    "required": null,
-    "restricted": []
-  },
-  "ELEC4502": {
-    "required": "ELEC4503",
-    "restricted": []
-  },
-  "ACSE3209": {
-    "required": "MAAE2400 && THIRD_YEAR",
-    "restricted": []
-  },
-  "ARCH2222": {
-    "required": "ARCH2221",
-    "restricted": []
-  },
-  "ELEC4505": {
-    "required": "(SYSC3501 || SYSC3503) && ELEC3509",
-    "restricted": []
-  },
-  "ENVE4003": {
-    "required": "(MAAE2400 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "ELEC4503": {
-    "required": "ELEC3909",
-    "restricted": []
-  },
-  "ACSE4101": {
-    "required": "CIVE2200 && CIVE2700",
-    "restricted": []
-  },
-  "ELEC2507": {
-    "required": "MATH1005 && ELEC2501 && SECOND_YEAR",
     "restricted": []
   },
   "SYSC3120": {
     "required": "SYSC2004",
     "restricted": []
   },
-  "SYSC3501": {
-    "required": "SYSC3600 || SYSC3610",
-    "restricted": []
-  },
-  "ELEC3907": {
-    "required": "(ELEC2507 || ELEC2607) && THIRD_YEAR",
-    "restricted": []
-  },
-  "ELEC4705": {
-    "required": "ELEC3908",
-    "restricted": []
-  },
-  "ENVE3004": {
-    "required": "CHEM1002 || CHEM1101 || ENVE3002",
-    "restricted": []
-  },
-  "ACSE3105": {
-    "required": "THIRD_YEAR",
+  "SYSC4310": {
+    "required": "SYSC3320",
     "restricted": []
   },
   "SYSC5103": {
     "required": "OTHER_REQUIREMENT",
     "restricted": []
   },
-  "SYSC4405": {
-    "required": "SYSC3500 || SYSC3600 || SYSC3610",
-    "restricted": []
-  },
-  "ARCH4200": {
-    "required": "OTHER_REQUIREMENT",
-    "restricted": []
-  },
-  "ACSE4601": {
-    "required": "ACSE3207 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "SYSC3320": {
-    "required": "(SYSC3310 && THIRD_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "ELEC2501": {
-    "required": "(PHYS1004 || PHYS1002) && MATH1005 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC2010": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC4310": {
-    "required": "SYSC3320",
-    "restricted": []
-  },
-  "SYSC4810": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "ENVE2001": {
-    "required": "(CHEM1002 || CHEM1101) && MAAE2400 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC4006": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "ACSE3207": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "SYSC3200": {
-    "required": "MATH1004 && MATH1104 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC2004": {
-    "required": "((SYSC1006 || SYSC2006) && SECOND_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "SYSC3503": {
-    "required": "(STAT2605 || SYSC2510) && SYSC3500",
-    "restricted": []
-  },
-  "ACSE4107": {
-    "required": "CIVE3209 && ENVE4105",
-    "restricted": []
-  },
-  "SYSC4120": {
-    "required": "SYSC3120",
-    "restricted": []
-  },
-  "SYSC4502": {
-    "required": "(SYSC1006[C-] || SYSC2006[C-]) && SYSC4602",
-    "restricted": []
-  },
-  "ARCH1222": {
-    "required": "PROGRAM_BAS",
-    "restricted": []
-  },
-  "ELEC2602": {
-    "required": "PHYS1004 && ELEC2501 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC2001": {
-    "required": "ECOR1606 || SYSC1005",
-    "restricted": []
-  },
-  "SYSC3303": {
-    "required": "SYSC2004 && SYSC4001",
-    "restricted": []
-  },
-  "SYSC4511": {
-    "required": "SYSC3501 && ECOR2050",
-    "restricted": []
-  },
-  "SYSC3601": {
-    "required": "(ELEC2607 && SYSC2003) || PERMISSION",
-    "restricted": []
-  },
-  "SYSC4416": {
-    "required": "(ECOR2050 || STAT3502 || STAT2605 || SYSC2510) && (SYSC1006 || SYSC2006) && THIRD_YEAR",
-    "restricted": []
-  },
-  "SYSC4507": {
-    "required": "(SYSC2001 || SYSC3006) && ELEC2607",
-    "restricted": []
-  },
-  "SYSC4202": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "SYSC4206": {
-    "required": "(SYSC3600 || SYSC3610) && FOURTH_YEAR",
-    "restricted": []
-  },
-  "SYSC4106": {
-    "required": "SYSC3120 && COMP3004 && THIRD_YEAR",
-    "restricted": []
-  },
-  "SYSC5001": {
-    "required": null,
-    "restricted": []
-  },
-  "SYSC3006": {
-    "required": "(SYSC1006 || SYSC2006) && (SYSC2310 || ELEC2607)",
-    "restricted": []
-  },
-  "SYSC3610": {
-    "required": "MATH1005 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC5101": {
-    "required": "SYSC5704",
-    "restricted": []
-  },
-  "SYSC4709": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "SYSC1006": {
-    "required": "(ECOR1041 && ECOR1042) && ECOR1031",
-    "restricted": []
-  },
-  "SYSC4203": {
-    "required": "(ELEC3605 || SYSC3203) && SYSC3610 && FOURTH_YEAR",
+  "COMP2402": {
+    "required": "COMP1006[C-] || COMP1406[C-]",
     "restricted": []
   },
   "SYSC4130": {
     "required": "SYSC3020 || SYSC3120",
     "restricted": []
   },
-  "SYSC3512": {
-    "required": "(ECOR2050 || SYSC2510 || STAT2605 || STAT3502) && THIRD_YEAR",
+  "ELEC4506": {
+    "required": "FOURTH_YEAR",
     "restricted": []
   },
-  "SYSC2320": {
-    "required": "(SYSC2310 || ELEC2607) && SECOND_YEAR",
+  "SYSC3006": {
+    "required": "(SYSC1006 || SYSC2006 || SYSC2310 || ELEC2607)",
     "restricted": []
   },
-  "SYSC3203": {
-    "required": "(ELEC2507 || ELEC3605) && MATH1005 && SECOND_YEAR",
+  "SYSC3610": {
+    "required": "MATH1005 && SECOND_YEAR",
     "restricted": []
   },
-  "SYSC1005": {
-    "required": null,
-    "restricted": []
-  },
-  "SYSC4607": {
-    "required": "SYSC3501 || SYSC3503",
-    "restricted": []
-  },
-  "ACSE3201": {
-    "required": "THIRD_YEAR",
-    "restricted": []
-  },
-  "SYSC3101": {
-    "required": "SYSC2004",
+  "ACSE4101": {
+    "required": "CIVE2200 && CIVE2700",
     "restricted": []
   },
   "SYSC3020": {
     "required": "SYSC2004",
     "restricted": []
   },
+  "ELEC4908": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "ACSE3207": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "SYSC3303": {
+    "required": "SYSC2004 && SYSC4001 && COMP2401 && COMP2402 && COMP3000",
+    "restricted": []
+  },
+  "ARCH1222": {
+    "required": "PROGRAM_BAS",
+    "restricted": []
+  },
+  "SYSC2004": {
+    "required": "(SYSC1006 || SYSC2006 && SECOND_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "SYSC4511": {
+    "required": "SYSC3501 && ECOR2050",
+    "restricted": []
+  },
+  "ECOR1056": {
+    "required": null,
+    "restricted": []
+  },
+  "SYSC2001": {
+    "required": "ECOR1606 || SYSC1005",
+    "restricted": []
+  },
+  "ARCH1000": {
+    "required": null,
+    "restricted": []
+  },
+  "SYSC4700": {
+    "required": "(SYSC3501 || SYSC3503) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC4006": {
+    "required": "THIRD_YEAR",
+    "restricted": []
+  },
+  "SYSC2010": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
+  "SYSC3601": {
+    "required": "(ELEC2607 && SYSC2003) || PERMISSION",
+    "restricted": []
+  },
+  "SYSC4206": {
+    "required": "(SYSC3600 || SYSC3610) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC4202": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC4505": {
+    "required": "(MATH2004 || SYSC3500 || SYSC3600 || SYSC3610)",
+    "restricted": []
+  },
+  "ELEC3909": {
+    "required": "ELEC3105 || PERMISSION",
+    "restricted": []
+  },
+  "SYSC3200": {
+    "required": "MATH1004 && MATH1104 && SECOND_YEAR",
+    "restricted": []
+  },
+  "SYSC2310": {
+    "required": "SECOND_YEAR",
+    "restricted": []
+  },
   "SYSC4101": {
     "required": "SYSC3120 || SYSC3020",
     "restricted": []
   },
-  "SYSC4602": {
+  "SYSC1005": {
+    "required": null,
+    "restricted": []
+  },
+  "ACSE3209": {
+    "required": "MAAE2400 && THIRD_YEAR",
+    "restricted": []
+  },
+  "ACSE3999": {
+    "required": "OTHER_REQUIREMENT",
+    "restricted": []
+  },
+  "SYSC4416": {
+    "required": "(ECOR2050 || STAT3502 || STAT2605 || SYSC2510) && (SYSC1006 || SYSC2006) && THIRD_YEAR",
+    "restricted": []
+  },
+  "SYSC3503": {
+    "required": "(SYSC3500 || STAT2605 || SYSC2510)",
+    "restricted": []
+  },
+  "SYSC3320": {
+    "required": "(SYSC3310 && THIRD_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "SYSC3313": {
+    "required": "(SYSC3310 && SYSC4001 && THIRD_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "SYSC4806": {
+    "required": "(COMP3005 && SYSC3110) || PERMISSION",
+    "restricted": []
+  },
+  "SYSC3512": {
     "required": "(ECOR2050 || SYSC2510 || STAT2605 || STAT3502) && THIRD_YEAR",
     "restricted": []
   },
-  "SYSC3310": {
-    "required": "(SYSC1006[C-] || SYSC2006[C-]) && (SYSC2320 || SYSC3006)",
+  "SYSC4120": {
+    "required": "SYSC3120",
     "restricted": []
   },
-  "SYSC5502": {
+  "ENVE3001": {
+    "required": "ENVE3002",
+    "restricted": []
+  },
+  "SYSC5001": {
     "required": null,
     "restricted": []
   },
-  "SYSC2100": {
-    "required": "(SYSC1006[C-] || SYSC2006[C-]) && SECOND_YEAR",
+  "SYSC5101": {
+    "required": "SYSC5704 && SYSC4102",
     "restricted": []
   },
-  "SYSC2003": {
-    "required": "SYSC2001 && SYSC2006",
+  "SYSC4709": {
+    "required": "FOURTH_YEAR",
     "restricted": []
   },
-  "SYSC4415": {
-    "required": "(ECOR2050 || STAT3502 || STAT2605 || SYSC2510) && (SYSC1006[C-] || SYSC2006[C-]) && THIRD_YEAR",
-    "restricted": []
-  },
-  "SYSC4701": {
-    "required": "(SYSC4602 && FOURTH_YEAR) || PERMISSION",
-    "restricted": []
-  },
-  "SYSC3500": {
-    "required": "MATH1005 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC3600": {
-    "required": "MATH1005 && SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC4805": {
-    "required": "SYSC3310",
-    "restricted": []
-  },
-  "SYSC4001": {
-    "required": "(SYSC1006[C-] && SYSC2006[C-])",
-    "restricted": []
-  },
-  "CHEM2204": {
-    "required": "CHEM2203",
-    "restricted": []
-  },
-  "CHEM2203": {
-    "required": "(CHEM1006[B-] || CHEM1002 || CHEM1012)",
-    "restricted": []
-  },
-  "CHEM1101": {
-    "required": "HIGH_SCHOOL_REQUIREMENT",
-    "restricted": []
-  },
-  "ACSE2001": {
-    "required": null,
+  "SYSC4502": {
+    "required": "(SYSC1006 || SYSC2006) && SYSC4602",
     "restricted": []
   },
   "SYSC4600": {
     "required": "SYSC3501 && ECOR2050",
     "restricted": []
   },
-  "CHEM2302": {
-    "required": "(MATH1007 || MATH1004) && (CHEM1006[B-] || CHEM1002 || CHEM1012 || CHEM1101)",
+  "ELEC4505": {
+    "required": "(ELEC3509 || SYSC3501 || SYSC3503)",
     "restricted": []
   },
-  "CHEM2800": {
-    "required": "(MATH1007 || MATH1004) && (CHEM1006[B-] || CHEM1002 || CHEM1012 || CHEM1101)",
+  "SYSC4106": {
+    "required": "SYSC3120 && COMP3004 && THIRD_YEAR",
     "restricted": []
   },
-  "CHEM1002": {
-    "required": "CHEM1001",
-    "restricted": []
-  },
-  "SYSC4505": {
-    "required": "(SYSC3500 || SYSC3600 || SYSC3610) && MATH2004",
+  "ELEC3908": {
+    "required": "ELEC2507",
     "restricted": []
   },
   "SYSC2510": {
@@ -1331,68 +1247,152 @@
     "required": "SYSC2004 && SYSC2100",
     "restricted": []
   },
-  "SYSC3313": {
-    "required": "(SYSC3310 && SYSC4001 && THIRD_YEAR) || PERMISSION",
+  "SYSC4001": {
+    "required": "SYSC1006 && SYSC2006",
     "restricted": []
   },
-  "SYSC3522": {
-    "required": "(SYSC1006[C-] || SYSC2006[C-]) && (SYSC3512 || SYSC4602)",
-    "restricted": []
-  },
-  "SYSC4907": {
-    "required": "FOURTH_YEAR",
-    "restricted": []
-  },
-  "SYSC3999": {
+  "SYSC5502": {
     "required": null,
     "restricted": []
   },
-  "SYSC2006": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC4700": {
-    "required": "(SYSC3501 || SYSC3503) && FOURTH_YEAR",
-    "restricted": []
-  },
-  "SYSC2310": {
-    "required": "SECOND_YEAR",
-    "restricted": []
-  },
-  "SYSC4205": {
-    "required": "MATH1005 && FOURTH_YEAR",
-    "restricted": []
-  },
-  "CHEM1001": {
-    "required": "HIGH_SCHOOL_REQUIREMENT",
-    "restricted": []
-  },
-  "SYSC4806": {
-    "required": "(COMP3005 && SYSC3110) || PERMISSION",
+  "SYSC3310": {
+    "required": "(SYSC1006 || SYSC2006 || SYSC2320 || SYSC3006)",
     "restricted": []
   },
   "SYSC4201": {
     "required": "ECOR2050 && THIRD_YEAR",
     "restricted": []
   },
+  "SYSC3010": {
+    "required": "(SYSC2100 || SYSC2003 || SYSC3310)",
+    "restricted": []
+  },
+  "SYSC1006": {
+    "required": "ECOR1031[C-] || (ECOR1041[C-] && ECOR1042[C-])",
+    "restricted": []
+  },
+  "SYSC3203": {
+    "required": "(MATH1005 || ELEC2507 || ELEC3605) && SECOND_YEAR",
+    "restricted": []
+  },
+  "SYSC3600": {
+    "required": "MATH1005 && SECOND_YEAR",
+    "restricted": []
+  },
+  "SYSC3522": {
+    "required": "(SYSC1006 || SYSC2006) && (SYSC3512 || SYSC4602)",
+    "restricted": []
+  },
+  "SYSC3999": {
+    "required": null,
+    "restricted": []
+  },
+  "SYSC2003": {
+    "required": "SYSC2001 && SYSC2006",
+    "restricted": []
+  },
+  "SYSC4405": {
+    "required": "SYSC3500 || SYSC3600 || SYSC3610",
+    "restricted": []
+  },
+  "SYSC4205": {
+    "required": "MATH1005 && FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC2320": {
+    "required": "(SYSC2310 || ELEC2607) && SECOND_YEAR",
+    "restricted": []
+  },
+  "CHEM2203": {
+    "required": "CHEM1006 && (CHEM1002 || CHEM1012)",
+    "restricted": []
+  },
+  "CHEM1001": {
+    "required": "HIGH_SCHOOL_REQUIREMENT",
+    "restricted": []
+  },
+  "SYSC2100": {
+    "required": "(SYSC1006 || SYSC2006) && SECOND_YEAR",
+    "restricted": []
+  },
+  "CHEM2302": {
+    "required": "CHEM1006 && (CHEM1002 || CHEM1012 || CHEM1101 || MATH1007 || MATH1004)",
+    "restricted": []
+  },
+  "CHEM2800": {
+    "required": "CHEM1006[B-] && CHEM1002 && CHEM1012 && CHEM1101 && (MATH1007 || MATH1004)",
+    "restricted": []
+  },
+  "SYSC4602": {
+    "required": "(ECOR2050 || SYSC2510 || STAT2605 || STAT3502) && THIRD_YEAR",
+    "restricted": []
+  },
   "COOP1000": {
     "required": "OTHER_REQUIREMENT",
     "restricted": []
   },
-  "CHEM3800": {
-    "required": "CHEM2207 || CHEM2203 || CHEM2800",
+  "SYSC4507": {
+    "required": "(ELEC2607 || SYSC2001 || SYSC3006)",
+    "restricted": []
+  },
+  "SYSC3500": {
+    "required": "MATH1005 && SECOND_YEAR",
+    "restricted": []
+  },
+  "ARCH4200": {
+    "required": "THIRD_YEAR",
     "restricted": []
   },
   "SYSC4604": {
     "required": "SYSC3503",
     "restricted": []
   },
-  "ARCH3881": {
+  "CHEM1101": {
+    "required": "HIGH_SCHOOL_REQUIREMENT",
+    "restricted": []
+  },
+  "SYSC4203": {
+    "required": "(SYSC3610 || ELEC3605 || SYSC3203) && FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC4701": {
+    "required": "(SYSC4602 && FOURTH_YEAR) || PERMISSION",
+    "restricted": []
+  },
+  "CHEM1002": {
+    "required": "CHEM1001",
+    "restricted": []
+  },
+  "CHEM2204": {
+    "required": "CHEM2203",
+    "restricted": []
+  },
+  "CHEM3800": {
+    "required": "CHEM2207 || CHEM2203 || CHEM2800",
+    "restricted": []
+  },
+  "SYSC3101": {
+    "required": "SYSC2004",
+    "restricted": []
+  },
+  "SYSC4907": {
+    "required": "FOURTH_YEAR",
+    "restricted": []
+  },
+  "SYSC4607": {
+    "required": "SYSC3501 || SYSC3503",
+    "restricted": []
+  },
+  "SYSC2006": {
     "required": "SECOND_YEAR",
     "restricted": []
   },
-  "SYSC3010": {
-    "required": "(SYSC2003 || SYSC3310) && SYSC2100",
+  "SYSC4415": {
+    "required": "(ECOR2050 || STAT3502 || STAT2605 || SYSC2510) && (SYSC1006 || SYSC2006) && THIRD_YEAR",
+    "restricted": []
+  },
+  "SYSC4805": {
+    "required": "SYSC3310",
     "restricted": []
   }
 }

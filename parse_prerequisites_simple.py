@@ -665,14 +665,22 @@ class SimplePrerequisiteParser:
                         # Comma+and pattern - courses should be AND-connected
                         remaining_with_grades = remaining_courses
                     else:
-                        # Apply original same-subject heuristic
-                        remaining_prefixes = [course[:4] for course in remaining_courses]
-                        if len(set(remaining_prefixes)) == 1:
-                            # Same subject - OR alternatives
-                            parsed_groups.append(f"({' || '.join(remaining_courses)})")
-                        else:
-                            # Different subjects - individual AND components
+                        # Check if the context has explicit "and" keywords between courses
+                        # This overrides the same-subject heuristic
+                        has_explicit_and = re.search(r'[a-z]{4}\s+\d{4}\s+and\s+.*?\s+and\s+[a-z]{4}\s+\d{4}', content.lower())
+                        
+                        if has_explicit_and:
+                            # Explicit AND context - treat as individual AND components
                             remaining_with_grades = remaining_courses
+                        else:
+                            # Apply original same-subject heuristic
+                            remaining_prefixes = [course[:4] for course in remaining_courses]
+                            if len(set(remaining_prefixes)) == 1:
+                                # Same subject - OR alternatives
+                                parsed_groups.append(f"({' || '.join(remaining_courses)})")
+                            else:
+                                # Different subjects - individual AND components
+                                remaining_with_grades = remaining_courses
             else:
                 remaining_with_grades = [self.add_grade_to_course(remaining_courses[0], content, [])]
         
