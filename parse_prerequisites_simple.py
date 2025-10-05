@@ -1,0 +1,398 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import json
+import glob
+from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class SimplePrerequisiteParser:
+    def __init__(self):
+        # Course code pattern (4 letters + 4 digits)
+        self.course_pattern = r'[A-Z]{4}\s*\d{4}'
+        
+        # Year standing patterns
+        self.year_patterns = {
+            'first': r'first[- ]year\s+status|1st\s+year\s+status',
+            'second': r'second[- ]year\s+status|2nd\s+year\s+status', 
+            'third': r'third[- ]year\s+status|3rd\s+year\s+status',
+            'fourth': r'fourth[- ]year\s+status|4th\s+year\s+status',
+            'fifth': r'fifth[- ]year\s+status|5th\s+year\s+status'
+        }
+
+    def extract_course_codes(self, text):
+        """Extract all course codes from text."""
+        matches = re.findall(self.course_pattern, text, re.IGNORECASE)
+        return [match.replace(' ', '').replace('\xa0', '').upper() for match in matches]
+
+    def parse_year_standing(self, text):
+        """Parse year standing requirements."""
+        text_lower = text.lower()
+        for year, pattern in self.year_patterns.items():
+            if re.search(pattern, text_lower):
+                return f"{year.upper()}_YEAR"
+        return None
+
+    def parse_grade_requirements(self, text):
+        """Parse minimum grade requirements."""
+        grade_pattern = r'with\s+a\s+minimum\s+grade\s+of\s+([A-F][+-]?|\d+%?)'
+        matches = re.findall(grade_pattern, text, re.IGNORECASE)
+        return matches
+
+    def parse_permissions(self, text):
+        """Check for permission requirements."""
+        permission_patterns = [
+            r'permission\s+of\s+the\s+department',
+            r'permission\s+of\s+the\s+school',
+            r'permission\s+of\s+department',
+            r'departmental\s+permission',
+            r'instructor[\'s]?\s+permission'
+        ]
+        
+        text_lower = text.lower()
+        for pattern in permission_patterns:
+            if re.search(pattern, text_lower):
+                return True
+        return False
+
+    def parse_corequisites(self, text):
+        """Parse co-requisite requirements."""
+        text_lower = text.lower()
+        
+        # Skip negative concurrent requirements
+        if 'may not be taken concurrently' in text_lower or re.search(r'not.*concurrently', text_lower):
+            return []
+        
+        coreq_patterns = [
+            r'concurrent\s+registration\s+in',
+            r'concurrent\s+enrolment\s+in',
+            r'concurrently\s+with'
+        ]
+        
+        coreqs = []
+        for pattern in coreq_patterns:
+            if re.search(pattern, text_lower):
+                match = re.search(pattern + r'\s*([^.]+)', text_lower)
+                if match:
+                    concurrent_text = match.group(1)
+                    courses = self.extract_course_codes(concurrent_text)
+                    coreqs.extend(courses)
+        
+        return list(set(coreqs))  # Remove duplicates
+
+    def parse_exclusions(self, text):
+        """Parse exclusion/restriction requirements."""
+        exclusions = []
+        
+        exclusion_patterns = [
+            r'not\s+open\s+to\s+students\s+in\s+([^.]+)',
+            r'not\s+available\s+to\s+([^.]+)',
+            r'excludes\s+([^.]+)'
+        ]
+        
+        for pattern in exclusion_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            exclusions.extend(matches)
+        
+        return [ex.strip() for ex in exclusions]
+
+    def simplify_prerequisites(self, prereq_text):
+        """Convert prerequisite text to simple logical expression."""
+        if not prereq_text or 'prerequisite' not in prereq_text.lower():
+            return None
+        
+        # Extract the actual prerequisite content
+        prereq_match = re.search(r'prerequisite\(s\):\s*(.+?)(?:\.|$)', prereq_text, re.IGNORECASE | re.DOTALL)
+        if not prereq_match:
+            return None
+        
+        content = prereq_match.group(1).strip()
+        
+        # Handle special cases first
+        year_req = self.parse_year_standing(content)
+        permission_req = self.parse_permissions(content)
+        
+        # Extract courses
+        courses = self.extract_course_codes(content)
+        
+        # Build simple expression
+        components = []
+        
+        # Add courses with improved logic detection
+        if courses:
+            if len(courses) == 1:
+                components.append(courses[0])
+            else:
+                # Better logic detection based on parentheses and keywords
+                course_expr = self.parse_course_logic(content, courses)
+                components.append(course_expr)
+        
+        # Add year requirement
+        if year_req:
+            components.append(year_req)
+        
+        # Add permission requirement
+        if permission_req:
+            components.append("PERMISSION")
+        
+        # Join with AND if multiple components
+        if len(components) > 1:
+            return ' && '.join(components)
+        elif len(components) == 1:
+            return components[0]
+        else:
+            return "OTHER_REQUIREMENT"
+
+    def parse_course_logic(self, content, courses):
+        """Parse course logic more intelligently."""
+        content_lower = content.lower()
+        
+        # Handle explicit parenthetical groups connected by AND
+        # Pattern: (A or B) and (C or D) or (X or Y) and Z
+        if '(' in content and ')' in content:
+            # Extract groups with parentheses and handle logic between them
+            return self.parse_grouped_logic(content, courses)
+        
+        # Handle simple cases without parentheses
+        if ' or ' in content_lower and ' and ' in content_lower:
+            # Mixed logic without clear grouping - use heuristics
+            return self.parse_mixed_logic(content, courses)
+        elif ' or ' in content_lower and not ' and ' in content_lower:
+            # All OR
+            return ' || '.join(courses)
+        elif ' and ' in content_lower and not ' or ' in content_lower:
+            # All AND  
+            return ' && '.join(courses)
+        elif ',' in content and ' or ' not in content_lower:
+            # Comma-separated usually means AND
+            return ' && '.join(courses)
+        else:
+            # Default fallback
+            return ' && '.join(courses) if len(courses) > 1 else courses[0]
+    
+    def parse_grouped_logic(self, content, courses):
+        """Parse parenthetical groups connected by logical operators."""
+        content_clean = content.lower()
+        
+        # Find all parenthetical groups that contain course codes
+        groups = re.findall(r'\(([^)]+)\)', content)
+        
+        parsed_groups = []
+        used_courses = set()
+        has_course_groups = False
+        
+        for group in groups:
+            group_courses = self.extract_course_codes(group)
+            if group_courses:
+                has_course_groups = True
+                used_courses.update(group_courses)
+                if len(group_courses) > 1 and ' or ' in group.lower():
+                    parsed_groups.append(f"({' || '.join(group_courses)})")
+                else:
+                    parsed_groups.append(' && '.join(group_courses))
+        
+        # If no parenthetical groups contain courses, fall back to mixed logic parsing
+        if not has_course_groups:
+            return self.parse_mixed_logic(content, courses)
+        
+        # Handle any remaining courses not in parentheses
+        remaining_courses = [c for c in courses if c not in used_courses]
+        if remaining_courses:
+            parsed_groups.extend(remaining_courses)
+        
+        # Connect groups based on the logic between them
+        if len(parsed_groups) > 1:
+            # Check if there are explicit ANDs between groups
+            if ' and ' in content_clean:
+                return ' && '.join(parsed_groups)
+            else:
+                # Default to AND for multiple groups
+                return ' && '.join(parsed_groups)
+        elif len(parsed_groups) == 1:
+            return parsed_groups[0]
+        else:
+            return ' && '.join(courses)
+    
+    def parse_mixed_logic(self, content, courses):
+        """Handle mixed AND/OR logic without clear parentheses."""
+        content_lower = content.lower()
+        
+        # First, check if we have a sequence like "A or B or C, and X"
+        # Split by comma and 'and' pattern to isolate OR groups  
+        parts = re.split(r',\s*and\s+|,\s*', content_lower)
+        
+        if len(parts) > 1:
+            parsed_parts = []
+            courses_used = set()
+            
+            for part in parts:
+                part_courses = self.extract_course_codes(part)
+                if part_courses:
+                    courses_used.update(part_courses)
+                    # Check if this part has OR logic
+                    if len(part_courses) > 1 and ' or ' in part:
+                        parsed_parts.append(f"({' || '.join(part_courses)})")
+                    elif len(part_courses) == 1:
+                        parsed_parts.append(part_courses[0])
+                    else:
+                        # Multiple courses without explicit OR - assume AND within part
+                        parsed_parts.append(' && '.join(part_courses))
+            
+            # Handle any courses not captured
+            remaining = [c for c in courses if c not in courses_used]
+            parsed_parts.extend(remaining)
+            
+            return ' && '.join(parsed_parts) 
+        
+        # Split by 'and' to find OR groups
+        and_parts = re.split(r'\s+and\s+', content_lower)
+        
+        if len(and_parts) > 1:
+            # Multiple AND parts - each part might have OR logic
+            parsed_parts = []
+            courses_used = set()
+            
+            for part in and_parts:
+                part_courses = self.extract_course_codes(part)
+                if part_courses:
+                    courses_used.update(part_courses)
+                    if len(part_courses) > 1 and ' or ' in part:
+                        parsed_parts.append(f"({' || '.join(part_courses)})")
+                    else:
+                        parsed_parts.extend(part_courses)
+            
+            # Add any courses not captured in parts
+            remaining = [c for c in courses if c not in courses_used]
+            parsed_parts.extend(remaining)
+            
+            return ' && '.join(parsed_parts)
+        
+        # Check if it's a simple OR sequence
+        if ' or ' in content_lower and content_lower.count(' or ') >= len(courses) - 1:
+            return ' || '.join(courses)
+        
+        # Fallback for unclear mixed logic
+        return f"({' || '.join(courses)})"
+
+    def parse_course_file(self, html_file):
+        """Parse a single course HTML file."""
+        try:
+            # Extract course code from filename
+            filename = os.path.basename(html_file)
+            course_code = filename.replace('.html', '').upper()
+            
+            # Read and parse HTML
+            with open(html_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Extract text from HTML
+            soup = BeautifulSoup(content, 'html.parser')
+            text_content = soup.get_text()
+            
+            # Parse components
+            prerequisites = self.simplify_prerequisites(text_content)
+            corequisites = self.parse_corequisites(text_content)
+            exclusions = self.parse_exclusions(text_content)
+            
+            # Create simple course data
+            course_data = {
+                'course': course_code,
+                'required': prerequisites,
+                'concurrent': corequisites,
+                'restricted': exclusions
+            }
+            
+            return course_data
+            
+        except Exception as e:
+            logger.error(f"✗ Error parsing {html_file}: {e}")
+            return None
+
+    def parse_all_courses(self, courses_dir="courses"):
+        """Parse all course files and return simple dataset."""
+        html_files = glob.glob(f"{courses_dir}/**/*.html", recursive=True)
+        
+        if not html_files:
+            logger.error(f"No HTML files found in {courses_dir}/ directory")
+            return {}
+        
+        logger.info(f"Found {len(html_files)} HTML files to parse")
+        
+        all_courses = {}
+        successful = 0
+        failed = 0
+        
+        # Process files in parallel
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            future_to_file = {executor.submit(self.parse_course_file, html_file): html_file 
+                            for html_file in html_files}
+            
+            for future in as_completed(future_to_file):
+                html_file = future_to_file[future]
+                try:
+                    course_data = future.result()
+                    if course_data:
+                        all_courses[course_data['course']] = {
+                            'required': course_data['required'],
+                            'concurrent': course_data['concurrent'],
+                            'restricted': course_data['restricted']
+                        }
+                        successful += 1
+                    else:
+                        failed += 1
+                except Exception as exc:
+                    logger.error(f'File {html_file} generated an exception: {exc}')
+                    failed += 1
+        
+        logger.info(f"Parsing complete! Successful: {successful}, Failed: {failed}")
+        return all_courses
+
+def main():
+    """Main function to run the parser."""
+    parser = SimplePrerequisiteParser()
+    
+    # Parse all courses
+    all_courses = parser.parse_all_courses()
+    
+    # Save to JSON file
+    output_file = "course_prerequisites_simple.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(all_courses, f, indent=2, ensure_ascii=False)
+    
+    logger.info(f"Results saved to {output_file}")
+    
+    # Print some examples
+    print(f"\n=== SAMPLE COURSES ===")
+    count = 0
+    for course_code, data in all_courses.items():
+        if data['required'] and count < 10:  # Show first 10 courses with requirements
+            print(f"{course_code}:")
+            print(f"  required: {data['required']}")
+            if data['concurrent']:
+                print(f"  concurrent: {data['concurrent']}")
+            if data['restricted']:
+                print(f"  restricted: {data['restricted']}")
+            print()
+            count += 1
+    
+    # Print statistics
+    total_courses = len(all_courses)
+    courses_with_reqs = sum(1 for course in all_courses.values() if course['required'])
+    courses_with_coreqs = sum(1 for course in all_courses.values() if course['concurrent'])
+    courses_with_restrictions = sum(1 for course in all_courses.values() if course['restricted'])
+    
+    print(f"=== STATISTICS ===")
+    print(f"Total courses: {total_courses}")
+    print(f"Courses with requirements: {courses_with_reqs}")
+    print(f"Courses with co-requisites: {courses_with_coreqs}")
+    print(f"Courses with restrictions: {courses_with_restrictions}")
+    print(f"Output saved to: {output_file}")
+
+if __name__ == "__main__":
+    main()

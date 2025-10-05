@@ -3,4 +3,3 @@
 [ ]  Develop a strategy to validate and verify that the scheduler works correctly
 [ ]  Review the Capstone project proposal template requirements (proposal due October 17th)
 [ ]  Consider data privacy issues, especially around handling student grades and information
-
