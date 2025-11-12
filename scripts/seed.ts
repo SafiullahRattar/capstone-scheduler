@@ -4,6 +4,15 @@ import * as path from 'path'
 
 const prisma = new PrismaClient()
 
+// Enhanced course data interface
+interface CourseEntry {
+  required: string | null
+  restricted: string[]
+  title?: string
+  credits?: number
+  description?: string
+}
+
 // Prerequisite expression parser
 interface ParsedNode {
   type: 'AND' | 'OR' | 'COURSE' | 'YEAR_STANDING' | 'PERMISSION'
@@ -180,45 +189,26 @@ function extractCourseCodesFromExpression(expression: string): string[] {
   return expression.match(coursePattern) || []
 }
 
-// Helper function to collect all prerequisite course codes recursively
-function collectPrerequisiteCourses(parsedNode: ParsedNode): string[] {
-  const courses: string[] = []
-  
-  if (parsedNode.type === 'COURSE' && parsedNode.value) {
-    courses.push(parsedNode.value)
-  }
-  
-  if (parsedNode.children) {
-    for (const child of parsedNode.children) {
-      courses.push(...collectPrerequisiteCourses(child))
-    }
-  }
-  
-  return courses
-}
-
 async function main() {
   console.log('[SEED] Starting database seed...')
 
-  // Read the prerequisites JSON file
+  // Read the enhanced prerequisites JSON file
   const prerequisitesPath = path.join(process.cwd(), 'course_prerequisites_simple.json')
-  const prerequisitesData = JSON.parse(await fs.readFile(prerequisitesPath, 'utf-8'))
+  const prerequisitesData: Record<string, CourseEntry> = JSON.parse(await fs.readFile(prerequisitesPath, 'utf-8'))
 
-  console.log(`[COURSES] Found ${Object.keys(prerequisitesData).length} courses with prerequisites`)
+  console.log(`[COURSES] Found ${Object.keys(prerequisitesData).length} courses with enhanced data`)
 
   // PASS 1: Collect all unique course codes mentioned in prerequisites
   console.log('[SEARCH] Pass 1: Collecting all referenced courses...')
   const allReferencedCourses = new Set<string>()
   
-  for (const [courseId, data] of Object.entries(prerequisitesData)) {
-    const courseData = data as { required: string | null, restricted: string[] }
-    
+  for (const [courseId, courseEntry] of Object.entries(prerequisitesData)) {
     // Add the main course
     allReferencedCourses.add(courseId)
     
     // Extract prerequisite courses from the expression
-    if (courseData.required) {
-      const prereqCourses = extractCourseCodesFromExpression(courseData.required)
+    if (courseEntry.required) {
+      const prereqCourses = extractCourseCodesFromExpression(courseEntry.required)
       prereqCourses.forEach(course => allReferencedCourses.add(course))
     }
   }
@@ -226,49 +216,64 @@ async function main() {
   console.log(`[LIST] Found ${allReferencedCourses.size} unique courses to create`)
   
   // Create all Course records first to satisfy foreign key constraints
-  console.log('[CREATE]  Creating Course records...')
+  console.log('[CREATE] Creating Course records...')
   let coursesCreated = 0
+  let titledCourses = 0
+  
   for (const courseId of Array.from(allReferencedCourses)) {
     try {
+      const courseEntry = prerequisitesData[courseId]
+      
       await prisma.course.upsert({
         where: { id: courseId },
         update: {
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          // Update title/description if we have enhanced data
+          ...(courseEntry?.title && courseEntry.title !== courseId ? { 
+            title: courseEntry.title,
+            description: courseEntry.description,
+            credits: courseEntry.credits
+          } : {})
         },
         create: {
           id: courseId,
-          title: courseId, // Will be populated with actual titles when course catalog data is available
+          title: courseEntry?.title || courseId,
+          description: courseEntry?.description || null,
+          credits: courseEntry?.credits || null
         }
       })
+      
       coursesCreated++
+      if (courseEntry?.title && courseEntry.title !== courseId) {
+        titledCourses++
+      }
     } catch (error) {
       console.log(`[ERROR] Error creating course ${courseId}:`, error)
     }
   }
   
   console.log(`[SUCCESS] Created ${coursesCreated} course records`)
+  console.log(`[TITLES] ${titledCourses} courses have proper titles`)
 
   // PASS 2: Create prerequisites and parse trees
   console.log('[TREE] Pass 2: Creating prerequisite expressions and trees...')
   let successCount = 0
   let errorCount = 0
 
-  for (const [courseId, data] of Object.entries(prerequisitesData)) {
-    const courseData = data as { required: string | null, restricted: string[] }
-    
+  for (const [courseId, courseEntry] of Object.entries(prerequisitesData)) {
     try {
       // Create prerequisite if it exists
-      if (courseData.required) {
+      if (courseEntry.required) {
         // Store the human-readable expression
         await prisma.prerequisite.upsert({
           where: { courseId },
           update: {
-            expression: courseData.required,
+            expression: courseEntry.required,
             lastModified: new Date()
           },
           create: {
             courseId: courseId,
-            expression: courseData.required,
+            expression: courseEntry.required,
           }
         })
 
@@ -279,12 +284,12 @@ async function main() {
             where: { courseId }
           })
           
-          const parsedTree = parsePrerequisiteExpression(courseData.required)
+          const parsedTree = parsePrerequisiteExpression(courseEntry.required)
           await createPrerequisiteTree(courseId, parsedTree)
           
           successCount++
         } catch (parseError) {
-          console.log(`[WARNING]  Failed to parse prerequisites for ${courseId}: ${courseData.required}`)
+          console.log(`[WARNING] Failed to parse prerequisites for ${courseId}: ${courseEntry.required}`)
           console.log(`   Error: ${parseError}`)
           errorCount++
         }
@@ -302,6 +307,22 @@ async function main() {
   if (errorCount > 0) {
     console.log(`   Parsing errors: ${errorCount} courses`)
   }
+  
+  // Show statistics about course titles
+  const coursesWithTitles = await prisma.course.count({
+    where: {
+      NOT: {
+        title: { equals: prisma.course.fields.id }
+      }
+    }
+  })
+  
+  const totalCourses = await prisma.course.count()
+  
+  console.log(`\n[FINAL STATS] Course title coverage:`)
+  console.log(`   Total courses in database: ${totalCourses}`)
+  console.log(`   Courses with proper titles: ${coursesWithTitles}`)
+  console.log(`   Coverage: ${((coursesWithTitles / totalCourses) * 100).toFixed(1)}%`)
 }
 
 main()
