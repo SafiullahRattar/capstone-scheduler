@@ -1,0 +1,20 @@
+{
+  "name": "carleton-smart-scheduler",
+  "version": "0.1.0",
+  "description": "Smart Scheduler for Carleton Engineering Students",
+  "scripts": {
+    "db:setup": "prisma generate && prisma db push",
+    "db:reset": "prisma db push --force-reset",
+    "db:seed": "tsx scripts/seed.ts",
+    "cli": "tsx cli/index.ts"
+  },
+  "dependencies": {
+    "prisma": "^5.7.0",
+    "@prisma/client": "^5.7.0",
+    "typescript": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.6.0"
+  }
+}
