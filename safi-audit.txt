@@ -1,0 +1,2828 @@
+<!DOCTYPE html>	<html lang="en-US">
+	<head>
+
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+<meta name="description" content="uAchieve Self-Service" />
+<meta name="keywords" content="uAchieve Self-Service,u.achieve,u.achieve self service,audit,interactive,degree,graduate,college,progress,track" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>My Audit - Audit Results Tab</title>
+<link rel="icon" type="image/ico" href="/selfservice/images/favicon.ico"/>
+<link rel="stylesheet" type="text/css" media="all" href="/selfservice/gzip_N638463752/bundles/normalize.css" />
+<link rel="stylesheet" type="text/css" media="all" href="/selfservice/gzip_N201209837/bundles/jquery.css" />
+<link rel="stylesheet" type="text/css" media="all" href="/selfservice/gzip_N624654365/bundles/bootstrap.css" />
+<link rel="stylesheet" type="text/css" media="all" href="/selfservice/gzip_N251752155/bundles/fontawesome.css" />
+<link rel="stylesheet" type="text/css" media="all" href="/selfservice/gzip_N1955633521/bundles/base.css" />
+<link rel="stylesheet" type="text/css" media="all" href="/selfservice/gzip_N1806896843/bundles/common.css" />
+<link rel="stylesheet" type="text/css" media="all" title="default" href="/selfservice/gzip_1063150981/bundles/default.css" />
+<link rel="stylesheet" type="text/css" media="all" title="highcontrast" href="/selfservice/gzip_N343979474/bundles/highcontrast.css" />
+
+<script type="text/javascript" src="/selfservice/gzip_N14331008/bundles/jquery.js" ></script>
+<script type="text/javascript" src="/selfservice/gzip_N189025147/bundles/base.js" ></script>
+
+		<!--[if lt IE 9]>
+<script type="text/javascript" src="/selfservice/gzip_N745584451/bundles/respond.js" ></script>
+        <![endif]-->
+              
+<script type="text/javascript"> if (top.frames.length!=0) top.location=self.document.location; </script>
+
+<input type="hidden" id="contextPath" value="/selfservice" />		
+        
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-39603289-16"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'UA-39603289-16');
+        </script>
+
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-W0DPRCVBYP"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-W0DPRCVBYP');
+        </script>
+
+	</head>
+		<body>
+	
+
+
+
+
+	
+	
+
+<div id="warnSessionTimeOut" class="alert alert-danger" aria-live="assertive"  style="display:none;" data-spy="affix" >
+	<i class="fas fa-exclamation-triangle " style="font-size: 14px;" aria-hidden="true"></i> 
+	<span id="timeoutWarningText" ></span>
+	<a id="stayLoggedIn" onclick="keepLoggedIn(); return false;" href=""> Click here to stay logged in</a>
+	
+	<button type="button" class="close" onclick="keepLoggedIn()" aria-label="Close">
+			<span aria-hidden="true">&times;</span>
+	</button>
+</div>
+
+	
+	<!-- menu -->
+				<header class="hidden-print">
+				<div id="header" class="d-none d-lg-block">
+					<div id="headerLogo" class=" first">
+							<img src="/selfservice/images/logo.png" alt="Identifies School Logo" title="School Logo"  />
+			
+					</div>
+					<div id="headerInfo" class="float-right">
+								<span class="float-right">
+									Safiullah Rattar
+								</span>
+								<br/>
+						
+								<span class="float-right">
+									Undergraduate
+								</span>
+								<br/>
+
+							<!--span class="textonlylink">Turn off Styles & Javascript</span-->
+							<br/>
+							<span class="float-right">
+
+	<small>Select your style:</small>
+	<button type="button" class="btn badge badge-pill badge-defaultCSS" title="Default Style"  onclick="setActiveStyleSheet('default',true); return false;"> &nbsp; <span class="sr-only">Default Style</span></button>
+	<button type="button" class="btn badge badge-pill badge-highContrastCSS" title="High Contrast Style"  onclick="setActiveStyleSheet('highcontrast',true); return false;">&nbsp; <span class="sr-only">High Contrast Style</span></button>
+							</span>
+							
+					</div>
+				</div>
+<ul class="skiplist dontprint">
+    		<li class="skip"><a href="#main" id="skpnav" >Skip navigation links.</a></li>
+    	</ul>
+
+
+	<nav class="navbar navbar-default main-menu navbar-expand-md justify-content-end" >
+		<div class="navbar-header" id="navbar-default">
+			  
+			  
+		  		  <button type="button" class="navbar-toggler menu_collapsed_button" data-toggle="collapse" data-target="#mainmenu">
+					   <span class="sr-only">Toggle navigation</span>
+					   <span class="btn menu_collapsed_span">Menu</span>
+				  </button>
+				  
+		</div>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+						<div class="collapse navbar-collapse main-menu" role="menubar" id="mainmenu">
+			    			<ul class="nav navbar-nav" style="height: auto;">
+									<li id="audits" class="dropdown d-none d-md-block">
+										<a href="#" class="dropdown-toggle" data-toggle="dropdown">Audits <b class="caret"></b></a>
+										<ul class="dropdown-menu" id="auditsDD">
+												<li>	<a href="/selfservice/audit/create.html" class="" title="Request New" alt="Request New" target="_self"   >Request New </a>
+</li>
+												<li>	<a href="/selfservice/audit/list.html" class="" title="Manage" alt="Manage" target="_self"   >Manage </a>
+</li>
+										</ul>
+									</li>
+										<li class="d-block d-md-none requestAudit">	<a href="/selfservice/audit/create.html" class="" title="Request New Audit" alt="Request New Audit" target="_self"  role="menuitem" >Request New Audit </a>
+</li>
+										<li class="d-block d-md-none manageAudits">	<a href="/selfservice/audit/list.html" class="" title="Manage Audits" alt="Manage Audits" target="_self"  role="menuitem" >Manage Audits </a>
+</li>
+								
+								
+									
+									
+
+	
+	
+									<li id="courses" class="dropdown d-none d-md-block">
+										<a class="dropdown-toggle" data-toggle="dropdown" href="#" >Courses <b class="caret"></b></a>
+										<ul class="dropdown-menu" id="coursesDD">
+												<li>	<a href="/selfservice/plannedcourse/list.html" class="" title="Planned" alt="Planned" target="_self"   >Planned </a>
+</li>
+										</ul>
+									</li>
+										<li class="d-block d-md-none plannedCourses">	<a href="/selfservice/plannedcourse/list.html" class="" title="Planned Courses" alt="Planned Courses" target="_self"  role="menuitem" >Planned Courses </a>
+</li>
+
+
+	
+	
+								
+								<li class="d-block d-md-none">
+					    			<a href="/selfservice/j_spring_security_logout" role="menuitem">
+					    				<i class="fas fa-sign-out-alt fa-lg"></i> Log Out
+				    				</a>
+			    				</li>
+							</ul>
+									
+					    	<ul class="nav navbar-nav navbar-right settings d-none d-md-block ml-auto">
+						     	<li class="dropdown" id="settings">
+						        	<a href="#" id="settings" class="dropdown-toggle" data-toggle="dropdown" title="Settings"><span class="sr-only">Settings</span><i class="fas fa-cog fa-lg"></i> <b class="caret"></b></a>
+									<ul class="dropdown-menu"  id="settingsDD">
+	                         				<li><a href="https://carleton.ca/registrar/progress/academic-audit/" target="_blank" alt="Help">Help <span class="sr-only">Link opens in a new tab or window</span></a></li>
+										<li>
+											<a href="/selfservice/j_spring_security_logout">
+						    					<i class="fas fa-sign-out-alt fa-lg"></i> Log Out
+					    					</a>
+				    					</li>
+									</ul>
+								</li>
+							</ul>
+							
+						</div>
+				
+				
+				</header>
+			
+		<div class="container-fluid" style="margin-top: 20px;" id="main" role="main">					
+
+			
+			<!-- body -->		
+			<div>
+<h1 class="sr-only">Audit Results</h1>
+<input type= "hidden" id= "pageGroup" value= "audits"/>
+<input type= "hidden" id= "mobilePageGroup" value= "manageAudits"/>
+<input type= "hidden" id= "showCourseLinks" value= "T" />
+<input type= "hidden" id= "hoursLabel" value= "Credit" />
+<input type= "hidden" id= "auditSpecialEffects" value= "F" />
+<input type= "hidden" id= "seriesIdentifierClass" value= "" />
+<input type= "hidden" id= "auditConfigurationAutoCollapseStandardView" value= "false" />
+<input type= "hidden" id= "auditConfigautoCollapsePrinterView" value= "false" />
+<input type= "hidden" id= "printerFriendly" value= "false" />
+<input type= "hidden" id= "maxYearTermCode" value= "000000" />
+							
+		
+		<h1 class="sr-only">Student and Audit Information</h1>
+				<div class="auditTitle">
+					<div class="floatright" style="height:60px;">
+	<a id="pageAddButton" href="/selfservice/audit/create.html" class="btn btn-primary" role="button" onclick="disableRunAudit()" style="font-style: normal;">Request Audit</a>
+					</div>
+					<!--div -->
+						     Rattar, Safiullah
+					<!-- /div -->
+					<br/>
+
+							Bachelor of Engineering - Software Engineering<br/>
+				</div>
+				<div class="auditMessage"></div>
+			    	
+					<div class="auditHeader verticalListing row">		
+							<div class="auditHeaderEntryLabel col-1">
+				    			<h><b>Prepared On</b></h>
+			    			</div>
+			    			<div class="auditHeaderEntry col-3">
+				    			<h>11/12/2025 02:07 PM</h>
+			    			</div>
+							<div class="auditHeaderEntryLabel col-1">
+				    			<h><b>Program Code</b></h>
+			    			</div>
+			    			<div class="auditHeaderEntry col-3">
+				    			<h>BENG-8P</h>
+			    			</div>
+							<div class="auditHeaderEntryLabel col-1">
+				    			<h><b>Catalog Year</b></h>
+			    			</div>
+			    			<div class="auditHeaderEntry col-3">
+				    			<h>Fall 2021</h>
+			    			</div>
+							<div class="auditHeaderEntryLabel col-1">
+				    			<h><b>Student ID</b></h>
+			    			</div>
+			    			<div class="auditHeaderEntry col-3">
+				    			<h>101245709</h>
+			    			</div>
+							<div class="auditHeaderEntryLabel col-1">
+				    			<h><b>Graduation Date</b></h>
+			    			</div>
+			    			<div class="auditHeaderEntry col-3">
+				    			<h></h>
+			    			</div>
+							<div class="auditHeaderEntryLabel col-1">
+				    			<h><b>Job ID</b></h>
+			    			</div>
+			    			<div class="auditHeaderEntry col-3">
+				    			<h>2531614073019386</h>
+			    			</div>
+			    		
+					</div>
+				
+	
+
+
+
+	
+
+	
+		<script type='text/javascript'>
+	
+			$(document).ready(function() {
+				loadGraphColors();
+				loadAuditGraphOptions();	
+			});
+			
+			function loadAuditGraphOptions(){
+				$.ajaxSetup({ cache: false });	
+				loadAcademicProgressGraph(false, { complete: "Complete", inProgress: "In Progress", unfulfilled: "Unfulfilled", planned: "Planned", hours: "Credits", gpa: "CGPA" }, {"options":{"gpa":{"decimalPlaces":2,"showAllDecimals":true,"truncate":true,"maxGPA":12.0},"hour":{"decimalPlaces":2,"showAllDecimals":true},"animate":true},"data":[{"label":"Complementary","unfulfilledHours":0.0,"completedHours":1.0,"inProgressHours":0.5,"plannedHours":0.0,"gpa":9.5,"reqGpa":0.0,"seriesName":"Complementary","rtabx":"/selfservice/audit/read.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1DYXRlZ29yeSEhISFzZXJpZXNJZGVudGlmaWVyPUNvbXBsZW1lbnRhcnkhISEhcnRhYng9bnVsbCEhISFzdGFieD1udWxsISEhIXNlcnZsZXRQYXRoPS9zZWxmc2VydmljZS9hdWRpdC9yZWFkLmh0bWwhISEhc2VyaWVzTGFiZWw9Q29tcGxlbWVudGFyeQ==","or":0,"optional":0},{"label":"Year 1","unfulfilledHours":0.0,"completedHours":4.5,"inProgressHours":0.0,"plannedHours":0.0,"gpa":11.153846,"reqGpa":0.0,"seriesName":"Year 1","rtabx":"/selfservice/audit/read.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1DYXRlZ29yeSEhISFzZXJpZXNJZGVudGlmaWVyPVllYXIgMSEhISFydGFieD1udWxsISEhIXN0YWJ4PW51bGwhISEhc2VydmxldFBhdGg9L3NlbGZzZXJ2aWNlL2F1ZGl0L3JlYWQuaHRtbCEhISFzZXJpZXNMYWJlbD1ZZWFyIDE=","or":0,"optional":0},{"label":"Year 2","unfulfilledHours":0.0,"completedHours":4.5,"inProgressHours":0.0,"plannedHours":0.0,"gpa":11.25,"reqGpa":0.0,"seriesName":"Year 2","rtabx":"/selfservice/audit/read.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1DYXRlZ29yeSEhISFzZXJpZXNJZGVudGlmaWVyPVllYXIgMiEhISFydGFieD1udWxsISEhIXN0YWJ4PW51bGwhISEhc2VydmxldFBhdGg9L3NlbGZzZXJ2aWNlL2F1ZGl0L3JlYWQuaHRtbCEhISFzZXJpZXNMYWJlbD1ZZWFyIDI=","or":0,"optional":0},{"label":"Year 3","unfulfilledHours":0.0,"completedHours":5.5,"inProgressHours":0.0,"plannedHours":0.0,"gpa":8.0,"reqGpa":0.0,"seriesName":"Year 3","rtabx":"/selfservice/audit/read.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1DYXRlZ29yeSEhISFzZXJpZXNJZGVudGlmaWVyPVllYXIgMyEhISFydGFieD1udWxsISEhIXN0YWJ4PW51bGwhISEhc2VydmxldFBhdGg9L3NlbGZzZXJ2aWNlL2F1ZGl0L3JlYWQuaHRtbCEhISFzZXJpZXNMYWJlbD1ZZWFyIDM=","or":0,"optional":0},{"label":"Year 4","unfulfilledHours":0.0,"completedHours":0.0,"inProgressHours":5.0,"plannedHours":0.0,"gpa":0.0,"reqGpa":0.0,"seriesName":"Year 4","rtabx":"/selfservice/audit/read.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1DYXRlZ29yeSEhISFzZXJpZXNJZGVudGlmaWVyPVllYXIgNCEhISFydGFieD1udWxsISEhIXN0YWJ4PW51bGwhISEhc2VydmxldFBhdGg9L3NlbGZzZXJ2aWNlL2F1ZGl0L3JlYWQuaHRtbCEhISFzZXJpZXNMYWJlbD1ZZWFyIDQ=","or":0,"optional":0}]});
+				loadGpaDetailGraph(false, { complete: "Complete", inProgress: "In Progress", unfulfilled: "Unfulfilled", planned: "Planned", hours: "Credits", gpa: "CGPA" }, {"options":{"gpa":{"decimalPlaces":2,"showAllDecimals":true,"truncate":true,"maxGPA":12.0},"hour":{"decimalPlaces":2,"showAllDecimals":true},"animate":true},"data":[{"unfulfilledHours":0.0,"completedHours":15.5,"inProgressHours":5.5,"plannedHours":0.0,"gpa":9.780488,"reqGpa":5.0}]});
+			}
+		
+		</script>
+		
+		
+	<ul class="nav nav-tabs" >
+			<li class="nav-item"><a class="nav-link active" href="#" aria-current="page" >Audit Results</a></li>
+			<li class="nav-item"><a class="nav-link" href="/selfservice/audit/listcourses.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1BdWRpdCEhISFzZXJpZXNJZGVudGlmaWVyPW51bGwhISEhcnRhYng9bnVsbCEhISFzdGFieD1udWxsISEhIXNlcnZsZXRQYXRoPS9zZWxmc2VydmljZS9hdWRpdC9yZWFkLmh0bWwhISEhc2VyaWVzTGFiZWw9bnVsbA==">Course History</a></li>
+			<li class="nav-item"><a class="nav-link" href="/selfservice/audit/listmarkers.html?id=AuditViewRequest!!!!ISEhIWludFNlcU5vPTQwMTIyMzAwISEhIXJlcXVlc3RMZXZlbD1BdWRpdCEhISFzZXJpZXNJZGVudGlmaWVyPW51bGwhISEhcnRhYng9bnVsbCEhISFzdGFieD1udWxsISEhIXNlcnZsZXRQYXRoPS9zZWxmc2VydmljZS9hdWRpdC9yZWFkLmh0bWwhISEhc2VyaWVzTGFiZWw9bnVsbA==">Markers</a></li>
+	</ul>
+	
+	
+	<table class="fancytable" role="presentation" id="auditSummary" style="width:100%"><tr><td></td><td>
+		<h2 class="sr-only hidden-print">Progress Chart</h2>
+			<div class="row graphs hidden-print">
+
+
+				<div class="col-lg-4" style="flex-basis:auto;-ms-flex-preferred-size:auto;">
+					<span class="stronger">
+								Audit
+												
+
+					</span>
+					<br/>
+					<p class="floatleft graphLegend">
+						You are here: <i class="fas fa-home"></i>
+							
+								Audit
+					</p>
+					<br/><hr/>
+					<div id="gpaDetailGraphHtml" class="row" style="width: 297px; height: 183px;">
+						<div class="col-8">
+							<div id="gpaDetailGraphHtmlPie" style="height: 145px;"><i class="fas fa-spinner fa-spin" title="Still Loading"></i></div>
+							<div class="aligncenter" style="height: 17px; padding: 5px;">
+								<span id="gpaDetailGraphHtmlPieLabel" class="graphLabelLabel">&nbsp;Credits&nbsp;</span>
+							</div>
+						</div>
+						<div class="col-4">
+							<div id="gpaDetailGraphHtmlBar" style="height: 146px;"><i class="fas fa-spinner fa-spin" title="Still Loading"></i></div>
+							<div class="aligncenter" style="height: 17px;">
+								<span id="gpaDetailGraphHtmlBarLabel" class="graphLabelLabel">&nbsp;CGPA&nbsp;</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-8" style="flex-basis:auto;-ms-flex-preferred-size:auto;">
+					<div>
+						<span class="stronger">
+									Categories
+													</span>
+						<br/>
+						<p class="floatright graphLegend">
+							<strong>Click on any area of the graph for further detail.</strong>
+						</p>
+						<br/><hr/>
+						<div id="academicProgressGraphHtml" class="row">
+							<div class="col-8">
+								<div id="academicProgressGraphHtmlHours" style="height: 146px;"><i class="fas fa-spinner fa-spin" title="Still Loading"></i></div>
+								<div class="aligncenter" style="height: 17px;margin-bottom: 5px;">
+									<span id="academicProgressGraphHtmlHoursLabel" class="graphLabelLabel">&nbsp;Credits&nbsp;</span>
+								</div>
+							</div>
+							<div class="col-4">
+								<div id="academicProgressGraphHtmlGPA" style="height: 146px;"><i class="fas fa-spinner fa-spin" title="Still Loading"></i></div>
+								<div class="aligncenter" style="height: 17px;">
+									<span id="academicProgressGraphHtmlGPALabel" class="graphLabelLabel">&nbsp;CGPA&nbsp;</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-12 pt-4" style="flex-basis:auto;-ms-flex-preferred-size:auto;">
+					<div class="row">
+						<div class="col-lg-2 col-0"></div>
+						<div class="col-lg-8 col-12" style="padding: 0px 5px; border-style: solid; border-width: 1px;">
+							<div class="row">
+								
+								<div class="col-lg-3 col-6 graphLegendLabel">
+									<canvas id="graphLegendOK" width="20" height="20">
+									</canvas>
+										<a href="#" onclick="filterAudit('Status_OK','graphLegendLinkOK'); return false;" style="vertical-align:super" id="graphLegendLinkOK">
+										<span id="graphLegendLabelOK">Complete</span> <span class="sr-only">Audit Filter</span>
+										</a>
+								</div>
+								<div class="col-lg-3 col-6 graphLegendLabel">
+									<canvas id="graphLegendIP" width="20" height="20">
+									</canvas>
+										<a href="#"  onclick="filterAudit('Status_IP','graphLegendLinkIP'); return false;" style="vertical-align:super" id="graphLegendLinkIP">
+											<span id="graphLegendLabelIP">In Progress</span> <span class="sr-only">Audit Filter</span>
+										</a>	
+								</div>
+								<div class="col-lg-3 col-6 graphLegendLabel">
+									<canvas id="graphLegendNO" width="20" height="20">
+									</canvas>
+										<a href="#"  onclick="filterAudit('Status_NO','graphLegendLinkNO'); return false;" style="vertical-align:super" id="graphLegendLinkNO">
+											<span id="graphLegendLabelNO">Unfulfilled</span> <span class="sr-only">Audit Filter</span>
+										</a>	
+								</div>
+								<div class="col-lg-3 col-6 graphLegendLabel">
+									<canvas id="graphLegendPL" width="20" height="20">
+									</canvas>
+										<a href="#"  onclick="filterAudit('Status_PL','graphLegendLinkPL'); return false;" style="vertical-align:super" id="graphLegendLinkPL">
+											<span id="graphLegendLabelPL">Planned</span> <span class="sr-only">Audit Filter</span>
+										</a>	
+								</div>
+							</div>
+						</div>	
+						<div class="col-md-2 col-xs-0"></div>
+					</div>
+				</div>								
+			</div>
+	</td><td></td></tr><tr><td></td><td></td><td></td></tr></table>
+	
+					
+		<h2 class="sr-only">Audit Result Details</h2>
+		<div id="auditResults">
+			<div id="auditMenu">
+				<div class="aligncenter auditHeaderMessage">
+				</div>
+				
+				<p id="expandCollapseAllLinks" style="display:none;">
+					<a href="#" id="expandAll" onclick="expandAllReq(); return false;"><i class="far fa-caret-square-down"></i> Open All Sections</a> <span class="spacer">&nbsp;</span> 
+					<a href="#" id="collapseAll" onclick="collapseAllReq(); return false;"><i class="far fa-caret-square-right"></i> Close All Sections</a>
+				</p>
+				
+	<div class="help">
+		
+			<a href="#" data-toggle="modal" data-target="#auditresultsModal" aria-haspopup="true" title = "Help for audit results" class="black" style="text-decoration:none;">
+			
+			<span class="sr-only">View Help Modal</span>
+			<i class="fas fa-question-circle fa-lg"></i>
+
+		</a>
+		
+	</div>
+	
+	<div class="modal fade" id="auditresultsModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+  		<div class="modal-dialog" role="document">
+    		<div class="modal-content">
+      			<div class="modal-body">
+<h1>Interpreting Audit Results</h1>
+
+
+    <h2>COMPLETION STATUS</h2>
+    <div style="margin: 15px;">
+        <ul class="list-unstyled">
+            <li>
+                <span class="statusOK legend_status" style="float: left;" title="Requirement/Sub-Requirement Complete">
+                    <i class="fas fa-statusOK" title="Requirement / Sub-Requirement Complete Image"></i>
+                </span>  - Complete
+            </li>
+            
+            <li>
+                <span class="statusPL legend_status" style="float: left;" title="Requirement/Sub-Requirement Complete with Planned Courses">
+                    <i class="fas fa-statusPL" title="Requirement / Sub-Requirement Complete with Planned Courses Image"></i> 
+                </span> - Planned
+            </li> 
+        
+            <li>
+                <span class="statusIP legend_status" style="float: left;" title="Requirement/Sub-Requirement In Progress">
+                    <i class="fas fa-statusIP" title="Requirement / Sub-Requirement In Progress"></i> 
+                </span> - In Progress
+            </li> 
+        
+            <li>
+                <span class="statusNO legend_status" style="float: left;" title="Requirement/Sub-Requirement Unfulfilled">
+                    <i class="fas fa-statusNO" title="Requirement / Sub-Requirement Unfulfilled"></i> 
+                </span> - Unfulfilled
+            </li>
+        </ul>	
+    </div>
+
+    <h2>SPECIAL GRADES</h2>
+    <div style="margin: 15px;">
+        <ul class="list-unstyled">
+            <li><strong>LOP</strong>  Letter of Permission</li>
+            <li><strong>CLP</strong>  Current LOP</li>
+            <li><strong>CUO</strong>  Current Ottawa Univ.</li>
+            <li><strong>EXC</strong>  Exchange Course</li>
+            <li><strong>CEX</strong>  Current Exchange Course</li>
+            <li><strong>TR </strong>  Transfer Course</li>
+            <li><strong>TX </strong>  TR Forfeited on Adm</li>
+            <li><strong>CR </strong>  Credit</li>
+            <li><strong>NR </strong>  No Record</li>
+        </ul> 
+    </div>
+
+    <h2>COURSE CODES</h2>
+    <div style="margin: 15px;">
+        <ul class="list-unstyled">
+            <li><strong>&gt;R </strong>  Repeatable Course</li>
+            <li><strong>RP </strong>  Repeated Course</li>
+            <li><strong>&gt;X </strong>  Forfeited Course</li>
+            <li><strong>EPD</strong>  Extra to Previous Degree</li>
+        </ul>
+    </div>
+      			</div>
+      			<div class="modal-footer">
+			    	<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+		        </div>
+    		</div><!-- /.modal-content -->
+  		</div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+					<p id="printerFriendlyP"><a target="_blank" href="?printerFriendly=true&id=JobQueueRun!!!!ISEhIWludFNlcU5vPTQwMTIyMzAw" id="printerFriendly"><i class="fas fa-print"></i> Printer Friendly</a></p>
+		
+
+		
+		
+		
+			</div> <!-- end auditMenu -->
+	
+			<br/>
+<style type="text/css">
+	
+/* ===== auditSpacing.css ===== */
+div {border: 1px}
+hr {clear:both;}
+#audit {width: 100%;}
+#audit .errorMessage { font-weight: bold; align:left; float:left; clear:both; color: red;}
+#audit .includeTopText {float:left; clear:both;  width:100%; padding-bottom:6px}
+#audit .includeBottomText {float:left; clear:both; width:100%; }
+#auditHeader #refArtHeaderText {float:left; clear:both; width:100%; margin-left:24px; padding-bottom:6px}
+#auditHeader    .completionTextOK, #auditHeader .completionTextNO, #auditHeader .completionText  {float:left; clear:both; width:100%; padding-left:55px; }
+#auditResults .legend {float:left; clear:both; margin-left:22%}
+#endText {text-align: center;float: left;clear: both;width: 100%;} 
+
+/* ===== REQUIREMENTS LISTALL HEADER ===== */
+#auditRequirements {width:100%;}
+#auditRequirements .error {clear:both;}
+#auditRequirements .cmessc { clear: both; float:left;}
+#auditRequirements .requirement { clear: both;  }
+#auditRequirements .requirement .togglerExpanded { }
+#auditRequirements .requirement .togglerCollapsed { }
+#auditRequirements .requirement .status { }
+#auditRequirements .requirement .reqText p .reqStatus {display:none;}
+
+#auditRequirements .listAll {float:left; clear:both; padding:0px}
+#auditRequirements .listAll table {margin:12px 0px 0px 0px }
+#auditRequirements .listAll td {padding-right: 10px }
+
+
+/* ===== REQUIREMENTS ===== */
+#auditRequirements .requirement { }
+#auditRequirements .reqBody {float:left; clear:both; width: 100%;
+								margin-left:0px; margin-top: 0px; 
+								padding-bottom:6px;
+								-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+								-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+								box-sizing: border-box;         /* Opera/IE 8+ */
+							}
+							
+#auditRequirements .requirement-buttons {float:right;}
+#auditRequirements .subrequirement-buttons {float:right;}
+#auditRequirements .selectfrom-buttons {float:right;}
+#auditRequirements .notfrom-buttons {float:right;}
+
+/* UACH-3366	DAP		03/24/16	added margin-top to put a little extra space between requirement titles when collapsed  */
+#auditRequirements .requirement .reqHeaderTable {float:left; clear:right; display:table; margin-top:7px;}
+#auditRequirements .requirement .reqStatusGroup {display:table-cell; padding-top:2px}
+@media screen {
+	#auditRequirements .reqBody {padding-left:38px;}
+	#auditRequirements .requirement .reqStatusGroup {width:73px;}
+	/* UACH-3366	DAP		03/24/16	changed margin to removed extra height  */
+	#auditRequirements .requirement .reqStatusGroup .toggler {float:left; width:18px; height:16px; margin-right:7px; border:none;}
+}
+@media print {
+	#auditRequirements .reqBody {padding-left:0px;}
+	#auditRequirements .requirement .reqStatusGroup {width:53px;}
+	#auditRequirements .requirement .reqStatusGroup .toggler {float:left; width:0px; height:16px; margin:0px ; border:none;}
+}
+#auditRequirements .requirement .reqStatusGroup .status, .legend_status {float:left; width:16px; height:16px; text-align:center;}
+#auditRequirements .requirement .reqStatusGroup .reqNumber {float:left; width:23px; height:23px; text-align:left; padding-left:3px;}
+#auditRequirements .requirement .reqStatusGroup .reqGroups {float:left; width:100%; text-align:right;vertical-align:top}
+
+#auditRequirements .requirement .reqText {padding-left:6px; width:790px; display:table-cell;vertical-align:top}
+#auditRequirements .requirement .reqText .requirement-buttons {float:right;}
+#auditRequirements .requirement .reqText .reqHeader {float:left; clear:left;}
+#auditRequirements .requirement .reqText .reqTitle {float:left; clear:left;}
+
+#auditRequirements .requirement .requirementTotals {margin-bottom: 10px;}
+#auditRequirements .requirement .requirementTotals .reqEarned {margin-bottom: 5px; width: 100%;}
+#auditRequirements .requirement .requirementTotals .reqNeeds {margin-bottom: 5px; width: 100%;}
+
+#auditRequirements .requirement .requirementTotals .warnind {display:inline-block; float:left; text-align:left; font-style:italic;}
+#auditRequirements .requirement .requirementTotals .rowlabel {width:100px; text-align:right; padding-right:5px;  font-style:italic; white-space:nowrap;}
+#auditRequirements .requirement .requirementTotals .bigcolumn {width:264px;}
+#auditRequirements .requirement .requirementTotals .fieldlabel {display:inline-block; width:144px; text-align:left; font-style:italic;}
+#auditRequirements .requirement .requirementTotals .smallfieldlabel {display:inline-block; width:84px; text-align:left; font-style:italic;}
+#auditRequirements .requirement .requirementTotals .gpalabel {display:inline-block; font-style:italic; max-width:84px; text-align:left;}
+#auditRequirements .requirement .requirementTotals .number {display:inline-block; width: 48px; text-align:right; padding-right:5px; font-style:italic;}
+#auditRequirements .requirement .requirementTotals .count {width: 24px; font-style:italic;}
+#auditRequirements .requirement .requirementTotals {font-style:italic; font-size:10pt;}
+
+
+/* ===== SUB-REQUIREMENTS ===== */
+#auditRequirements .auditSubrequirements .subrequirement {float:left; clear:both; display:table;}  
+#auditRequirements .auditSubrequirements .subrequirement .status {display:inline-block; width:13px; height:13px; min-height:1px; max-height:23px; background-position:top; text-align:center; vertical-align:text-top; font-size: 9px; margin-top:2px; }
+#auditRequirements .auditSubrequirements .subrequirement .Status_NO { }
+#auditRequirements .auditSubrequirements .subrequirement .Status_OK { }
+#auditRequirements .auditSubrequirements .subrequirement .Status_PL { }
+#auditRequirements .auditSubrequirements .subrequirement .Status_IP { }
+#auditRequirements .auditSubrequirements .subrequirement .subreqTitle {float:left; margin-left:0px; padding:2px; min-height:17px; }
+#auditRequirements .auditSubrequirements .subrequirement .rowlabel {width:75px; text-align:right; padding-right: 5px;}
+
+#auditRequirements .auditSubrequirements .subrequirement .subreqPretext {display:table-cell; padding-left: 0px; padding-right:3px; padding-top:2px; margin-left:0px; vertical-align:top; min-width:90px}
+#auditRequirements .auditSubrequirements .subrequirement .subreqPretext .subreqSeqErr {display:inline-block; max-height:23px; min-height:1px; text-align:center; width:20px; padding:0em;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqPretext .subreqSeqErrBorder {float:left; height:23px; border-width:1px; border-style:solid;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqPretext .subreqRequired {display:inline-block; max-height:23px; min-height:1px; text-align:center; width:20px;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqPretext .subreqRequiredBorder {height:16px; width:16px; margin-top:2px;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqPretext .subreqNumber {display:inline-block; max-height:23px; min-height:1px; text-align:right; min-width:24px;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqTitle {float:left; margin-left:0px; margin-bottom:5px; }
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqCline {float:left; clear:right; text-align:left; width:100%; padding-left:60px;}
+
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody {display:table-cell; width:720px; margin-left:5px;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals {margin-left:0px; margin-bottom:10px; float:left; clear:both; }
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals .rowlabel {width:204px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals .fieldlabel {width:180px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals .smallfieldlabel {width:48px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals .bigcolumn {width:224px; text-align:left;}
+
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals .number {width:48px; display:inline-block; text-align:right; padding-right:5px;}
+
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses {width:100%; margin-left: 0px; margin-bottom:5px; float:left; clear:both;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses td {padding-right:10px; padding-top:1px; padding-bottom: 1px}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses tr {vertical-align:top; }
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .term {width: 40px; text-align:right; white-space: nowrap}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .course {width: 180px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .credit {width: 48px; text-align:right;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .grade {width: 30px; text-align:left; white-space: nowrap}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .ccode {width: 30px; text-align:left}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .description {text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .description table {border-spacing:0px}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .description td {padding:0px}
+#auditRequirements .auditSubrequirements .subrequirement .completedCourses .pretext {float:left; }
+
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqNeeds {float:left; clear:left; padding-bottom: 5px}
+
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqNeeds .fieldlabel {width:144px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqNeeds .smallfieldlabel {width:94px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqNeeds .rowlabel {width:78px; text-align:left;}
+#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqNeeds .number {width: 42px; text-align:right; padding-right:5px; }
+
+#auditRequirements .auditSubrequirements .course {margin: 0px 1px 0px 1px;}
+#auditRequirements .auditSubrequirements .subrequirement .selectcourses { width:100%; margin-bottom: 5px; float:left; clear:both;}
+#auditRequirements .auditSubrequirements .subrequirement .selectcourses table { padding:0px; border-spacing:0px;}
+#auditRequirements .auditSubrequirements .subrequirement .selectcourses table td { }
+
+#auditRequirements .auditSubrequirements .subrequirement .notcourses { width:100%; margin-bottom: 5px; float:left; clear:both;}
+#auditRequirements .auditSubrequirements .subrequirement .notcourses table { padding:0px; border-spacing:0px;}
+#auditRequirements .auditSubrequirements .subrequirement .notcourses table td { }
+
+#auditRequirements .auditSubrequirements .subrequirement .fromlabel { width:117px; vertical-align:top}
+
+#auditRequirements .auditSubrequirements .subrequirement .refcoursemessage { margin-bottom: 5px; float:left; clear:both;}
+
+/* ===== audit.css ===== */
+
+.auditHeaderMessage{}
+
+.auditMessage{text-align:center; font-weight:bold;}
+/* ========================= PDF AUDIT FORMATTING ====================================== */
+#pdfAudit { margin: 3em auto; width: 830px; }
+#pdfAudit .pdf { }
+#pdfAudit .pdfDownload, #pdfAudit .pdfDownload a { font-size: 110%; }
+#pdfAudit .getAcrobat, #pdfAudit .pdfDownload { text-align: right; }
+
+/* ========================= HTML AUDIT FORMATTING ====================================== */
+
+#auditStudentInfo, #auditSummary { margin-top: 5px; margin-bottom: 5px; }
+
+
+.graphs h3 {color: #31314e; padding: 2px 5px;}
+.graphs hr { margin-top: 4px; margin-bottom: 4px; }
+p.graphLegend { margin-top: 0; margin-bottom: 0; height:18px;}
+.auditTitle{ font-size:140%; text-align:center; font-style:italic;}
+@media:screen{
+	.auditTitle{margin:5px 5px 15px 100px;}
+}
+@media:print{
+	.auditTitle{margin:5px 5px 15px 5px;}
+}
+
+.hiddenTH th {
+	width:0px; 
+	height: 0px; 
+	text-indent: -10000px; 
+	background-color: transparent;
+	padding: 0px;
+}
+
+/* ===== AUDIT RESULTS ===== */
+/*
+	Line types are set by the user to identify the byte to assign each of the 
+	30 possible output content line types produced on the degree audit report.
+	
+	Note: some sources may have line types that are off by one - i.e. the Page Header
+	line type may be referenced as 00 instead of 01.
+
+	The position meaning of each of these 30 possibilities are:
+
+	01	Page Header - occurs once at top of audit
+	02	Horizontal Separator - separator lines - 2-column report only
+	03	Column Header/End Line  2-column report only
+	04	INCLTOP Text - All - text included at top of audit
+	05	INCLBOT Text - All - text included at bottom of audit
+	06	Mail block Text  2-column report only
+	07	Completion Text Line - text included at top of audit when program is complete (like "don't forget to register for graduation")
+	08	'H' Text Lines  Requirement Header text  printed before the Requirement Title
+	09	Error Message Lines - occurs if there is an error
+	10	Blank Line - No Text - a blank line
+	11	OK-Requirement Title - self explanatory
+	12	NO-Requirement Title - self explanatory
+	13	OK-Requirement Earned Line - self explanatory
+	14	NO-Requirement Earned Line  - self explanatory
+	15	OK-Requirement Needs Line  - self explanatory
+	16	NO-Requirement Needs Line  - self explanatory
+	
+	'T' subrequirement titles are displayed whether or not the subreq is satisfied
+	'V' subrequirement titles are only displayed when the subreq is satisfied, and will replace the regular title ('T' lines)
+	I have no idea how the 'no-subreq V' condition (20) would ever occur.
+	17	OK-Sub-Requirement 'T' Line - see above
+	18	NO-Sub-Requirement 'T' Line - see above
+	19	OK-Sub-Requirement 'V' Line - see above
+	20	NO-Sub-Requirement 'V' Line - see above
+	
+	21	OK-Sub-Requirement Earned Line - self explanatory
+	22	NO-Sub-Requirement Earned Line - self explanatory
+	23	OK-Sub-Requirement Courses - courses taken to fulfill subrequirement
+	24	NO-Sub-Requirement Courses - courses taken to fulfill subrequirement
+	25	OK-Sub-Req. Needs Summary Line - self explanatory
+	26	NO-Sub-Req. Needs Summary Line - self explanatory
+	27	OK-Sub-Requirement Reject Courses - courses that can't be taken to fulfill subreq
+	28	NO-Sub-Requirement Reject Courses - courses that can't be taken to fulfill subreq
+	29	OK-Sub-Requirement Accept Courses - courses that can be taken to fulfill subreq
+	30	NO-Sub-Requirement Accept Courses - courses that can be taken to fulfill subreq
+*/
+
+
+
+#auditResults { margin: auto 20px; }
+
+
+	/* ===== MENU / OPTIONS ===== */
+	#auditMenu p { float: left; }	
+	#auditMenu a { padding-left: 15px; background: #fff none no-repeat left center; font-size: 13px; font-weight: bold; }
+/* 	#auditMenu #expandAll { background-image: url(../../../images/icon_open_all.gif); } */
+/* 	#auditMenu #collapseAll { background-image: url(../../../images/icon_close_all.gif); } */
+/* 	#auditMenu #printerFriendly { background-image: url(../../../images/icon_print.gif); } */
+	#auditMenu #printerFriendlyP { float: right; }
+
+
+
+	/* ===== AUDIT ===== */
+	#audit { }
+	#audit .spacer { }
+	
+		/* ===== STYLE RESETS ===== */
+		#audit div, #audit p {}
+		
+				/* ===== HEADER / FOOTER ===== */
+		#auditHeader, #audit #auditFooter {font-weight: bold; }
+		#auditHeader div, #audit #auditFooter div { }
+		#auditHeader #testMessageHeader {font-weight: bold;}
+		
+		/* linetype: 00 */	#auditHeader	.pageHeader				{ display: none; }
+		/* linetype: 01 */	#audit			.horizontalSeparator	{ /* 2 column audit only */ }
+		/* linetype: 02 */	#auditHeader	.columnHeader			{ /* 2 column audit only */ }
+		/* linetype: 03 */	#auditHeader	.includeTopText         {font-weight:normal; font-style:italic; }
+		/* linetype: 04 */		.includeBottomText					{ font-weight:normal; font-style:italic; }
+		/* linetype: 05 */	#auditHeader	.mailBlockText			{ /* 2 column audit only */ }
+		/* linetype: 06 */	#auditHeader	.completionText			{ color: black; }
+		/* linetype: 07 */	/* see below */
+		/* linetype: 08 */	#auditHeader	.errorText				{ color: #c27079; }
+		/* linetype: 09 */	#audit			.blankLine				{ }
+		/* Reference articulation header*/ #auditHeader #refArtHeaderText { font-style: italic;}
+		/* cmess header */ .cmessHeader { font-weight: bold; }
+
+        /* ===== COMPLETION TEXT =====*/
+        #auditHeader .completionTextNO  { color: #EB0000; padding-bottom:10px; }
+        #auditHeader .completionTextOK { color: green; padding-bottom:10px; }
+        
+		/* ===== REQUIREMENTS ===== */
+		#auditRequirements { }
+		
+			/* ===== REQUIREMENT ===== */
+			#auditRequirements .requirement { clear: both; }
+			#auditRequirements .requirement .toggler { float: left; background: #fff none no-repeat;}
+			.fa-togglerExpanded:before {content: " \f078";}
+			.fa-togglerCollapsed:before {content: " \f054";}
+          #auditRequirements .requirement .reqText p .reqStatus {display:none;}
+          
+          	#auditRequirements .requirement .status {background: #fff none no-repeat; }
+			#auditRequirements .requirement .statusOK, .statusOK { background-color: #1b7403; color: #ffffff;}
+			.fa-statusOK:before {content: "OK";}
+			#auditRequirements .requirement .statusNO, .statusNO { background-color: #c2717a; color: #ffffff;}
+			.fa-statusNO:before {content: "NO";}
+			#auditRequirements .requirement .statusPL, .statusPL { background-color: #6666c5; color: #ffffff;}
+			.fa-statusPL:before {content: " PL";}
+			#auditRequirements .requirement .statusIP, .statusIP { background-color: #3ea133; color: #ffffff;}
+			.fa-statusIP:before {content: "IP";}
+			#auditRequirements .requirement .statusNONE { background-color: transparent;}
+			
+			#auditRequirements .requirement .reqHeader {font-size:125%;}
+			#auditRequirements .requirement .reqText .reqTitle{font-size:125%;}
+			#auditRequirements .requirement .statusNO + .reqHeader { color: black;}
+			#auditRequirements .requirement .statusOK + .reqHeader { color: green;}
+			#auditRequirements .requirement .statusPL + .reqHeader { color: #FF8C00;}
+			#auditRequirements .requirement .statusIP + .reqHeader { color: blue;}
+			#auditRequirements .requirement .statusNONE + .reqHeader { color: black;}
+			
+			#auditRequirements .requirement .reqText { font-weight: bold; }
+			#auditRequirements .requirement .reqText p { }
+			#auditRequirements .requirement .requirementTotals {}
+			#auditRequirements .requirement .requirementTotals strong { font-weight: bold; }
+			#auditRequirements .requirement .requirementTotals p { }
+			#auditRequirements .requirement .reqBody {}
+			#auditRequirements .requirement .reqBody .reqEarned, #auditRequirements .requirement .reqBody .reqNeeds {}
+			#auditRequirements .requirement .reqBody .reqEarned {}
+			
+			/*
+            #auditRequirements .requirement .requirementTotals strong { font-weight: bold; }
+            #auditRequirements .requirement .requirementTotals .warnind {font-weight:bold;}
+			#auditRequirements .requirement .requirementTotals .rowlabel {font-weight:bold; }
+			#auditRequirements .requirement .requirementTotals .fieldlabel {font-weight:normal; font-style:normal; color:gray;}
+			#auditRequirements .requirement .requirementTotals .smallfieldlabel {font-weight:normal; font-style:normal; color: gray;}
+			#auditRequirements .requirement .requirementTotals .number {font-weight:normal; font-style:normal;}
+			#auditRequirements .requirement .requirementTotals .count {}
+			*/
+			
+							/* ===== SUBREQUIREMENTS ===== */
+				#auditRequirements .auditSubrequirements { }
+			    #auditRequirements .auditSubrequirements .subrequirement {}
+			    
+			    				/* ===== SUBREQUIREMENT ===== */
+				#auditRequirements .auditSubrequirements .subrequirement .status {background-position: left top;  }
+				#auditRequirements .auditSubrequirements .subrequirement .Status_OK { background-color: #1b7403; color: #ffffff; }
+				.fa-Status_OK:before {content: "OK";}
+				#auditRequirements .auditSubrequirements .subrequirement .Status_NO { background-color: #c2717a; color: #ffffff; }
+				.fa-Status_NO:before {content: "NO";}
+				#auditRequirements .auditSubrequirements .subrequirement .Status_PL { background-color: #6666c5; color: #ffffff; }
+				.fa-Status_PL:before {content: "PL";}
+				#auditRequirements .auditSubrequirements .subrequirement .Status_IP { background-color: #3ea133; color: #ffffff; }
+				.fa-Status_IP:before {content: "IP";}
+				#auditRequirements .auditSubrequirements .subrequirement .Status_NONE { background-color: transparent; }
+				
+				#auditRequirements .auditSubrequirements .subrequirement .subreqStatus {display:none;}
+				#auditRequirements .auditSubrequirements .subrequirement .subreqRequired .subreqRequiredBorder {border:solid;}
+				#auditRequirements .auditSubrequirements .subrequirement .subreqTitle { }
+				#auditRequirements .auditSubrequirements .subrequirement .subreqTitle .subreqTitleText {}
+				#auditRequirements .auditSubrequirements .subrequirement .Status_NO + .subreqTitle { color: black;}
+				#auditRequirements .auditSubrequirements .subrequirement .Status_OK + .subreqTitle { color: black;}
+			    #auditRequirements .auditSubrequirements .subrequirement .Status_PL + .subreqTitle { color: black;}
+			    #auditRequirements .auditSubrequirements .subrequirement .Status_IP + .subreqTitle { color: black;}
+			    
+			    #auditRequirements .auditSubrequirements .subrequirement .subrequirementTotals {}
+				#auditRequirements .auditSubrequirements .subrequirement .subreqNeeds, #auditRequirements .auditSubrequirements .subrequirement .subreqGotGpa, #auditRequirements .auditSubrequirements .subrequirement .subreqIpHours, #auditRequirements .auditSubrequirements .subrequirement .subreqIpCount, #auditRequirements .auditSubrequirements .subrequirement .subreqWhatIfDetail  {
+                      background-image: none; }
+               #auditRequirements .auditSubrequirements .subrequirement .subreqGotGpa, #auditRequirements .auditSubrequirements .subrequirement .subreqIpHours, #auditRequirements .auditSubrequirements .subrequirement .subreqIpCount, #auditRequirements .auditSubrequirements .subrequirement .subreqWhatIfDetail  {
+					   position:relative; background-image: none; }
+				#auditRequirements .auditSubrequirements .subrequirement .subreqBody { vertical-align: middle;}
+				#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subreqCline {}
+				#auditRequirements .auditSubrequirements .subrequirement .subreqBody .subrequirementTotals .subreqEarned {}
+				#auditRequirements .auditSubrequirements .subrequirement .description {}
+				
+			   	#auditRequirements .auditSubrequirements .subrequirement  .completedCourses {}
+				#auditRequirements .auditSubrequirements .subrequirement  .completedCourses table {}
+				#auditRequirements .auditSubrequirements .subrequirement  .completedCourses .wif td {color:#000000;}
+				#auditRequirements .auditSubrequirements .subrequirement  .completedCourses td { }
+				#auditRequirements .auditSubrequirements .subrequirement  .completedCourses table tr.takenCourse {background-color: #EAEAEA; vertical-align: top;}
+				#auditRequirements .auditSubrequirements .subrequirement  .completedCourses table tr.takenCourse > td {}
+					
+				#auditRequirements .auditSubrequirements .subrequirement  .notFromCourses, #auditRequirements .auditSubrequirements .subrequirement .selectFromCourses { background-color:#FFFFFF;}
+				#auditRequirements .auditSubrequirements .subrequirement  .notFromCourses, #auditRequirements .auditSubrequirements .subrequirement .refCourses { font-style:italic; }
+				#auditRequirements .auditSubrequirements .subrequirement  .notFromCourses, #auditRequirements .auditSubrequirements .subrequirement .noRefFoundMsg { font-style:italic; }
+				#auditRequirements .auditSubrequirements .subrequirement  .notFromCourses a, #auditRequirements .auditSubrequirements .subrequirement .selectFromCourses a { color: #000000; text-decoration: underline;}
+				#auditRequirements .auditSubrequirements .subrequirement  .notFromCourses a:hover, #auditRequirements .auditSubrequirements .subrequirement  .selectFromCourses a:hover { color: #6f3d05; }
+					
+				#auditRequirements .auditSubrequirements .subrequirement  .transferCourse { color: #1b7403; }
+				
+				
+				#auditRequirements .auditSubrequirements .course {}
+				#auditRequirements .auditSubrequirements .course .department { }
+				#auditRequirements .auditSubrequirements .course .number { }
+				#auditRequirements .auditSubrequirements .course a { color: #000000; text-decoration: underline; }
+				#auditRequirements .auditSubrequirements .course a:visited {}
+				
+				
+               #endText{}
+                    
+             td {}
+             pre {display:inline; front-family:inherit;}
+			.preformatted {white-space:pre; font-family:Consolas,Monaco,"Courier 10 Pitch",monospace;font-size:9pt;}
+			.fromcourselist {}
+					
+			.completedCourses .course {}
+			.completedCourses .term {}
+			.notfromcourses .fromlabel {font-weight:bold;}
+			.notfromcourses .fromcourselist{color:grey}
+			.selectfromcourses .fromlabel {font-weight:bold;}
+			#auditRequirements .auditSubrequirements .subrequirement .subreqBody .completedCourses .takenCourse{background-color:#eeeeee;}
+</style>
+<div id="audit" com="IA   " instidq="CS" instid="3502" instcd="URS" dprog="BENG-8P" forceDprog="false" catlyt="202130" forceCatlyt="false" dpmask="" sinstid="" sinstcd="" com-ignoreIP=" " includeIP="true" includePlanned="false" wifRead=" " wifDprog=" " evalsw="S" soprid="1419334" com-templatnam="htm" >
+	<div id="auditHeader">
+<div class="includeTopText preformatted">        		
+        		Email: SAFIULLAHRATTAR@cmail.carleton.ca
+        		Admit Term: 2021  Fall
+        		Your program is in the Faculty:Engineering &amp; Design
+        		
+        		ACE for Current Admission:
+        		202230 EC 202310 EC 202320 EC 202330 EC
+        		202410 EC
+        		
+        		   *** Academic Continuation Code Legend ***
+        		(EC)- Eligible to Continue                  (PE)- Pending
+        		(CN)- Eligible to Continue in non-honours   (AW)- Academic Warning
+        		(WT)- Required to Withdraw for 2 terms      (CA)- Continue in Alternate
+        		(WY)- Required to Withdraw for 2 years      (DP)- Dismissed from Program
+        		(NA)- No Assessment
+        		
+		</div>
+			<div class="completionTextNO">         AT LEAST ONE REQUIREMENT HAS NOT BEEN SATISFIED        </div>
+		
+	</div>  	<div id="auditRequirements">
+		  
+			<div class="requirement Status_NONE    rname_ENG_NOTE  rtabx_01" id="req-1b58e24c-ea78-4672-a09f-8484d630b94e" rname="ENG NOTE" pseudo="" rqdSubreq="0" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: </h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">                      ***IMPORTANT NOTES***<br />ALL ENGINEERING STUDENTS must refer to the Engineering Academic<br />Support Web-site at: www.carleton.ca/engineering/uas<br />for program and registration directions and information, and for<br />Faculty news.<br />The list of acceptable COMPLEMENTARY STUDIES ELECTIVES<br />for the current calendar year will be listed on this site.<br /><br />The Bachelor of Engineering requires that the most recent<br />attempt of a course be a passing grade in order to be eligible<br />for graduation. Please verify your graduation eligibility with<br />your Departmental Advisor: https://carleton.ca/<br />engineering-design/current-students/undergraduate-advisors/<br /><br />For accreditation purposes, errors in the Degree Audit Report<br />CANNOT be accommodated.					</div>
+<div class="reqTitle">						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+ 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_21-79  rtabx_02" id="req-649553e1-8cf3-4553-bc02-b831e5dea216" rname="21-79" pseudo="21-79" rqdSubreq="1" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.00" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: CO-OP OPTION FOR COMPUTER SYSTEMS, COMMUNICATIONS &amp;amp;</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">CO-OP OPTION FOR COMPUTER SYSTEMS, COMMUNICATIONS &amp;<br />SOFTWARE ENGINEERING - Four work terms are required						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-cec18113-2321-451a-a67e-0cf8c4cfcd49" pseudo="" pseudoList='[]' rqdSubreq="0" rqdGpa="8.0" rqdHours="0.00" maxHours="999.90"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_NONE"><span class="sr-only hidden-print">Sub-Requirement </span><i class="fa fa-Status_NONE" title="Sub-Requirement " aria-hidden="true"></i></span>
+								<span class="subreqNumber">1)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">8.0 Overall CGPA required</span>
+
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						9.78
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						CGPA
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-2f47b903-8983-485c-b87e-85c67c9de5f2" pseudo="2179-1" pseudoList='[&quot;R2179-1&quot;,&quot;2179-1&quot;]' rqdSubreq="4" rqdGpa="0" rqdHours="0.00" maxHours="999.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_NO"><span class="sr-only hidden-print">Sub-Requirement Unfulfilled</span><i class="fa fa-Status_NO" title="Sub-Requirement Unfulfilled" aria-hidden="true"></i></span>
+								<span class="subreqNumber">2)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusNO">Four co-op work terms in SYSC</span>
+
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_HSTANDENG  rtabx_05" id="req-06796f03-b3a0-4209-8fff-7df90b85f1d8" rname="HSTANDENG" pseudo="HSTANDENG" rqdSubreq="1" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: UNIVERSITY YEAR STANDING IN ENGINEERING</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">UNIVERSITY YEAR STANDING IN ENGINEERING						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-f593581e-51ba-4f61-9133-615465f109c3" pseudo="*" pseudoList='[&quot;*&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="14.00" maxHours="999.90"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber"></span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">Fourth Year Standing - 14.0 or more credits completed<br />ALL REQUIREMENTS BELOW MUST BE MET IN ORDER TO GRADUATE</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number"> 15.50</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_YEAR_STAT  rtabx_06" id="req-0474a68d-c703-4cac-b7cb-1381ab93a462" rname="YEAR STAT" pseudo="" rqdSubreq="0" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: </h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">                **YEAR STATUS IN ENGINEERING**<br />See Academic Regulations and Requirements for the Bachelor of<br />Engineering Degree in the undergraduate calendar					</div>
+<div class="reqTitle">						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+ 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_ENG-RES  rtabx_07" id="req-4a2a390e-f4d7-4b07-99f3-8d3c4c3ea73f" rname="ENG-RES" pseudo="ENG-RES" rqdSubreq="1" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: RESIDENCY REQUIREMENTS</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">RESIDENCY REQUIREMENTS						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-f6419d27-8431-441d-a535-1c39a1073b62" pseudo="ENGRES" pseudoList='[&quot;ENGRES&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="10.50" maxHours="0.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber"></span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">A minimum of 10.5 Carleton credits.</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number"> 11.75</span><span class="hourslabel fieldlabel">Credits</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+                    						<tr class="subreqIpHours">
+                        						<td class="rowlabel">
+                        							IP
+                        						</td>
+                        						<td class="hours number">
+                        							  5.50
+                        						</td>
+                        						<td class="hourslabel fieldlabel">
+                        							Credits
+                        						</td>
+                        						<td class="count number">
+                        							
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                        							
+                        						</td>
+                    						</tr>
+                						 
+ 
+            						</table>
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE  category_Overall   rname_GR21-5.0  rtabx_08" id="req-1f95cc15-c42e-4d80-ab1f-dedd7dbf8d57" rname="GR21-5.0" pseudo="GR21-5.0" rqdSubreq="1" rqdCount="0" rqdGpa="5.0" rqdHours="21.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: SUMMARY OF CREDITS AND CGPA</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">SUMMARY OF CREDITS AND CGPA<br />Engineering Program Only						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                        <tr class="reqEarned">
+                        <td class="warnind"></td>
+                        <td class="rowlabel"><span class="warnind"></span>EARNED:</td>
+                        <td class="hourscount bigcolumn">
+                        	<span class="hours number"> 15.50</span>
+                        	<span class="hourslabel smallfieldlabel">Credits</span>
+                        	<span class="count number"></span>
+                        	<span class="countlabel smallfieldlabel"></span>
+                        </td>
+                        <td class="subreqs number"></td>
+                        <td class="subreqslabel fieldlabel"></td>
+                        <td class="gpa number"></td>
+                        <td class="gpalabel"></td>
+                        </tr> 
+                                         	<tr class="reqGpaDetail">
+                    		<td class="reqStatusTd"></td>
+                    		<td class="rowlabel"></td>
+                    		<td class="hourscount bigcolumn">
+                    			<span class="hours number"> 10.25</span>
+                    			<span class="hourslabel fieldlabel">CGPA Credits</span>
+                    		</td>
+                    		<td class="points number">100.25</td>
+                    		<td class="pointslabel fieldlabel">Points                                                           </td>
+                    		<td class="gpa number">9.78</td>
+                    		<td class="gpalabel">CGPA</td>
+                    	</tr>
+                    	<tr class="reqIpDetail">
+                        	<td class="reqStatusTd"></td>
+                            <td class="rowlabel">IP</td>
+                            <td class="hourscount bigcolumn">
+                            	<span class="hours number">  5.50</span>
+                               	<span class="hourslabel smallfieldlabel">Credits</span>
+                               	<span class="count number"></span>
+                        		<span class="countlabel smallfieldlabel"></span>
+                            </td>
+                            <td class="number"></td><td class="fieldlabel"></td>
+                            <td class="number"></td><td class="fieldlabel"></td>
+                        </tr>
+                </table>
+				<div class="auditSubrequirements">
+ 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_IP  category_Complementary   rname_ECOMP_1.5  rtabx_09" id="req-190edb17-ee4c-4bad-8019-76c4d7803e86" rname="ECOMP 1.5" pseudo="ECOMP 1.5" rqdSubreq="4" rqdCount="0" rqdGpa="0" rqdHours="1.50" maxHours="999.00" authCode1=" " authCode2=" "> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: COMPLEMENTARY STUDIES, CCDP 2100, ECOR 1055/1056/1057/2995</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusIP"><span class="sr-only hidden-print">Requirement In Progress</span><i class="fa fa-statusIP" title="Requirement In Progress" aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">COMPLEMENTARY STUDIES, CCDP 2100, ECOR 1055/1056/1057/2995<br />1.5 credits required						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                        <tr class="reqEarned">
+                        <td class="warnind"></td>
+                        <td class="rowlabel"><span class="warnind"></span>EARNED:</td>
+                        <td class="hourscount bigcolumn">
+                        	<span class="hours number">  1.00</span>
+                        	<span class="hourslabel smallfieldlabel">Credit                                                           </span>
+                        	<span class="count number"></span>
+                        	<span class="countlabel smallfieldlabel"></span>
+                        </td>
+                        <td class="subreqs number"></td>
+                        <td class="subreqslabel fieldlabel"></td>
+                        <td class="gpa number"></td>
+                        <td class="gpalabel"></td>
+                        </tr> 
+                                         	<tr class="reqIpDetail">
+                        	<td class="reqStatusTd"></td>
+                            <td class="rowlabel">IP</td>
+                            <td class="hourscount bigcolumn">
+                            	<span class="hours number">  0.50</span>
+                               	<span class="hourslabel smallfieldlabel">Credits</span>
+                               	<span class="count number"></span>
+                        		<span class="countlabel smallfieldlabel"></span>
+                            </td>
+                            <td class="number"></td><td class="fieldlabel"></td>
+                            <td class="number"></td><td class="fieldlabel"></td>
+                        </tr>
+                </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-fbf6baaa-918e-49fd-ac04-a2725f238043" pseudo="ECOMP-1" pseudoList='[&quot;RECOMP-1&quot;,&quot;ECOMP-1&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="0.50" maxHours="0.50"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">1)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">CCDP 2100 (formerly ALSS 1000)</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.50</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23FA</td>
+        											<td class="course"	aria-label="course">CCDP 2100</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">B+  </td>
+    											<td class="ccode" aria-label="condition code">RP </td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-36e531c4-1462-4261-b52a-429d7f1565d8" pseudo="ENG-COMP" pseudoList='[&quot;ENG-COBAD&quot;,&quot;RECOMP-2&quot;,&quot;ENG-COMP&quot;,&quot;ECOMP-2&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="1.00" maxHours="1.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber">2)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">1.0 credit in Complementary Studies</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.50</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+                    						<tr class="subreqIpHours">
+                        						<td class="rowlabel">
+                        							IP
+                        						</td>
+                        						<td class="hours number">
+                        							  0.50
+                        						</td>
+                        						<td class="hourslabel fieldlabel">
+                        							Credits
+                        						</td>
+                        						<td class="count number">
+                        							
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                        							
+                        						</td>
+                    						</tr>
+                						 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">25FA</td>
+        											<td class="course"	aria-label="course">PHIL 1301</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">24WN</td>
+        											<td class="course"	aria-label="course">TSES 4012</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-a16ecd30-dfd2-4ea2-9dbc-5be7a7b9e3fb" pseudo="RENGINTRO" pseudoList='[&quot;RENGINTRO&quot;,&quot;ENGINTRO&quot;]' rqdSubreq="3" rqdGpa="0" rqdHours="0.00" maxHours="0.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">3)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">FIRST YEAR REQUIREMENT<br />The Introduction to Engineering Disciplines requirement<br />must be met through the successful completion of<br />ECOR 1055 [0.0], ECOR 1056 [0.0], ECOR 1057 [0.0]</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">ECOR 1055</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">ECOR 1056</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">ECOR 1057</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code">RP </td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-9c5737fb-1cd2-4fb3-8364-129715394852" pseudo="ENGPORT" pseudoList='[&quot;RENGPORT&quot;,&quot;ENGPORT&quot;]' rqdSubreq="1" rqdGpa="0" rqdHours="0.00" maxHours="0.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber">4)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">Successful completion of ECOR 2995 [0.0]</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">ECOR 2995</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_OK  category_Year_1   rname_BENG8P-1  rtabx_10" id="req-69679e6d-b55e-465d-b246-c6aec3a192ee" rname="BENG8P-1" pseudo="BENG8P-1" rqdSubreq="2" rqdCount="0" rqdGpa="0" rqdHours="4.50" maxHours="4.50" authCode1=" " authCode2=" "> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: FIRST YEAR</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusOK"><span class="sr-only hidden-print">Requirement Complete</span><i class="fa fa-statusOK" title="Requirement Complete" aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">FIRST YEAR						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                        <tr class="reqEarned">
+                        <td class="warnind"></td>
+                        <td class="rowlabel"><span class="warnind"></span>EARNED:</td>
+                        <td class="hourscount bigcolumn">
+                        	<span class="hours number">  4.50</span>
+                        	<span class="hourslabel smallfieldlabel">Credits</span>
+                        	<span class="count number"></span>
+                        	<span class="countlabel smallfieldlabel"></span>
+                        </td>
+                        <td class="subreqs number"></td>
+                        <td class="subreqslabel fieldlabel"></td>
+                        <td class="gpa number"></td>
+                        <td class="gpalabel"></td>
+                        </tr> 
+                                     </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-a1c32dcd-3abd-48b2-b5b0-4fe7cb667899" pseudo="8P1-1" pseudoList='[&quot;R8P1-1&quot;,&quot;8P1-1&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="4.00" maxHours="4.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">1)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">4.0 credits in CHEM 1101, ECOR 1041, ECOR 1042,<br />ECOR 1043, ECOR 1044, ECOR 1045, ECOR 1046, ECOR 1047,<br />ECOR 1048, MATH 1004, MATH 1104, PHYS 1004</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  4.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">CHEM 1101</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">ECOR 1041</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">ECOR 1042</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">ECOR 1043</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">ECOR 1044</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">A-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">ECOR 1045</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">A   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">ECOR 1046</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">ECOR 1047</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">ECOR 1048</td>
+											        <td class="credit"	aria-label="credit"> 0.25 </td>
+											        <td class="grade"	aria-label="grade">A-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">MATH 1004</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code">RP </td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">MATH 1104</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">PHYS 1004</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-53032054-faa2-4eed-88b0-1b4d621072cd" pseudo="RBASIC SCI" pseudoList='[&quot;R8P1-2&quot;,&quot;RBASIC SCI&quot;,&quot;BASIC SCI&quot;,&quot;8P1-2&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="0.50" maxHours="0.50"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">2)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">0.5 credit in Basic Science Electives</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.50</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">ERTH 1011</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_OK  category_Year_2   rname_BENG8P-2  rtabx_11" id="req-98d008cc-a3c2-4acc-8e3c-0bc0b9f8f9cd" rname="BENG8P-2" pseudo="BENG8P-2" rqdSubreq="1" rqdCount="0" rqdGpa="0" rqdHours="4.50" maxHours="4.50" authCode1=" " authCode2=" "> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: SECOND YEAR</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusOK"><span class="sr-only hidden-print">Requirement Complete</span><i class="fa fa-statusOK" title="Requirement Complete" aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">SECOND YEAR						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                        <tr class="reqEarned">
+                        <td class="warnind"></td>
+                        <td class="rowlabel"><span class="warnind"></span>EARNED:</td>
+                        <td class="hourscount bigcolumn">
+                        	<span class="hours number">  4.50</span>
+                        	<span class="hourslabel smallfieldlabel">Credits</span>
+                        	<span class="count number"></span>
+                        	<span class="countlabel smallfieldlabel"></span>
+                        </td>
+                        <td class="subreqs number"></td>
+                        <td class="subreqslabel fieldlabel"></td>
+                        <td class="gpa number"></td>
+                        <td class="gpalabel"></td>
+                        </tr> 
+                                     </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-3a7800ea-f34f-42ed-b10a-dbc3680a6a81" pseudo="8P2-1" pseudoList='[&quot;R8P2-1&quot;,&quot;8P2-1&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="4.50" maxHours="4.50"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">1)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">4.5 credits in COMP 1805, COMP 2804, ELEC 2501,<br />MATH 1005, SYSC 2004, SYSC 2006, SYSC 2100, SYSC 2310,<br />SYSC 2320</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  4.50</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22FA</td>
+        											<td class="course"	aria-label="course">COMP 2804</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22FA</td>
+        											<td class="course"	aria-label="course">ELEC 2501</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">MATH 1005</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">MATH 1805</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+															<tr>
+																<td class="descLine">&gt;&gt;MATCHED AS: COMP 1805</td>
+															</tr>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">SYSC 2004</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22FA</td>
+        											<td class="course"	aria-label="course">SYSC 2006</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">SYSC 2100</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">SYSC 2310</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23SU</td>
+        											<td class="course"	aria-label="course">SYSC 2320</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_OK  category_Year_3   rname_BENG8P-3  rtabx_12" id="req-a5936a78-1c91-44f1-b6d4-5d45b944286f" rname="BENG8P-3" pseudo="BENG8P-3" rqdSubreq="2" rqdCount="0" rqdGpa="0" rqdHours="5.50" maxHours="5.50" authCode1=" " authCode2=" "> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: THIRD YEAR</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusOK"><span class="sr-only hidden-print">Requirement Complete</span><i class="fa fa-statusOK" title="Requirement Complete" aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">THIRD YEAR						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                        <tr class="reqEarned">
+                        <td class="warnind"></td>
+                        <td class="rowlabel"><span class="warnind"></span>EARNED:</td>
+                        <td class="hourscount bigcolumn">
+                        	<span class="hours number">  5.50</span>
+                        	<span class="hourslabel smallfieldlabel">Credits</span>
+                        	<span class="count number"></span>
+                        	<span class="countlabel smallfieldlabel"></span>
+                        </td>
+                        <td class="subreqs number"></td>
+                        <td class="subreqslabel fieldlabel"></td>
+                        <td class="gpa number"></td>
+                        <td class="gpalabel"></td>
+                        </tr> 
+                                     </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-9cfe02b7-18d4-4ebc-a7c1-aef4976d3b79" pseudo="8P3-1" pseudoList='[&quot;R8P3-1&quot;,&quot;8P3-1&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="5.00" maxHours="5.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">1)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">5.0 credits in COMP 3005, ECOR 2050, SYSC 3101,<br />SYSC 3110, SYSC 3120, SYSC 3303, SYSC 3310,<br />SYSC 4001, SYSC 4106, SYSC 4120</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  5.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23WN</td>
+        											<td class="course"	aria-label="course">COMP 3005</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23SU</td>
+        											<td class="course"	aria-label="course">ECOR 2050</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">C   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23WN</td>
+        											<td class="course"	aria-label="course">SYSC 3101</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">SYSC 3110</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22FA</td>
+        											<td class="course"	aria-label="course">SYSC 3120</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">24WN</td>
+        											<td class="course"	aria-label="course">SYSC 3303</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">C+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23FA</td>
+        											<td class="course"	aria-label="course">SYSC 3310</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">B-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23FA</td>
+        											<td class="course"	aria-label="course">SYSC 4001</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">C   </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23WN</td>
+        											<td class="course"	aria-label="course">SYSC 4106</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A-  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23WN</td>
+        											<td class="course"	aria-label="course">SYSC 4120</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-5a1dfe88-572b-4c17-908d-63ebbc549d28" pseudo="RBASIC SCI" pseudoList='[&quot;R8P3-2&quot;,&quot;RBASIC SCI&quot;,&quot;BASIC SCI&quot;,&quot;8P3-2&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="0.50" maxHours="0.50"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_OK"><span class="sr-only hidden-print">Sub-Requirement Complete</span><i class="fa fa-Status_OK" title="Sub-Requirement Complete" aria-hidden="true"></i></span>
+								<span class="subreqNumber">2)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusOK">0.5 credit from ELEC 2507, ELEC 4705 or Basic<br />Science Electives</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.50</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+ 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23SU</td>
+        											<td class="course"	aria-label="course">BIOL 1902</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">B+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_IP  category_Year_4   rname_BENG8P-4  rtabx_13" id="req-9501d05c-f65a-4766-b8da-a85d1794f0ae" rname="BENG8P-4" pseudo="BENG8P-4" rqdSubreq="4" rqdCount="0" rqdGpa="0" rqdHours="5.00" maxHours="5.00" authCode1=" " authCode2=" "> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: FOURTH YEAR</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusIP"><span class="sr-only hidden-print">Requirement In Progress</span><i class="fa fa-statusIP" title="Requirement In Progress" aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">FOURTH YEAR						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                     	<tr class="reqIpDetail">
+                        	<td class="reqStatusTd"></td>
+                            <td class="rowlabel">IP</td>
+                            <td class="hourscount bigcolumn">
+                            	<span class="hours number">  5.00</span>
+                               	<span class="hourslabel smallfieldlabel">Credits</span>
+                               	<span class="count number"></span>
+                        		<span class="countlabel smallfieldlabel"></span>
+                            </td>
+                            <td class="number"></td><td class="fieldlabel"></td>
+                            <td class="number"></td><td class="fieldlabel"></td>
+                        </tr>
+                </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-2e7cfe09-2224-4797-9ed3-05fa4e6a9bd6" pseudo="8P4-1" pseudoList='[&quot;R8P4-1&quot;,&quot;8P4-1&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="2.00" maxHours="2.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber">1)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">2.0 credits in ECOR 4995, SYSC 4101, SYSC 4806,<br />SYSC 4810</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+                    						<tr class="subreqIpHours">
+                        						<td class="rowlabel">
+                        							IP
+                        						</td>
+                        						<td class="hours number">
+                        							  2.00
+                        						</td>
+                        						<td class="hourslabel fieldlabel">
+                        							Credits
+                        						</td>
+                        						<td class="count number">
+                        							
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                        							
+                        						</td>
+                    						</tr>
+                						 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">ECOR 4995</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">25FA</td>
+        											<td class="course"	aria-label="course">SYSC 4101</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code">RP </td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">25FA</td>
+        											<td class="course"	aria-label="course">SYSC 4806</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">25FA</td>
+        											<td class="course"	aria-label="course">SYSC 4810</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-200ed720-73be-48e3-883d-1f078ddf5d02" pseudo="8P4-1A" pseudoList='[&quot;R8P4-1A&quot;,&quot;8P4-1A&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="1.00" maxHours="1.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber">2)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">1.0 credit from SYSC 4907 [1.0]</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+                    						<tr class="subreqIpHours">
+                        						<td class="rowlabel">
+                        							IP
+                        						</td>
+                        						<td class="hours number">
+                        							  1.00
+                        						</td>
+                        						<td class="hourslabel fieldlabel">
+                        							Credit                                                           
+                        						</td>
+                        						<td class="count number">
+                        							
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                        							
+                        						</td>
+                    						</tr>
+                						 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">SYSC 4907</td>
+											        <td class="credit"	aria-label="credit"> 1.00 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-7533f765-fb78-486d-a75b-a37dc094cb70" pseudo="8P4-2" pseudoList='[&quot;R8P4-2&quot;,&quot;8P4-2&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="1.00" maxHours="1.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber">3)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">1.0 credit from SYSC or ELEC courses at the 3000-level<br />or above</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+                    						<tr class="subreqIpHours">
+                        						<td class="rowlabel">
+                        							IP
+                        						</td>
+                        						<td class="hours number">
+                        							  1.00
+                        						</td>
+                        						<td class="hourslabel fieldlabel">
+                        							Credit                                                           
+                        						</td>
+                        						<td class="count number">
+                        							
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                        							
+                        						</td>
+                    						</tr>
+                						 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">SYSC 3600</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">SYSC 4416</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-61534853-d8bd-4075-953f-516fae0402e3" pseudo="8P4-3" pseudoList='[&quot;R8P4-3&quot;,&quot;8P4-3&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="1.00" maxHours="1.00"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">IP</span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_IP"><span class="sr-only hidden-print">Sub-Requirement In Progress</span><i class="fa fa-Status_IP" title="Sub-Requirement In Progress" aria-hidden="true"></i></span>
+								<span class="subreqNumber">4)</span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusIP">1.0 credit in ELEC or SYSC at the 3000-level or<br />1.0 credit in Computer Science Electives for Software<br />Engineering. With permission of the department 1.0<br />credit in SYSC at the 5000-level may be used.</span>
+ 	           						<table class="subrequirementTotals">
+                    						<tr class="subreqEarned">
+                       							<td class="bigcolumn">
+<span class="hours number">  0.00</span><span class="hourslabel fieldlabel">cr. Complete</span>                        						</td>
+                        						<td class="count number">
+                            						
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                            						
+                        						</td>
+                        						<td class="gpa number">
+                            						
+                       							</td>
+                        						<td class="gpalabel smallfieldlabel">
+                            						
+                        						</td>
+                    						</tr>               
+                						 
+ 
+                    						<tr class="subreqIpHours">
+                        						<td class="rowlabel">
+                        							IP
+                        						</td>
+                        						<td class="hours number">
+                        							  1.00
+                        						</td>
+                        						<td class="hourslabel fieldlabel">
+                        							Credit                                                           
+                        						</td>
+                        						<td class="count number">
+                        							
+                        						</td>
+                        						<td class="countlabel fieldlabel">
+                        							
+                        						</td>
+                    						</tr>
+                						 
+ 
+            						</table>
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">SYSC 4504</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ip">
+        											<td class="term"	aria-label="term">26WN</td>
+        											<td class="course"	aria-label="course">SYSC 4906</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">CUR </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_ETD  rtabx_14" id="req-c55cf1ff-b2d9-4e1d-8948-6d2a7472cd1d" rname="ETD" pseudo="ETD" rqdSubreq="1" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: COURSES SET ASIDE</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">COURSES SET ASIDE						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-f6af1624-2592-4982-9d2b-0336d58ff2de" pseudo="TOOMANYTR" pseudoList='[&quot;TOOMANYTR&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="300.00" maxHours="999.90"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_NONE"><span class="sr-only hidden-print">Sub-Requirement </span><i class="fa fa-Status_NONE" title="Sub-Requirement " aria-hidden="true"></i></span>
+								<span class="subreqNumber"></span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusNO">Excess Transfer Credits for this Program</span>
+
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">COMP 2XXX</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">PHYS 1XXX</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-163734d4-fee8-48ca-94bd-1d9224fc7d95" pseudo="ETD-1" pseudoList='[&quot;RETD-1&quot;,&quot;ETD-1&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="300.00" maxHours="999.90"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_NONE"><span class="sr-only hidden-print">Sub-Requirement </span><i class="fa fa-Status_NONE" title="Sub-Requirement " aria-hidden="true"></i></span>
+								<span class="subreqNumber"></span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusNO">Excess courses for this program</span>
+
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22WN</td>
+        											<td class="course"	aria-label="course">COMP 1805</td>
+											        <td class="credit"	aria-label="credit"> 0.50 </td>
+											        <td class="grade"	aria-label="grade">A+  </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+											<div class="subrequirement" id="subreq-b18a4239-471b-493e-a6f8-992c1100c830" pseudo="FORFEIT" pseudoList='[&quot;RFORFEIT&quot;,&quot;FORFEIT&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="300.00" maxHours="999.90"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_NONE"><span class="sr-only hidden-print">Sub-Requirement </span><i class="fa fa-Status_NONE" title="Sub-Requirement " aria-hidden="true"></i></span>
+								<span class="subreqNumber"></span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusNO">Failed and/or Forfeited Courses</span>
+
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23SU</td>
+        											<td class="course"	aria-label="course">CCDP 2100</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">F   </td>
+    											<td class="ccode" aria-label="condition code">&gt;X </td>
+												<td class="description" aria-label="description">
+													<table>
+															<tr>
+																<td class="descLine"> RP </td>
+															</tr>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21FA</td>
+        											<td class="course"	aria-label="course">ECOR 1057</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">UNS </td>
+    											<td class="ccode" aria-label="condition code">&gt;X </td>
+												<td class="description" aria-label="description">
+													<table>
+															<tr>
+																<td class="descLine"> RP </td>
+															</tr>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">23FA</td>
+        											<td class="course"	aria-label="course">SYSC 4101</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">C+  </td>
+    											<td class="ccode" aria-label="condition code">&gt;X </td>
+												<td class="description" aria-label="description">
+													<table>
+															<tr>
+																<td class="descLine"> RP </td>
+															</tr>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_NCD-SYSC  rtabx_03" id="req-03e5fa97-5c27-48dd-875f-cdc35026fef0" rname="NCD-SYSC" pseudo="NCD-SYSC" rqdSubreq="1" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1=" " authCode2=" "> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: COURSES SET ASIDE</h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">					</div>
+<div class="reqTitle">COURSES SET ASIDE						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+						<div class="subrequirement" id="subreq-2375a8ea-553c-4768-932c-3790927dc032" pseudo="NCDSYSC" pseudoList='[&quot;RNCDSYSC&quot;,&quot;NCDSYSC&quot;]' rqdSubreq="0" rqdGpa="0" rqdHours="300.00" maxHours="999.90"> 							<div class="subreqPretext">
+								<span class="subreqSeqErr">  </span>
+								<span class="subreqRequired"></span>
+									<span class="status Status_NONE"><span class="sr-only hidden-print">Sub-Requirement </span><i class="fa fa-Status_NONE" title="Sub-Requirement " aria-hidden="true"></i></span>
+								<span class="subreqNumber"></span>
+							</div>
+							<div class="subreqBody">
+								<div class="subrequirement-buttons"></div>
+									<span class="subreqTitle srTitle_substatusNO">No credit in this degree program</span>
+
+									<table class="completedCourses" summary="complete course table">
+											<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">22FA</td>
+        											<td class="course"	aria-label="course">COOP 1000</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">SAT </td>
+    											<td class="ccode" aria-label="condition code"></td>
+												<td class="description" aria-label="description">
+													<table>
+													</table>
+												</td>
+											</tr>
+																					<tr class="takenCourse ">
+        											<td class="term"	aria-label="term">21SU</td>
+        											<td class="course"	aria-label="course">MATH 1007</td>
+											        <td class="credit"	aria-label="credit"> 0.00 </td>
+											        <td class="grade"	aria-label="grade">TR  </td>
+    											<td class="ccode" aria-label="condition code">&gt;X </td>
+												<td class="description" aria-label="description">
+													<table>
+															<tr>
+																<td class="descLine"> RP </td>
+															</tr>
+													</table>
+												</td>
+											</tr>
+										 
+									</table> 
+ 
+ 
+							</div> 
+						</div> 
+					 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		  
+			<div class="requirement Status_NONE    rname_DISCLAIM  rtabx_26" id="req-93b4150c-2d74-4527-9cf6-20faab33085f" rname="DISCLAIM" pseudo="" rqdSubreq="0" rqdCount="0" rqdGpa="0" rqdHours="0.00" maxHours="999.90" authCode1="" authCode2=""> 
+			<div class="reqHeaderTable">
+				<h3 class="sr-only">Requirement: </h3>
+				<div class="reqStatusGroup">
+					<button class="toggler togglerExpanded hidden-print" title="Toggle Requirement Text"><i class="fa fa-togglerExpanded" title="Requirement expanded, click to collapse"></i></button>
+					<div class="status statusNONE"><span class="sr-only hidden-print">Requirement </span><i class="fa fa-statusNONE" title="Requirement " aria-hidden="true"></i></div>
+				</div>  <div class="reqText">					<div class="requirement-buttons"></div>
+<div class="reqHeader">                   ****  IMPORTANT NOTICE  ****<br />This Degree Audit Report is a summary of your degree program<br />requirements matched to your individual student record.  While<br />the University makes every effort to make your Degree Audit<br />Report as accurate as possible, it is your responsibility to<br />review your Degree Audit Report carefully to ensure you<br />satisfy published requirements using the University's<br />Undergraduate Calendar.  Requirements will not be waived based<br />on Degree Audit Report discrepancies.  Completion of all degree<br />requirements is the sole responsibility of the individual<br />student. Please report any discrepancies to your School or<br />Major department advisor.<br /><br />THIS DEGREE AUDIT REPORT IS UNOFFICIAL AND FOR INTERNAL USE ONLY<br />IT IS NOT TO BE USED FOR SCHOLARSHIP OR DEAN'S LIST ASSESSMENTS					</div>
+<div class="reqTitle">						</div>
+				</div>
+			</div>
+			<div class="reqBody">
+                <table class="requirementTotals">
+                 </table>
+				<div class="auditSubrequirements">
+ 
+				</div> 
+				<hr/>
+			</div> 
+			</div> 
+		 
+	</div> 
+ 	<div id="endText">
+		**********END OF REPORT**********
+	</div>                                                
+</div> 			
+                 
+            <div class="card bg-light col-md-5 px-0">
+                <h2 style="margin-top: 0px;" class="card-header">Legend</h2>
+                
+                <div class="card-body">
+                    <h2>COMPLETION STATUS</h2>
+                    <ul class="list-unstyled">
+                        <li>
+                            <span class="statusOK legend_status" style="float: left;" title="Requirement/Sub-Requirement Complete">
+                                <i class="fas fa-statusOK" title="Requirement / Sub-Requirement Complete Image"></i>
+                            </span>  - Complete
+                        </li>
+                        
+                        <li>
+                            <span class="statusPL legend_status" style="float: left;" title="Requirement/Sub-Requirement Complete with Planned Courses">
+                                <i class="fas fa-statusPL" title="Requirement / Sub-Requirement Complete with Planned Courses Image"></i> 
+                            </span> - Planned
+                        </li> 
+                    
+                        <li>
+                            <span class="statusIP legend_status" style="float: left;" title="Requirement/Sub-Requirement In Progress">
+                                <i class="fas fa-statusIP" title="Requirement / Sub-Requirement In Progress Image"></i> 
+                            </span> - In Progress
+                        </li> 
+                    
+                        <li>
+                            <span class="statusNO legend_status" style="float: left;" title="Requirement/Sub-Requirement Unfulfilled">
+                                <i class="fas fa-statusNO" title="Requirement / Sub-Requirement Unfulfilled Image"></i> 
+                            </span> - Unfulfilled
+                        </li>
+                    </ul>
+                    
+                    <h2>SPECIAL GRADES</h2>
+                    <ul class="list-unstyled">
+                        <li><strong>LOP</strong>  Letter of Permission</li>
+                        <li><strong>CLP</strong>  Current LOP</li>
+                        <li><strong>CUO</strong>  Current Ottawa Univ.</li>
+                        <li><strong>EXC</strong>  Exchange Course</li>
+                        <li><strong>CEX</strong>  Current Exchange Course</li>
+                        <li><strong>TR </strong>  Transfer Course</li>
+                        <li><strong>TX </strong>  TR Forfeited on Adm</li>
+                        <li><strong>CR </strong>  Credit</li>
+                        <li><strong>NR </strong>  No Record</li>
+                    </ul>
+                    
+                    <h2>COURSE CODES</h2>
+                    <ul class="list-unstyled">
+                        <li><strong>&gt;R </strong>  Repeatable Course</li>
+                        <li><strong>RP </strong>  Repeated Course</li>
+                        <li><strong>&gt;X </strong>  Forfeited Course</li>
+                        <li><strong>EPD</strong>  Extra to Previous Degree</li>
+                    </ul>
+                </div>
+            </div>
+
+            
+			
+		</div>
+
+
+			</div>
+
+		</div>
+		
+		<!-- footer -->
+<!-- footer -->
+<div id="footerContainer" role="contentinfo">
+<div class="greyBar"></div>
+<span class="d-none d-md-block">
+You must have the free Adobe Reader program installed on your computer to view the documents marked <span class="badge label-pdf">PDF</span>. Download the <a href="http://www.adobe.com/products/acrobat/readstep2.html" target="_blank">free Adobe Reader program.</a>
+</span>
+<br>
+Copyright &copy; 2020 <a href="http://www.collegesource.com/">CollegeSource, Inc.</a> All Rights Reserved.<br/>
+<a href="http://www.collegesource.com/privacy">Privacy Policy</a>
+<br/>
+
+	    	selfservice Version: 4.5.4.4 - 06/07/2021 10:32 AM
+	    	<br>This product is licensed to Carleton University<br>
+
+</div>
+
+	</body>
+	</html>
+

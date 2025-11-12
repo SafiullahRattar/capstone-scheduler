@@ -3,6 +3,7 @@
 import { PrismaClient } from '@prisma/client'
 import * as readline from 'readline'
 import { validatePrerequisites, getPrerequisiteExplanation, StudentTranscript } from './prerequisite-validator'
+import { ingestAuditFromFile } from './audit-parser'
 
 const prisma = new PrismaClient()
 
@@ -23,19 +24,21 @@ Smart Scheduler CLI Commands:
 2. prereq <course_code>     - Show prerequisites for a course
 3. sections <course_code>   - Show all sections for a course with times
 4. validate <course> <completed_courses> [year] [permission] - Check if prerequisites are met
-5. schedule <course_list>   - Check for schedule conflicts between courses
-6. stats                   - Show database statistics
-7. help                    - Show this help
-8. exit                    - Exit the CLI
+5. ingest <file_path>       - Import student audit data from HTML file
+6. student <student_id>     - Show student's completed courses
+7. eligible <student_id>    - Show courses student is eligible to take
+8. stats                   - Show database statistics
+9. help                    - Show this help
+10. exit                   - Exit the CLI
 
 Examples:
   search SYSC
   prereq SYSC4907
   sections SYSC4907
   validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001"
-  validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001" FOURTH_YEAR
-  validate CIVE4302 "CIVE3203,CIVE3206" FOURTH_YEAR true
-  schedule "SYSC4907,SYSC4120,ELEC4501"
+  ingest safi-audit.txt
+  student 101245709
+  eligible 101245709
 `)
 }
 
@@ -225,15 +228,90 @@ async function showStats() {
   const nodeCount = await prisma.prerequisiteNode.count()
   const sectionCount = await prisma.section.count()
 
-  console.log(`\nDatabase Statistics: Database Statistics:`)
-  console.log(`Smart Scheduler CLI Commands: Courses: ${courseCount}`)
-  console.log(`Prerequisites: Prerequisite Expressions: ${prereqCount}`)
-  console.log(`Prerequisite Tree Nodes: Prerequisite Tree Nodes: ${nodeCount}`)
-  console.log(`Available Sections Sections: ${sectionCount}`)
+  console.log(`\nDatabase Statistics:`)
+  console.log(`Courses: ${courseCount}`)
+  console.log(`Prerequisite Expressions: ${prereqCount}`)
+  console.log(`Prerequisite Tree Nodes: ${nodeCount}`)
+  console.log(`Sections: ${sectionCount}`)
+}
+
+async function showStudent(studentId: string) {
+  const student = await prisma.student.findUnique({
+    where: { studentId: studentId },
+    include: { courseCompletions: { include: { course: true } } }
+  })
+
+  if (!student) {
+    console.log(`[ERROR] Student ${studentId} not found`)
+    return
+  }
+
+  console.log(`\n[STUDENT] ${student.name} (${student.studentId})`)
+  console.log(`Program: ${student.program}`)
+  console.log(`\nCompleted Courses (${student.courseCompletions.length} total):`)
+  
+  student.courseCompletions.forEach(completion => {
+    console.log(`  ${completion.courseId} - ${completion.grade} - ${completion.course.title || 'No title'}`)
+  })
+}
+
+async function showEligibleCourses(studentId: string) {
+  const student = await prisma.student.findUnique({
+    where: { studentId: studentId },
+    include: { courseCompletions: true }
+  })
+
+  if (!student) {
+    console.log(`[ERROR] Student ${studentId} not found`)
+    return
+  }
+
+  // Get completed course IDs
+  const completedCourseIds = student.courseCompletions.map(c => c.courseId)
+  
+  console.log(`\n[ELIGIBLE COURSES] Checking prerequisites for ${student.name}`)
+  console.log(`Completed courses: ${completedCourseIds.join(', ')}`)
+
+  // Create transcript for validation
+  const transcript: StudentTranscript = {
+    completedCourses: completedCourseIds,
+    courseGrades: Object.fromEntries(
+      student.courseCompletions.map(c => [c.courseId, c.grade])
+    ),
+    currentYear: 'FOURTH_YEAR', // Default for now
+    hasSpecialPermission: false
+  }
+
+  // Get all courses and check which ones they can take
+  const allCourses = await prisma.course.findMany({
+    where: {
+      prerequisiteExpression: {
+        isNot: null
+      }
+    },
+    take: 50 // Limit for demo
+  })
+
+  console.log(`\nChecking eligibility for ${allCourses.length} courses with prerequisites:\n`)
+
+  for (const course of allCourses) {
+    // Skip if already completed
+    if (completedCourseIds.includes(course.id)) {
+      continue
+    }
+
+    try {
+      const isEligible = await validatePrerequisites(course.id, transcript)
+      if (isEligible) {
+        console.log(`✓ ${course.id} - ${course.title || 'No title'} - ELIGIBLE`)
+      }
+    } catch (error) {
+      // Skip courses with validation errors
+    }
+  }
 }
 
 async function main() {
-  console.log('Current year standing: Welcome to Smart Scheduler CLI!')
   console.log('Type "help" for available commands or "exit" to quit.\n')
 
   while (true) {
@@ -288,6 +366,34 @@ async function main() {
         
         case 'stats':
           await showStats()
+          break
+        
+        case 'ingest':
+          if (args.length === 0) {
+            console.log('[ERROR] Usage: ingest <file_path>')
+            break
+          }
+          try {
+            await ingestAuditFromFile(args[0])
+          } catch (error) {
+            console.log(`[ERROR] Failed to ingest audit: ${error}`)
+          }
+          break
+
+        case 'student':
+          if (args.length === 0) {
+            console.log('[ERROR] Usage: student <student_id>')
+            break
+          }
+          await showStudent(args[0])
+          break
+
+        case 'eligible':
+          if (args.length === 0) {
+            console.log('[ERROR] Usage: eligible <student_id>')
+            break
+          }
+          await showEligibleCourses(args[0])
           break
         
         case 'exit':
