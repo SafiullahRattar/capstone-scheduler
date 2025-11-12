@@ -20,16 +20,20 @@ async function showHelp() {
 
 1. search <course_code>     - Search for a course (e.g., search SYSC4907)
 2. prereq <course_code>     - Show prerequisites for a course
-3. validate <course> <completed_courses> - Check if prerequisites are met
-4. list programs           - Show all programs
-5. stats                   - Show database statistics
-6. help                    - Show this help
-7. exit                    - Exit the CLI
+3. sections <course_code>   - Show all sections for a course with times
+4. validate <course> <completed_courses> - Check if prerequisites are met
+5. schedule <course_list>   - Check for schedule conflicts between courses
+6. list programs           - Show all programs
+7. stats                   - Show database statistics
+8. help                    - Show this help
+9. exit                    - Exit the CLI
 
 Examples:
   search SYSC
   prereq SYSC4907
+  sections SYSC4907
   validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001"
+  schedule "SYSC4907,SYSC4120,ELEC4501"
 `)
 }
 
@@ -132,6 +136,68 @@ async function showPrograms() {
   })
 }
 
+async function showSections(courseCode: string) {
+  const course = await prisma.course.findUnique({
+    where: { id: courseCode.toUpperCase() },
+    include: { sections: true }
+  })
+
+  if (!course) {
+    console.log(`❌ Course ${courseCode} not found`)
+    return
+  }
+
+  console.log(`\n📖 ${course.id} - ${course.title}`)
+  
+  if (course.sections.length === 0) {
+    console.log('❌ No sections available for this course')
+    return
+  }
+
+  console.log(`\n📅 Available Sections (${course.sections.length} total):\n`)
+  
+  // Group sections by type for better display
+  const sectionsByType = course.sections.reduce((acc, section) => {
+    if (!acc[section.sectionType]) {
+      acc[section.sectionType] = []
+    }
+    acc[section.sectionType].push(section)
+    return acc
+  }, {} as Record<string, any[]>)
+
+  Object.entries(sectionsByType).forEach(([type, sections]) => {
+    console.log(`📝 ${type} Sections:`)
+    sections.forEach(section => {
+      const timeStr = section.startTime && section.endTime 
+        ? `${formatTime(section.startTime)}-${formatTime(section.endTime)}`
+        : 'TBA'
+      
+      const enrollmentStr = section.capacity && section.enrolled !== null
+        ? `${section.enrolled}/${section.capacity}`
+        : 'N/A'
+        
+      console.log(`   ${section.sectionCode}: ${section.days || 'TBA'} ${timeStr}`)
+      console.log(`      Enrollment: ${enrollmentStr} | Term: ${section.term || 'N/A'} | Status: ${section.status || 'N/A'}`)
+      if (section.instructor) {
+        console.log(`      Instructor: ${section.instructor}`)
+      }
+    })
+    console.log('')
+  })
+}
+
+function formatTime(timeStr: string): string {
+  // Convert "0835" to "8:35 AM"
+  if (!timeStr || timeStr.length !== 4) return timeStr
+  
+  const hour = parseInt(timeStr.substring(0, 2))
+  const minute = timeStr.substring(2, 4)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour)
+  
+  return `${displayHour}:${minute} ${ampm}`
+}
+
 async function showStats() {
   const courseCount = await prisma.course.count()
   const prereqCount = await prisma.prerequisite.count()
@@ -173,6 +239,14 @@ async function main() {
             break
           }
           await showPrerequisites(args[0])
+          break
+        
+        case 'sections':
+          if (args.length === 0) {
+            console.log('❌ Usage: sections <course_code>')
+            break
+          }
+          await showSections(args[0])
           break
         
         case 'validate':

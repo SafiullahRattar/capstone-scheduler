@@ -38,23 +38,27 @@ model Prerequisite {
   @@map("prerequisites")
 }
 
-// Course sections for scheduling (will be populated from supervisor data)
+// Course sections for scheduling
 model Section {
-  id           String   @id @default(cuid())
-  courseId     String   // Course this section belongs to
-  sectionType  String   // "LEC", "LAB", "TUT", etc.
-  sectionNumber String  // "A01", "B02", etc.
-  crn          String?  // Course Registration Number
-  instructor   String?  // Instructor name
-  days         String[] // Days of week ["MON", "WED", "FRI"]
-  startTime    String?  // Start time "09:35"
-  endTime      String?  // End time "10:55"
-  location     String?  // Room/building
-  term         String?  // "F25", "W26", etc.
-  capacity     Int?     // Section capacity
-  enrolled     Int?     // Current enrollment
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  sectionId     String?  // External section ID from scheduling system
+  courseId      String   // Course this section belongs to
+  sectionCode   String   // "A", "B", "L1", etc.
+  sectionType   String   // "LEC", "LAB", "TUT", "PAN", "WRK", etc.
+  crn           String?  // Course Registration Number
+  instructor    String?  // Instructor name
+  days          String?  // Days string like "MW", "TR", "F"
+  startTime     String?  // Start time "0835"
+  endTime       String?  // End time "1125"
+  startDate     String?  // Start date "2026-01-05"
+  endDate       String?  // End date "2026-04-08"
+  location      String?  // Room/building
+  term          String?  // "202610" (Winter 2026)
+  capacity      Int?     // Section capacity
+  enrolled      Int?     // Current enrollment
+  status        String?  // "A" (Active), "I" (Inactive)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relationships
   course Course @relation(fields: [courseId], references: [id])

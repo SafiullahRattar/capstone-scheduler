@@ -1,0 +1,160 @@
+import { PrismaClient } from '@prisma/client'
+import fs from 'fs/promises'
+import path from 'path'
+
+const prisma = new PrismaClient()
+
+interface TimetableRecord {
+  term: string
+  sectionId: string
+  department: string
+  courseNumber: string
+  sectionCode: string
+  sectionType: string
+  days: string
+  startTime: string
+  endTime: string
+  startDate: string
+  endDate: string
+  capacity: number
+  enrolled: number
+  status: string
+}
+
+function parseTimetableLine(line: string): TimetableRecord | null {
+  const parts = line.trim().split('\t')
+  
+  // Skip invalid lines
+  if (parts.length < 14) {
+    return null
+  }
+
+  const [
+    term,
+    sectionId,
+    department,
+    courseNumber,
+    sectionCode,
+    sectionType,
+    days,
+    startTime,
+    endTime,
+    startDate,
+    endDate,
+    capacity,
+    enrolled,
+    status
+  ] = parts
+
+  return {
+    term,
+    sectionId,
+    department,
+    courseNumber,
+    sectionCode,
+    sectionType,
+    days: days || '',
+    startTime: startTime || '',
+    endTime: endTime || '',
+    startDate,
+    endDate,
+    capacity: parseInt(capacity) || 0,
+    enrolled: parseInt(enrolled) || 0,
+    status
+  }
+}
+
+async function main() {
+  console.log('📅 Starting timetable data import...')
+
+  // Read the timetable file
+  const timetablePath = path.join(process.cwd(), 'scheduling-timings.txt')
+  const content = await fs.readFile(timetablePath, 'utf-8')
+  const lines = content.split('\n').filter(line => line.trim())
+
+  console.log(`📊 Found ${lines.length} timetable records to process`)
+
+  let imported = 0
+  let skipped = 0
+
+  for (const line of lines) {
+    const record = parseTimetableLine(line)
+    
+    if (!record) {
+      skipped++
+      continue
+    }
+
+    const courseId = `${record.department}${record.courseNumber}`
+
+    try {
+      // Check if the course exists in our database
+      const course = await prisma.course.findUnique({
+        where: { id: courseId }
+      })
+
+      if (!course) {
+        // Create the course if it doesn't exist
+        await prisma.course.create({
+          data: {
+            id: courseId,
+            title: courseId // Will be updated later with actual titles
+          }
+        })
+      }
+
+      // Create the section
+      await prisma.section.create({
+        data: {
+          sectionId: record.sectionId,
+          courseId: courseId,
+          sectionCode: record.sectionCode,
+          sectionType: record.sectionType,
+          days: record.days,
+          startTime: record.startTime,
+          endTime: record.endTime,
+          startDate: record.startDate,
+          endDate: record.endDate,
+          term: record.term,
+          capacity: record.capacity,
+          enrolled: record.enrolled,
+          status: record.status
+        }
+      })
+
+      imported++
+
+      if (imported % 100 === 0) {
+        console.log(`📈 Imported ${imported} sections...`)
+      }
+
+    } catch (error) {
+      console.error(`❌ Error importing section ${courseId}-${record.sectionCode}:`, error)
+      skipped++
+    }
+  }
+
+  console.log(`\n✅ Timetable import completed!`)
+  console.log(`📊 Imported: ${imported} sections`)
+  console.log(`⚠️  Skipped: ${skipped} records`)
+
+  // Show statistics
+  const totalSections = await prisma.section.count()
+  const uniqueCourses = await prisma.section.groupBy({
+    by: ['courseId'],
+    _count: true
+  })
+
+  console.log(`\n📈 Database statistics:`)
+  console.log(`📚 Total sections: ${totalSections}`)
+  console.log(`🎯 Courses with sections: ${uniqueCourses.length}`)
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error importing timetable:', e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

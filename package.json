@@ -6,6 +6,7 @@
     "db:setup": "prisma generate && prisma db push",
     "db:reset": "prisma db push --force-reset",
     "db:seed": "tsx scripts/seed.ts",
+    "db:import-timetable": "tsx scripts/import-timetable.ts",
     "cli": "tsx cli/index.ts"
   },
   "dependencies": {
