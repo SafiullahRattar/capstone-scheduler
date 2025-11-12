@@ -10,8 +10,8 @@
     "cli": "tsx cli/index.ts"
   },
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "prisma": "^5.7.0",
-    "@prisma/client": "^5.7.0",
     "typescript": "^5.0.0"
   },
   "devDependencies": {

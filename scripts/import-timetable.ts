@@ -65,14 +65,14 @@ function parseTimetableLine(line: string): TimetableRecord | null {
 }
 
 async function main() {
-  console.log('📅 Starting timetable data import...')
+  console.log('[SCHEDULE] Starting timetable data import...')
 
   // Read the timetable file
   const timetablePath = path.join(process.cwd(), 'scheduling-timings.txt')
   const content = await fs.readFile(timetablePath, 'utf-8')
   const lines = content.split('\n').filter(line => line.trim())
 
-  console.log(`📊 Found ${lines.length} timetable records to process`)
+  console.log(`[STATS] Found ${lines.length} timetable records to process`)
 
   let imported = 0
   let skipped = 0
@@ -125,18 +125,18 @@ async function main() {
       imported++
 
       if (imported % 100 === 0) {
-        console.log(`📈 Imported ${imported} sections...`)
+        console.log(`[PROGRESS] Imported ${imported} sections...`)
       }
 
     } catch (error) {
-      console.error(`❌ Error importing section ${courseId}-${record.sectionCode}:`, error)
+      console.error(`[ERROR] Error importing section ${courseId}-${record.sectionCode}:`, error)
       skipped++
     }
   }
 
-  console.log(`\n✅ Timetable import completed!`)
-  console.log(`📊 Imported: ${imported} sections`)
-  console.log(`⚠️  Skipped: ${skipped} records`)
+  console.log(`\n[SUCCESS] Timetable import completed!`)
+  console.log(`[STATS] Imported: ${imported} sections`)
+  console.log(`[WARNING]  Skipped: ${skipped} records`)
 
   // Show statistics
   const totalSections = await prisma.section.count()
@@ -145,14 +145,14 @@ async function main() {
     _count: true
   })
 
-  console.log(`\n📈 Database statistics:`)
-  console.log(`📚 Total sections: ${totalSections}`)
-  console.log(`🎯 Courses with sections: ${uniqueCourses.length}`)
+  console.log(`\n[PROGRESS] Database statistics:`)
+  console.log(`[COURSES] Total sections: ${totalSections}`)
+  console.log(`[TARGETS] Courses with sections: ${uniqueCourses.length}`)
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error importing timetable:', e)
+    console.error('[ERROR] Error importing timetable:', e)
     process.exit(1)
   })
   .finally(async () => {

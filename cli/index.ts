@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { PrismaClient } from '@prisma/client'
-import readline from 'readline'
+import * as readline from 'readline'
+import { validatePrerequisites, getPrerequisiteExplanation, StudentTranscript } from './prerequisite-validator'
 
 const prisma = new PrismaClient()
 
@@ -16,23 +17,24 @@ function question(query: string): Promise<string> {
 
 async function showHelp() {
   console.log(`
-📚 Smart Scheduler CLI Commands:
+Smart Scheduler CLI Commands:
 
 1. search <course_code>     - Search for a course (e.g., search SYSC4907)
 2. prereq <course_code>     - Show prerequisites for a course
 3. sections <course_code>   - Show all sections for a course with times
-4. validate <course> <completed_courses> - Check if prerequisites are met
+4. validate <course> <completed_courses> [year] [permission] - Check if prerequisites are met
 5. schedule <course_list>   - Check for schedule conflicts between courses
-6. list programs           - Show all programs
-7. stats                   - Show database statistics
-8. help                    - Show this help
-9. exit                    - Exit the CLI
+6. stats                   - Show database statistics
+7. help                    - Show this help
+8. exit                    - Exit the CLI
 
 Examples:
   search SYSC
   prereq SYSC4907
   sections SYSC4907
   validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001"
+  validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001" FOURTH_YEAR
+  validate CIVE4302 "CIVE3203,CIVE3206" FOURTH_YEAR true
   schedule "SYSC4907,SYSC4120,ELEC4501"
 `)
 }
@@ -46,22 +48,22 @@ async function searchCourses(searchTerm: string) {
       }
     },
     include: {
-      prerequisites: true,
+      prerequisiteExpression: true,
       sections: true
     },
-    take: 10
+    take: 50
   })
 
   if (courses.length === 0) {
-    console.log(`❌ No courses found matching "${searchTerm}"`)
+    console.log(`No courses found matching "${searchTerm}"`)
     return
   }
 
-  console.log(`\n🔍 Found ${courses.length} course(s) matching "${searchTerm}":`)
+  console.log(`\nFound ${courses.length} course(s) matching "${searchTerm}":`)
   courses.forEach(course => {
-    console.log(`\n📖 ${course.id} - ${course.title}`)
-    if (course.prerequisites.length > 0) {
-      console.log(`   Prerequisites: ${course.prerequisites[0].requiredExpression || 'None'}`)
+    console.log(`\n${course.id} - ${course.title || 'No title available'}`)
+    if (course.prerequisiteExpression) {
+      console.log(`   Prerequisites: ${course.prerequisiteExpression.expression}`)
     }
     if (course.sections.length > 0) {
       console.log(`   Sections: ${course.sections.length} available`)
@@ -72,68 +74,87 @@ async function searchCourses(searchTerm: string) {
 async function showPrerequisites(courseCode: string) {
   const course = await prisma.course.findUnique({
     where: { id: courseCode.toUpperCase() },
-    include: { prerequisites: true }
+    include: { prerequisiteExpression: true }
   })
 
   if (!course) {
-    console.log(`❌ Course ${courseCode} not found`)
+    console.log(`[ERROR] Course ${courseCode} not found`)
     return
   }
 
-  console.log(`\n📖 ${course.id} - ${course.title}`)
+  console.log(`\n[COURSE] ${course.id} - ${course.title || 'No title available'}`)
   
-  if (course.prerequisites.length === 0) {
-    console.log('✅ No prerequisites required')
+  if (!course.prerequisiteExpression) {
+    console.log('[PASS] No prerequisites required')
     return
   }
 
-  const prereq = course.prerequisites[0]
-  console.log(`📋 Prerequisites: ${prereq.requiredExpression || 'None'}`)
-  
-  if (prereq.restrictedPrograms.length > 0) {
-    console.log(`🚫 Restricted for: ${prereq.restrictedPrograms.join(', ')}`)
-  }
+  console.log(`Prerequisites: ${course.prerequisiteExpression.expression}`)
+  console.log(`Last updated: ${course.prerequisiteExpression.lastModified.toDateString()}`)
 }
 
-async function validatePrerequisites(courseCode: string, completedCoursesStr: string) {
+async function validateCoursePrerequisites(courseCode: string, completedCoursesStr: string, yearStr?: string, permissionStr?: string) {
   const course = await prisma.course.findUnique({
-    where: { id: courseCode.toUpperCase() },
-    include: { prerequisites: true }
+    where: { id: courseCode.toUpperCase() }
   })
 
   if (!course) {
-    console.log(`❌ Course ${courseCode} not found`)
+    console.log(`[ERROR] Course ${courseCode} not found`)
     return
   }
 
-  if (course.prerequisites.length === 0) {
-    console.log(`✅ ${courseCode} has no prerequisites - you can take it!`)
-    return
-  }
-
-  const completedCourses = completedCoursesStr.split(',').map(c => c.trim().toUpperCase())
-  const prereqExpression = course.prerequisites[0].requiredExpression
-
-  console.log(`\n📖 ${course.id}`)
-  console.log(`📋 Prerequisites: ${prereqExpression}`)
-  console.log(`📚 Your completed courses: ${completedCourses.join(', ')}`)
+  // Parse completed courses and grades
+  const coursesWithGrades = completedCoursesStr.split(',').map(c => c.trim()).filter(c => c)
+  const completedCourses: string[] = []
+  const courseGrades: { [courseId: string]: string } = {}
   
-  // Simple validation (this is where T4 will be implemented)
-  console.log(`\n⚠️  Note: Full prerequisite validation logic not yet implemented.`)
-  console.log(`   This will be completed in T4 of the project.`)
-}
-
-async function showPrograms() {
-  const programs = await prisma.program.findMany()
-  
-  console.log(`\n🎓 Available Programs:`)
-  programs.forEach(program => {
-    console.log(`\n📘 ${program.id}`)
-    console.log(`   Name: ${program.name}`)
-    console.log(`   Faculty: ${program.faculty}`)
-    console.log(`   Total Credits: ${program.totalCredits}`)
-    console.log(`   Core Courses: ${program.coreRequirements.length}`)
+  coursesWithGrades.forEach(courseStr => {
+    // Handle courses with grades like "COMP1006[B+]"
+    const gradeMatch = courseStr.match(/^([A-Z]{3,4}\d{4})\[([A-Z\-+]*)\]$/i)
+    if (gradeMatch) {
+      const courseCode = gradeMatch[1].toUpperCase()
+      const grade = gradeMatch[2].toUpperCase()
+      completedCourses.push(courseCode)
+      courseGrades[courseCode] = grade
+    } else {
+      // Handle courses without grades like "COMP1006"
+      const courseCode = courseStr.toUpperCase()
+      if (courseCode.match(/^[A-Z]{3,4}\d{4}$/)) {
+        completedCourses.push(courseCode)
+      }
+    }
   })
+  
+  // Parse year standing
+  const yearStandings = ['FIRST_YEAR', 'SECOND_YEAR', 'THIRD_YEAR', 'FOURTH_YEAR']
+  let currentYear: StudentTranscript['currentYear'] = 'FIRST_YEAR'
+  
+  if (yearStr) {
+    const normalizedYear = yearStr.toUpperCase()
+    if (yearStandings.includes(normalizedYear)) {
+      currentYear = normalizedYear as StudentTranscript['currentYear']
+    } else {
+      console.log(`Invalid year standing "${yearStr}". Using FIRST_YEAR. Valid options: ${yearStandings.join(', ')}`)
+    }
+  }
+  
+  // Parse permission
+  const hasSpecialPermission = permissionStr?.toLowerCase() === 'true' || permissionStr?.toLowerCase() === 'yes'
+
+  const transcript: StudentTranscript = {
+    completedCourses,
+    courseGrades, 
+    currentYear,
+    hasSpecialPermission
+  }
+
+  console.log(`\n[COURSE] Validating prerequisites for ${course.id}`)
+  console.log(`Your completed courses: ${completedCourses.join(', ')}`)
+  console.log(`Current year standing: ${currentYear}`)
+  console.log(`Special permission: ${hasSpecialPermission ? 'Yes' : 'No'}`)
+  
+  const explanation = await getPrerequisiteExplanation(courseCode.toUpperCase(), transcript)
+  console.log(`\n${explanation}`)
 }
 
 async function showSections(courseCode: string) {
@@ -143,18 +164,18 @@ async function showSections(courseCode: string) {
   })
 
   if (!course) {
-    console.log(`❌ Course ${courseCode} not found`)
+    console.log(`[ERROR] Course ${courseCode} not found`)
     return
   }
 
-  console.log(`\n📖 ${course.id} - ${course.title}`)
+  console.log(`\n[COURSE] ${course.id} - ${course.title || 'No title available'}`)
   
   if (course.sections.length === 0) {
-    console.log('❌ No sections available for this course')
+    console.log('[ERROR] No sections available for this course')
     return
   }
 
-  console.log(`\n📅 Available Sections (${course.sections.length} total):\n`)
+  console.log(`\nAvailable Sections Available Sections (${course.sections.length} total):\n`)
   
   // Group sections by type for better display
   const sectionsByType = course.sections.reduce((acc, section) => {
@@ -166,7 +187,7 @@ async function showSections(courseCode: string) {
   }, {} as Record<string, any[]>)
 
   Object.entries(sectionsByType).forEach(([type, sections]) => {
-    console.log(`📝 ${type} Sections:`)
+    console.log(` ${type} Sections:`)
     sections.forEach(section => {
       const timeStr = section.startTime && section.endTime 
         ? `${formatTime(section.startTime)}-${formatTime(section.endTime)}`
@@ -201,18 +222,18 @@ function formatTime(timeStr: string): string {
 async function showStats() {
   const courseCount = await prisma.course.count()
   const prereqCount = await prisma.prerequisite.count()
-  const programCount = await prisma.program.count()
+  const nodeCount = await prisma.prerequisiteNode.count()
   const sectionCount = await prisma.section.count()
 
-  console.log(`\n📊 Database Statistics:`)
-  console.log(`📚 Courses: ${courseCount}`)
-  console.log(`📋 Prerequisites: ${prereqCount}`)
-  console.log(`🎓 Programs: ${programCount}`)
-  console.log(`📅 Sections: ${sectionCount}`)
+  console.log(`\nDatabase Statistics: Database Statistics:`)
+  console.log(`Smart Scheduler CLI Commands: Courses: ${courseCount}`)
+  console.log(`Prerequisites: Prerequisite Expressions: ${prereqCount}`)
+  console.log(`Prerequisite Tree Nodes: Prerequisite Tree Nodes: ${nodeCount}`)
+  console.log(`Available Sections Sections: ${sectionCount}`)
 }
 
 async function main() {
-  console.log('🎓 Welcome to Smart Scheduler CLI!')
+  console.log('Current year standing: Welcome to Smart Scheduler CLI!')
   console.log('Type "help" for available commands or "exit" to quit.\n')
 
   while (true) {
@@ -227,7 +248,7 @@ async function main() {
         
         case 'search':
           if (args.length === 0) {
-            console.log('❌ Usage: search <course_code>')
+            console.log('[ERROR] Usage: search <course_code>')
             break
           }
           await searchCourses(args.join(' '))
@@ -235,7 +256,7 @@ async function main() {
         
         case 'prereq':
           if (args.length === 0) {
-            console.log('❌ Usage: prereq <course_code>')
+            console.log('[ERROR] Usage: prereq <course_code>')
             break
           }
           await showPrerequisites(args[0])
@@ -243,7 +264,7 @@ async function main() {
         
         case 'sections':
           if (args.length === 0) {
-            console.log('❌ Usage: sections <course_code>')
+            console.log('[ERROR] Usage: sections <course_code>')
             break
           }
           await showSections(args[0])
@@ -251,19 +272,18 @@ async function main() {
         
         case 'validate':
           if (args.length < 2) {
-            console.log('❌ Usage: validate <course> <completed_courses>')
+            console.log('[ERROR] Usage: validate <course> <completed_courses> [year] [permission]')
             console.log('   Example: validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001"')
+            console.log('   Example: validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001" FOURTH_YEAR')
+            console.log('   Example: validate CIVE4302 "CIVE3203,CIVE3206" FOURTH_YEAR true')
             break
           }
-          await validatePrerequisites(args[0], args.slice(1).join(' ').replace(/"/g, ''))
-          break
-        
-        case 'list':
-          if (args[0] === 'programs') {
-            await showPrograms()
-          } else {
-            console.log('❌ Usage: list programs')
-          }
+          await validateCoursePrerequisites(
+            args[0], 
+            args[1].replace(/"/g, ''),
+            args[2],
+            args[3]
+          )
           break
         
         case 'stats':
@@ -272,23 +292,22 @@ async function main() {
         
         case 'exit':
         case 'quit':
-          console.log('👋 Goodbye!')
+          console.log('Goodbye! Goodbye!')
           rl.close()
           await prisma.$disconnect()
           process.exit(0)
-          break
         
         case '':
           // Empty command, do nothing
           break
         
         default:
-          console.log(`❌ Unknown command: ${command}`)
+          console.log(`[ERROR] Unknown command: ${command}`)
           console.log('Type "help" for available commands.')
           break
       }
     } catch (error) {
-      console.error('❌ Error:', error)
+      console.error('[ERROR] Error:', error)
     }
   }
 }

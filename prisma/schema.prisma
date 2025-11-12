@@ -7,88 +7,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Core course information
 model Course {
-  id          String   @id // Course code like "SYSC4907"
-  title       String?  // Course title
-  description String?  // Course description
-  credits     Float?   // Credit hours
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                     String             @id
+  title                  String?
+  description            String?
+  credits                Float?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  prerequisiteNodes      PrerequisiteNode[] @relation("CoursePrerequisites")
+  requiredByCourses      PrerequisiteNode[] @relation("RequiredByCourses")
+  prerequisiteExpression Prerequisite?      @relation("CoursePrerequisiteExpression")
+  sections               Section[]
 
-  // Relationships
-  prerequisites Prerequisite[]
-  sections      Section[]
-  
   @@map("courses")
 }
 
-// Prerequisites for courses
 model Prerequisite {
-  id                String   @id @default(cuid())
-  courseId          String   // The course that has this prerequisite
-  requiredExpression String? // The prerequisite expression like "CIVE3203 && CIVE3206"
-  restrictedPrograms String[] // Programs that cannot take this course
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // Relationships
-  course Course @relation(fields: [courseId], references: [id])
+  courseId     String   @id
+  expression   String
+  lastModified DateTime @default(now()) @updatedAt
+  course       Course   @relation("CoursePrerequisiteExpression", fields: [courseId], references: [id])
 
   @@map("prerequisites")
 }
 
-// Course sections for scheduling
-model Section {
-  id            String   @id @default(cuid())
-  sectionId     String?  // External section ID from scheduling system
-  courseId      String   // Course this section belongs to
-  sectionCode   String   // "A", "B", "L1", etc.
-  sectionType   String   // "LEC", "LAB", "TUT", "PAN", "WRK", etc.
-  crn           String?  // Course Registration Number
-  instructor    String?  // Instructor name
-  days          String?  // Days string like "MW", "TR", "F"
-  startTime     String?  // Start time "0835"
-  endTime       String?  // End time "1125"
-  startDate     String?  // Start date "2026-01-05"
-  endDate       String?  // End date "2026-04-08"
-  location      String?  // Room/building
-  term          String?  // "202610" (Winter 2026)
-  capacity      Int?     // Section capacity
-  enrolled      Int?     // Current enrollment
-  status        String?  // "A" (Active), "I" (Inactive)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model PrerequisiteNode {
+  id               String             @id @default(cuid())
+  courseId         String
+  nodeType         String
+  requiredCourseId String?
+  requiredYear     String?
+  parentId         String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  requiredGrade    String?
+  course           Course             @relation("CoursePrerequisites", fields: [courseId], references: [id])
+  parent           PrerequisiteNode?  @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children         PrerequisiteNode[] @relation("NodeHierarchy")
+  requiredCourse   Course?            @relation("RequiredByCourses", fields: [requiredCourseId], references: [id])
 
-  // Relationships
-  course Course @relation(fields: [courseId], references: [id])
+  @@map("prerequisite_nodes")
+}
+
+model Section {
+  id          String   @id @default(cuid())
+  sectionId   String?
+  courseId    String
+  sectionCode String
+  sectionType String
+  crn         String?
+  instructor  String?
+  days        String?
+  startTime   String?
+  endTime     String?
+  startDate   String?
+  endDate     String?
+  location    String?
+  term        String?
+  capacity    Int?
+  enrolled    Int?
+  status      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  course      Course   @relation(fields: [courseId], references: [id])
 
   @@map("sections")
-}
-
-// Academic programs and their requirements
-model Program {
-  id               String   @id // Like "SOFTWARE_ENGINEERING"
-  name             String   // "Software Engineering"
-  faculty          String   // "Engineering"
-  totalCredits     Float?   // Total credits required
-  coreRequirements String[] // List of required course IDs
-  electiveGroups   Json?    // Complex elective requirements as JSON
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@map("programs")
-}
-
-// Student academic records (for testing)
-model StudentRecord {
-  id            String   @id @default(cuid())
-  studentId     String   @unique // Student number
-  programId     String?  // Program they're in
-  completedCourses String[] // List of completed course IDs
-  currentYear   Int?     // 1, 2, 3, 4, 5+
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@map("student_records")
 }
