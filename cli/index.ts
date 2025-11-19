@@ -54,7 +54,7 @@ async function searchCourses(searchTerm: string) {
       prerequisiteExpression: true,
       sections: true
     },
-    take: 50
+    // take: 50
   })
 
   if (courses.length === 0) {
@@ -289,7 +289,7 @@ async function showEligibleCourses(studentId: string) {
         isNot: null
       }
     },
-    take: 50 // Limit for demo
+    // take: 50 // Limit for demo
   })
 
   console.log(`\nChecking eligibility for ${allCourses.length} courses with prerequisites:\n`)

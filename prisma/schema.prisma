@@ -18,7 +18,7 @@ model Course {
   requiredByCourses      PrerequisiteNode[] @relation("RequiredByCourses")
   prerequisiteExpression Prerequisite?      @relation("CoursePrerequisiteExpression")
   sections               Section[]
-  courseCompletions      CourseCompletion[] // New relation to track student completions
+  courseCompletions      CourseCompletion[] 
 
   @@map("courses")
 }
@@ -75,12 +75,11 @@ model Section {
   @@map("sections")
 }
 
-// Student and course completion tracking - minimal for scheduler
 model Student {
   id                String             @id @default(cuid())
-  studentId         String             @unique // Carleton Student ID 
+  studentId         String             @unique 
   name              String
-  program           String             // e.g., "Software Engineering"
+  program           String             
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   
@@ -92,14 +91,14 @@ model Student {
 model CourseCompletion {
   id        String   @id @default(cuid())
   studentId String
-  courseId  String   // Links to Course.id (e.g., "SYSC2004")
-  grade     String   // e.g., "A+", "B+", "C+"
+  courseId  String   
+  grade     String  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course    Course   @relation(fields: [courseId], references: [id])
 
-  @@unique([studentId, courseId]) // Student can only complete each course once
+  @@unique([studentId, courseId]) 
   @@map("course_completions")
 }
