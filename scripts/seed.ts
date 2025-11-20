@@ -165,9 +165,9 @@ async function createPrerequisiteTree(courseId: string, parsedNode: ParsedNode, 
   const node = await prisma.prerequisiteNode.create({
     data: {
       courseId,
-      nodeType: parsedNode.type,
+      nodeType: parsedNode.type as any,
       requiredCourseId: parsedNode.type === 'COURSE' ? parsedNode.value : null,
-      requiredYear: parsedNode.type === 'YEAR_STANDING' ? parsedNode.value : null,
+      requiredYear: parsedNode.type === 'YEAR_STANDING' ? parsedNode.value as any : null,
       requiredGrade: parsedNode.type === 'COURSE' && parsedNode.grade ? parsedNode.grade : null,
       parentId: parentId || null
     }

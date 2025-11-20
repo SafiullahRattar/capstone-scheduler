@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client'
-import fs from 'fs/promises'
-import path from 'path'
+import { PrismaClient, SectionType, SectionStatus } from '@prisma/client'
+import { promises as fs } from 'fs'
+import * as path from 'path'
 
 const prisma = new PrismaClient()
 
@@ -109,7 +109,7 @@ async function main() {
           sectionId: record.sectionId,
           courseId: courseId,
           sectionCode: record.sectionCode,
-          sectionType: record.sectionType,
+          sectionType: record.sectionType as SectionType,
           days: record.days,
           startTime: record.startTime,
           endTime: record.endTime,
@@ -118,7 +118,7 @@ async function main() {
           term: record.term,
           capacity: record.capacity,
           enrolled: record.enrolled,
-          status: record.status
+          status: record.status as SectionStatus
         }
       })
 

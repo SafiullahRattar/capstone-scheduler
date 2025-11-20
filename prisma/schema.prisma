@@ -7,19 +7,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum NodeType {
+  AND
+  OR
+  COURSE
+  YEAR_STANDING
+  PERMISSION
+}
+
+enum YearStanding {
+  FIRST_YEAR
+  SECOND_YEAR
+  THIRD_YEAR
+  FOURTH_YEAR
+}
+
+enum SectionType {
+  LEC  // Lecture
+  TUT  // Tutorial
+  LAB  // Laboratory
+  SEM  // Seminar
+}
+
+enum SectionStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum Grade {
+  A_PLUS
+  A
+  A_MINUS
+  B_PLUS
+  B
+  B_MINUS
+  C_PLUS
+  C
+  C_MINUS
+  D_PLUS
+  D
+  D_MINUS
+  F
+  PASS
+  FAIL
+  AUDIT
+}
+
+enum ScheduleDensity {
+  COMPACT
+  BALANCED
+  SPREAD_OUT
+}
+
+enum TimePreference {
+  MORNING
+  AFTERNOON
+  EVENING
+  FLEXIBLE
+}
+
+enum RequirementType {
+  CORE
+  TECHNICAL_ELECTIVE
+  COMPLEMENTARY_ELECTIVE
+  CREDIT_REQUIREMENT
+}
+
 model Course {
   id                     String             @id
   title                  String?
   description            String?
   credits                Float?
+  department             String?            // e.g., "SYSC", "COMP", "MATH"
+  level                  String?            // e.g., "1000", "2000", "3000", "4000"
+  isActive               Boolean            @default(true)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
+  
+  // Relationships
   prerequisiteNodes      PrerequisiteNode[] @relation("CoursePrerequisites")
   requiredByCourses      PrerequisiteNode[] @relation("RequiredByCourses")
   prerequisiteExpression Prerequisite?      @relation("CoursePrerequisiteExpression")
   sections               Section[]
-  courseCompletions      CourseCompletion[] 
+  courseCompletions      CourseCompletion[]
+  programRequirements    ProgramRequirement[] @relation("CourseProgramRequirements")
+  electivePoolCourses    ElectivePoolCourse[] @relation("CourseElectivePoolCourses")
+  scheduleItems          ScheduleItem[] @relation("CourseScheduleItems")
 
+  @@index([department])
+  @@index([level])
+  @@index([isActive])
   @@map("courses")
 }
 
@@ -35,43 +113,56 @@ model Prerequisite {
 model PrerequisiteNode {
   id               String             @id @default(cuid())
   courseId         String
-  nodeType         String
+  nodeType         NodeType
   requiredCourseId String?
-  requiredYear     String?
+  requiredYear     YearStanding?
   parentId         String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-  requiredGrade    String?
+  requiredGrade    String?            // e.g., "C", "B+", "A-" - kept as string for flexibility
   course           Course             @relation("CoursePrerequisites", fields: [courseId], references: [id])
   parent           PrerequisiteNode?  @relation("NodeHierarchy", fields: [parentId], references: [id])
   children         PrerequisiteNode[] @relation("NodeHierarchy")
   requiredCourse   Course?            @relation("RequiredByCourses", fields: [requiredCourseId], references: [id])
 
+  @@index([courseId])
+  @@index([parentId])
+  @@index([requiredCourseId])
+  @@index([nodeType])
   @@map("prerequisite_nodes")
 }
 
 model Section {
-  id          String   @id @default(cuid())
-  sectionId   String?
+  id          String        @id @default(cuid())
+  sectionId   String?       // Official section identifier
   courseId    String
-  sectionCode String
-  sectionType String
-  crn         String?
+  sectionCode String        // e.g., "A", "B", "TUT1"
+  sectionType SectionType
+  crn         String?       // Course Registration Number
   instructor  String?
-  days        String?
-  startTime   String?
-  endTime     String?
-  startDate   String?
-  endDate     String?
+  days        String?       // e.g., "MW", "TTH", "F"
+  startTime   String?       // e.g., "08:30", "13:00"
+  endTime     String?       // e.g., "09:50", "14:20"
+  startDate   String?       // ISO date string
+  endDate     String?       // ISO date string
   location    String?
-  term        String?
+  term        String?       // e.g., "F2025", "W2026"
   capacity    Int?
   enrolled    Int?
-  status      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  course      Course   @relation(fields: [courseId], references: [id])
+  status      SectionStatus?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relationships
+  course      Course        @relation(fields: [courseId], references: [id])
+  scheduleItems ScheduleItem[] @relation("SectionScheduleItems")
 
+  @@index([courseId])
+  @@index([term])
+  @@index([sectionType])
+  @@index([crn])
+  @@index([isActive])
   @@map("sections")
 }
 
@@ -79,26 +170,204 @@ model Student {
   id                String             @id @default(cuid())
   studentId         String             @unique 
   name              String
-  program           String             
+  program           String?            // e.g., "Software Engineering", "Civil Engineering"
+  currentYear       YearStanding?
+  email             String?
+  isActive          Boolean            @default(true)
+  totalCredits      Float?             // Total credits earned
+  gpa               Float?             // Cumulative GPA
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   
+  // Relationships
   courseCompletions CourseCompletion[]
+  userPreference    UserPreference?
+  generatedSchedules GeneratedSchedule[]
+  auditRecords      AuditRecord[]
 
+  @@index([studentId])
+  @@index([program])
+  @@index([currentYear])
+  @@index([isActive])
   @@map("students")
 }
 
 model CourseCompletion {
-  id        String   @id @default(cuid())
-  studentId String
-  courseId  String   
-  grade     String  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  studentId   String
+  courseId    String   
+  grade       String?  // e.g., "A+", "B", "C-", "PASS"
+  term        String?  // e.g., "F2024", "W2025"
+  isCompleted Boolean  @default(true)
+  credits     Float?   // Actual credits earned (may differ from course credits)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course    Course   @relation(fields: [courseId], references: [id])
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id])
 
   @@unique([studentId, courseId]) 
+  @@index([studentId])
+  @@index([courseId])
+  @@index([term])
+  @@index([grade])
   @@map("course_completions")
+}
+
+model Program {
+  id                String   @id @default(cuid())
+  code              String   @unique // e.g., "SYSE", "CIVE", "COMP"
+  name              String   // e.g., "Software Engineering", "Civil Engineering"
+  degree            String?  // e.g., "B.Eng.", "B.Sc."
+  faculty           String?  // e.g., "Engineering and Design"
+  description       String?
+  totalCredits      Float?   // Total credits required for program
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  programRequirements ProgramRequirement[]
+  electivePools     ElectivePool[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("programs")
+}
+
+model ProgramRequirement {
+  id          String   @id @default(cuid())
+  programId   String
+  courseId    String?  // Specific required course (null for elective requirements)
+  requirementType RequirementType
+  creditsRequired Float? // Required credits for this requirement
+  minGrade    String?  // Minimum grade required
+  description String?   // Human-readable description
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program     Program  @relation(fields: [programId], references: [id])
+  course      Course?  @relation("CourseProgramRequirements", fields: [courseId], references: [id])
+
+  @@index([programId])
+  @@index([requirementType])
+  @@index([courseId])
+  @@map("program_requirements")
+}
+
+model ElectivePool {
+  id          String   @id @default(cuid())
+  programId   String
+  name        String   // e.g., "Technical Electives - Software Stream"
+  description String?
+  creditsRequired Float  // Number of credits required from this pool
+  maxCourses  Int?     // Maximum number of courses that can count
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program     Program  @relation(fields: [programId], references: [id])
+  eligibleCourses ElectivePoolCourse[]
+
+  @@index([programId])
+  @@map("elective_pools")
+}
+
+model ElectivePoolCourse {
+  id             String @id @default(cuid())
+  electivePoolId String
+  courseId       String
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  electivePool   ElectivePool @relation(fields: [electivePoolId], references: [id])
+  course         Course       @relation("CourseElectivePoolCourses", fields: [courseId], references: [id])
+
+  @@unique([electivePoolId, courseId])
+  @@index([electivePoolId])
+  @@index([courseId])
+  @@map("elective_pool_courses")
+}
+
+model UserPreference {
+  id                String   @id @default(cuid())
+  studentId         String   @unique
+  preferredStartTime String?  // e.g., "08:30" - earliest preferred class time
+  preferredEndTime   String?  // e.g., "18:00" - latest preferred class time
+  maxDailyHours      Float?   // Maximum hours per day
+  minBreakBetweenClasses Int?  // Minimum minutes between classes
+  preferredDays      String?  // e.g., "MWF" or "TTH" - preferred days
+  avoidDays         String?  // e.g., "F" - days to avoid
+  scheduleDensity    ScheduleDensity?
+  timePreference    TimePreference?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("user_preferences")
+}
+
+model GeneratedSchedule {
+  id              String   @id @default(cuid())
+  studentId       String
+  term            String   // e.g., "F2025", "W2026"
+  name            String?  // User-defined name for this schedule
+  score           Float?   // Overall preference score (0-100)
+  conflicts       Int      @default(0) // Number of conflicts detected
+  isComplete      Boolean  @default(false) // All required courses scheduled
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  scheduleItems   ScheduleItem[]
+
+  @@index([studentId])
+  @@index([term])
+  @@index([score])
+  @@index([isComplete])
+  @@map("generated_schedules")
+}
+
+model ScheduleItem {
+  id                String   @id @default(cuid())
+  scheduleId        String
+  sectionId         String
+  courseId          String
+  conflictDetected  Boolean  @default(false)
+  conflictReason    String?  // Description of conflict if detected
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  schedule          GeneratedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  section           Section          @relation("SectionScheduleItems", fields: [sectionId], references: [id])
+  course            Course           @relation("CourseScheduleItems", fields: [courseId], references: [id])
+
+  @@unique([scheduleId, sectionId])
+  @@index([scheduleId])
+  @@index([sectionId])
+  @@index([conflictDetected])
+  @@map("schedule_items")
+}
+
+model AuditRecord {
+  id          String   @id @default(cuid())
+  studentId   String
+  fileName    String?  // Original filename of uploaded audit
+  fileType    String   // 'PDF' or 'HTML'
+  content     String?  // Raw text content (for debugging)
+  parsedData  Json?    // Parsed audit data as JSON
+  isProcessed Boolean  @default(false)
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([isProcessed])
+  @@map("audit_records")
 }

@@ -33,7 +33,8 @@ export function parseAuditHTML(htmlContent: string): StudentAuditData {
 
   const completedCourses: Array<{ courseId: string; grade: string }> = []
   
-  for (const match of courseMatches) {
+  const courseMatchesArray = Array.from(courseMatches)
+  for (const match of courseMatchesArray) {
     const courseId = match[1].replace(/\s+/g, '') // Remove spaces from "SYSC 4907" -> "SYSC4907"
     const grade = match[2].trim()
     
