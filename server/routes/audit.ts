@@ -196,14 +196,21 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
       auditData = parseAuditHTML(fileContent)
     }
 
+    // Calculate remaining courses
+    const { getRemainingCourses } = require('../../cli/audit-parser')
+    const remainingCourses = getRemainingCourses(auditData)
+    
     res.json({
       studentId: auditData.studentId,
       studentName: auditData.name,
       program: auditData.program,
       completedCourses: auditData.completedCourses,
       currentCourses: auditData.currentCourses,
+      remainingCourses: remainingCourses,
+      requirements: auditData.requirements,
       completedCount: auditData.completedCourses.length,
-      currentCount: auditData.currentCourses.length
+      currentCount: auditData.currentCourses.length,
+      remainingCount: remainingCourses.length
     })
   } catch (error) {
     console.error('Audit parse error:', error)

@@ -8,6 +8,7 @@ interface CourseSelectionPageProps {
   hasAuditData: boolean;
   completedCourses: string[];
   currentCourses: Array<{ courseId: string; term: string }>;
+  remainingCourses?: string[];
   studentInfo?: {
     name: string;
     studentId: string;
@@ -21,6 +22,7 @@ export function CourseSelectionPage({
   hasAuditData,
   completedCourses,
   currentCourses,
+  remainingCourses = [],
   studentInfo,
   onGenerateSchedules,
   onGenerateSmartSchedule
@@ -111,7 +113,7 @@ export function CourseSelectionPage({
                   {studentInfo.program} • Student ID: {studentInfo.studentId}
                 </p>
                 <p className="text-sm text-slate-600 mt-1">
-                  Completed {completedCourses.length} courses
+                  ✅ {completedCourses.length} completed • 📚 {currentCourses.length} in progress • 🎯 {remainingCourses.length} remaining
                 </p>
               </div>
               <Button
@@ -156,6 +158,26 @@ export function CourseSelectionPage({
                       <Calendar className="w-3.5 h-3.5" />
                       {course.courseId}
                       <span className="text-xs opacity-75">({course.term})</span>
+                    </span>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {/* Remaining Required Courses Collapsible */}
+            {remainingCourses.length > 0 && (
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm text-slate-700 hover:text-slate-900 font-medium">
+                  View Remaining Required Courses ({remainingCourses.length})
+                </summary>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {remainingCourses.map((courseCode) => (
+                    <span
+                      key={courseCode}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      {courseCode}
                     </span>
                   ))}
                 </div>

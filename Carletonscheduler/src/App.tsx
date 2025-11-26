@@ -11,6 +11,7 @@ export default function App() {
   const [hasAuditData, setHasAuditData] = useState(false);
   const [completedCourses, setCompletedCourses] = useState<string[]>([]);
   const [currentCourses, setCurrentCourses] = useState<Array<{courseId: string; term: string}>>([]);
+  const [remainingCourses, setRemainingCourses] = useState<string[]>([]);
   const [studentInfo, setStudentInfo] = useState<{name: string; studentId: string; program: string} | undefined>();
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>([]);
 
@@ -65,6 +66,9 @@ export default function App() {
       // Extract current courses
       const currentCoursesData = data.currentCourses || [];
       
+      // Extract remaining courses (courses student still needs to take)
+      const remainingCoursesData = data.remainingCourses || [];
+      
       // Store student info
       setStudentInfo({
         name: data.studentName || 'Student',
@@ -72,9 +76,12 @@ export default function App() {
         program: data.program || 'Engineering'
       });
       
+      console.log(`📊 Audit Summary: ${completedCourseIds.length} completed, ${currentCoursesData.length} current, ${remainingCoursesData.length} remaining`);
+      
       setHasAuditData(true);
       setCompletedCourses(completedCourseIds);
       setCurrentCourses(currentCoursesData);
+      setRemainingCourses(remainingCoursesData);
       setCurrentPage('course-selection');
     } catch (error) {
       console.error('Error uploading audit file:', error);
@@ -165,6 +172,7 @@ export default function App() {
         hasAuditData={hasAuditData}
         completedCourses={completedCourses}
         currentCourses={currentCourses}
+        remainingCourses={remainingCourses}
         studentInfo={studentInfo}
         onGenerateSchedules={handleGenerateSchedules}
         onGenerateSmartSchedule={handleGenerateSmartSchedule}

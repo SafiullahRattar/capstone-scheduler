@@ -147,19 +147,20 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
       }
     }
     
-    if (nextLines.includes('Credits\nIP') || nextLines.includes('IP\n')) {
+    // Check for in-progress courses
+    // Format: "IP                    3.00 Credits" or "IP\n3.00 Credits"
+    const ipMatch = nextLines.match(/IP\s+([\d.]+)\s+Credits/)
+    if (ipMatch) {
       status = 'IP'
-      // Try to extract IP credits
-      const ipMatch = nextLines.match(/([\d.]+)\s+Credits\s*\n?\s*IP/)
-      if (ipMatch) {
-        creditsInProgress = parseFloat(ipMatch[1]) || 0
-      }
+      creditsInProgress = parseFloat(ipMatch[1]) || 0
     }
     
     if (nextLines.includes('NEEDS:')) {
       status = 'NO'
     } else if (creditsCompleted >= creditsRequired) {
       status = 'OK'
+    } else if (creditsCompleted + creditsInProgress >= creditsRequired) {
+      status = 'IP'  // In progress and will meet requirement
     }
     
     requirements.push({
