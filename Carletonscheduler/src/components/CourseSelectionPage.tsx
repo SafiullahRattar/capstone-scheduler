@@ -3,7 +3,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, X, CheckCircle, AlertTriangle, Calendar, Sparkles } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
-import { ElectiveRecommendations } from './ElectiveRecommendations';
 
 interface CourseSelectionPageProps {
   hasAuditData: boolean;
@@ -16,7 +15,6 @@ interface CourseSelectionPageProps {
   };
   onGenerateSchedules: (courses: string[]) => void;
   onGenerateSmartSchedule: () => void;
-  onElectiveRecommendations: () => void;
 }
 
 export function CourseSelectionPage({
@@ -25,15 +23,13 @@ export function CourseSelectionPage({
   currentCourses,
   studentInfo,
   onGenerateSchedules,
-  onGenerateSmartSchedule,
-  onElectiveRecommendations
+  onGenerateSmartSchedule
 }: CourseSelectionPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Course[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [courseDetails, setCourseDetails] = useState<Map<string, Course>>(new Map());
   const [showResults, setShowResults] = useState(false);
-  const [showElectives, setShowElectives] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -311,14 +307,6 @@ export function CourseSelectionPage({
               )}
             </div>
 
-            {/* Elective Recommendations Section */}
-            {hasAuditData && (
-              <ElectiveRecommendations
-                completedCourses={completedCourses}
-                selectedCourses={selectedCourses}
-                onAddCourse={addCourse}
-              />
-            )}
           </div>
 
           {/* Sidebar */}
@@ -338,26 +326,6 @@ export function CourseSelectionPage({
                 Generate Schedules
               </Button>
             </div>
-
-            {/* Optional Features */}
-            {hasAuditData && (
-              <div className="bg-white rounded-lg shadow-lg p-6 space-y-3">
-                <h3 className="text-slate-900 mb-4">Optional Features</h3>
-                
-                <button
-                  onClick={() => setShowElectives(!showElectives)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-colors text-left"
-                >
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-900">Elective Recommendations</p>
-                    <p className="text-xs text-slate-600">View compatible electives</p>
-                  </div>
-                </button>
-              </div>
-            )}
 
             {/* Info Card */}
             {!hasAuditData && (

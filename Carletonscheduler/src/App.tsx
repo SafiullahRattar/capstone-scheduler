@@ -1,32 +1,18 @@
 import { useState } from 'react';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Label } from './components/ui/label';
-import { Eye, EyeOff, Lock } from 'lucide-react';
 import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
 
-type AppPage = 'login' | 'import' | 'course-selection' | 'schedule-review';
+type AppPage = 'import' | 'course-selection' | 'schedule-review';
 
 export default function App() {
-  const [carletonId, setCarletonId] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [currentPage, setCurrentPage] = useState<AppPage>('login');
+  const [currentPage, setCurrentPage] = useState<AppPage>('import');
   const [hasAuditData, setHasAuditData] = useState(false);
   const [completedCourses, setCompletedCourses] = useState<string[]>([]);
   const [currentCourses, setCurrentCourses] = useState<Array<{courseId: string; term: string}>>([]);
   const [studentInfo, setStudentInfo] = useState<{name: string; studentId: string; program: string} | undefined>();
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>([]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempted with:', { carletonId, password });
-    setCurrentPage('import');
-  };
 
   const handleManualEntry = () => {
     console.log('Navigate to manual entry');
@@ -107,11 +93,6 @@ export default function App() {
     setCurrentPage('schedule-review');
   };
 
-  const handleElectiveRecommendations = () => {
-    console.log('Navigate to elective recommendations');
-    // Electives section is shown within CourseSelectionPage
-  };
-
   const handleFinalizeSchedule = (schedule: GeneratedSchedule) => {
     console.log('Finalized schedule:', schedule);
     alert('Schedule finalized! This would typically save or export your schedule.');
@@ -182,92 +163,15 @@ export default function App() {
         studentInfo={studentInfo}
         onGenerateSchedules={handleGenerateSchedules}
         onGenerateSmartSchedule={handleGenerateSmartSchedule}
-        onElectiveRecommendations={handleElectiveRecommendations}
-      />
-    );
-  }
-
-  if (currentPage === 'import') {
-    return (
-      <AcademicHistoryImport
-        onManualEntry={handleManualEntry}
-        onSkip={handleSkip}
-        onUploadComplete={handleUploadComplete}
       />
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Lock className="w-8 h-8 text-blue-600" />
-          </div>
-          <h1 className="text-slate-900">Carleton Login</h1>
-          <p className="text-slate-600 mt-2">Enter your credentials to continue</p>
-        </div>
-
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-6">
-          {/* Carleton ID Input */}
-          <div className="space-y-2">
-            <Label htmlFor="carletonId">Carleton ID</Label>
-            <Input
-              id="carletonId"
-              type="text"
-              placeholder="Enter your Carleton ID"
-              value={carletonId}
-              onChange={(e) => setCarletonId(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Password Input with Toggle */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Login Button */}
-          <Button type="submit" className="w-full">
-            Login
-          </Button>
-        </form>
-
-        {/* Additional Links */}
-        <div className="mt-6 text-center space-y-2">
-          <a href="#" className="text-sm text-blue-600 hover:text-blue-700 block">
-            Forgot your password?
-          </a>
-          <p className="text-sm text-slate-600">
-            Need help? <a href="#" className="text-blue-600 hover:text-blue-700">Contact Support</a>
-          </p>
-        </div>
-      </div>
-    </div>
+    <AcademicHistoryImport
+      onManualEntry={handleManualEntry}
+      onSkip={handleSkip}
+      onUploadComplete={handleUploadComplete}
+    />
   );
 }
