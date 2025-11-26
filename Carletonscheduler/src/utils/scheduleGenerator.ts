@@ -20,6 +20,13 @@ export interface CourseSchedule {
   sections: Section[];
 }
 
+export interface PrerequisiteInfo {
+  isValid: boolean;
+  reason?: string;
+  missingCourses?: string[];
+  expressionEvaluated: string;
+}
+
 export interface GeneratedSchedule {
   id: number;
   selections: {
@@ -27,6 +34,9 @@ export interface GeneratedSchedule {
     section: Section;
   }[];
   hasUnmetPrerequisites: boolean;
+  prerequisiteInfo?: {
+    [courseId: string]: PrerequisiteInfo;
+  };
 }
 
 /**
@@ -45,7 +55,8 @@ export async function generateSchedules(
       },
       body: JSON.stringify({
         courseIds: courseCodes,
-        term: 'Fall 2024', // TODO: Make this dynamic based on user selection
+        completedCourses: completedCourses,
+        // Don't filter by term - use all available sections
         maxSchedules: 50
       })
     });
@@ -59,18 +70,27 @@ export async function generateSchedules(
     const data = await response.json();
     
     // Map API response to frontend format
-    return data.schedules.map((schedule: any, index: number) => ({
-      id: index + 1,
-      selections: schedule.selections.map((sel: any) => ({
-        courseCode: sel.courseId,
-        section: mapApiSectionToFrontend(sel.section)
-      })),
-      hasUnmetPrerequisites: false // Backend validates prerequisites
-    }));
+    return data.schedules.map((schedule: any, index: number) => {
+      // Check if any course has prerequisites (for informational display)
+      const hasPrerequisites = schedule.prerequisiteInfo && 
+        Object.values(schedule.prerequisiteInfo).some((info: any) => 
+          info.expressionEvaluated && info.expressionEvaluated !== 'None'
+        );
+      
+      return {
+        id: index + 1,
+        selections: schedule.selections.map((sel: any) => ({
+          courseCode: sel.courseId,
+          section: mapApiSectionToFrontend(sel.section)
+        })),
+        hasUnmetPrerequisites: hasPrerequisites || false, // Used to show info banner
+        prerequisiteInfo: schedule.prerequisiteInfo || {}
+      };
+    });
   } catch (error) {
     console.error('Error generating schedules:', error);
-    // Return empty array instead of throwing to prevent UI crash
-    return [];
+    // Re-throw the error so the UI can display it to the user
+    throw error;
   }
 }
 

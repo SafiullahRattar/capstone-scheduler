@@ -220,7 +220,14 @@ export function CourseSelectionPage({
                           <div className="flex-1">
                             <p className="text-slate-900">{course.code}</p>
                             <p className="text-sm text-slate-600 mt-1">{course.name}</p>
-                            <p className="text-xs text-slate-500 mt-1">{course.credits} credits</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-slate-500">{course.credits} credits</p>
+                              {course.sectionTypes && course.sectionTypes.length > 0 && (
+                                <span className="text-xs text-blue-600 font-medium">
+                                  • {course.sectionTypes.join(' + ')}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {selectedCourses.includes(course.code) && (
                             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />

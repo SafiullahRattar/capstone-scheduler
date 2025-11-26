@@ -7,6 +7,7 @@ export interface Course {
   prerequisites: string[];
   description: string;
   type?: 'core' | 'technical-elective' | 'complementary-elective';
+  sectionTypes?: string[]; // e.g., ["LEC", "LAB", "TUT"]
 }
 
 /**
@@ -33,7 +34,8 @@ export async function searchCourses(query: string): Promise<Course[]> {
       credits: course.credits || 0,
       prerequisites: course.prerequisites || [],
       description: course.description || '',
-      type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined
+      type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
+      sectionTypes: course.sectionTypes || []
     })).slice(0, 8); // Limit to 8 results
   } catch (error) {
     console.error('Error searching courses:', error);

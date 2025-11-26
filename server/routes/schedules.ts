@@ -23,6 +23,7 @@
 
 import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
+import { validatePrerequisites } from '../../cli/prerequisite-validator'
 
 const router = Router()
 
@@ -56,6 +57,14 @@ interface GeneratedSchedule {
   selections: ScheduleSelection[]
   hasConflicts: boolean
   score?: number
+  prerequisiteInfo?: {
+    [courseId: string]: {
+      isValid: boolean
+      reason?: string
+      missingCourses?: string[]
+      expressionEvaluated: string
+    }
+  }
 }
 
 /**
@@ -148,24 +157,93 @@ function hasConflictWithSelections(
 }
 
 /**
+ * Group sections by type for a single course
+ * Returns: { LEC: [...], LAB: [...], TUT: [...], ... }
+ */
+function groupSectionsByType(sections: Section[]): { [type: string]: Section[] } {
+  const grouped: { [type: string]: Section[] } = {}
+  
+  for (const section of sections) {
+    if (!grouped[section.sectionType]) {
+      grouped[section.sectionType] = []
+    }
+    grouped[section.sectionType].push(section)
+  }
+  
+  return grouped
+}
+
+/**
+ * Generate all combinations of section selections for a course
+ * If a course has LEC + LAB, returns all (lecture, lab) pairs
+ * 
+ * Example: 3 LEC × 2 LAB = 6 combinations
+ */
+function generateSectionCombinations(
+  courseId: string,
+  sectionsByType: { [type: string]: Section[] }
+): Section[][] {
+  const types = Object.keys(sectionsByType)
+  
+  if (types.length === 0) return []
+  if (types.length === 1) {
+    // Only one type (e.g., just LEC) - return each section as a single-item array
+    return sectionsByType[types[0]].map(section => [section])
+  }
+  
+  // Multiple types - generate all combinations
+  const combinations: Section[][] = []
+  
+  function buildCombination(typeIndex: number, current: Section[]) {
+    if (typeIndex === types.length) {
+      combinations.push([...current])
+      return
+    }
+    
+    const currentType = types[typeIndex]
+    for (const section of sectionsByType[currentType]) {
+      current.push(section)
+      buildCombination(typeIndex + 1, current)
+      current.pop()
+    }
+  }
+  
+  buildCombination(0, [])
+  return combinations
+}
+
+/**
+ * Check if a combination of sections (for one course) has internal conflicts
+ */
+function hasInternalConflicts(sections: Section[]): boolean {
+  for (let i = 0; i < sections.length; i++) {
+    for (let j = i + 1; j < sections.length; j++) {
+      const slots1 = getTimeSlots(sections[i])
+      const slots2 = getTimeSlots(sections[j])
+      
+      for (const slot1 of slots1) {
+        for (const slot2 of slots2) {
+          if (hasTimeConflict(slot1, slot2)) {
+            return true
+          }
+        }
+      }
+    }
+  }
+  return false
+}
+
+/**
  * Generate all valid schedules using backtracking
  * 
  * Algorithm: Recursive backtracking with constraint propagation
  * 
- * Pseudocode:
- * function generateSchedules(courses, currentIndex, currentSelections):
- *   if currentIndex == len(courses):
- *     return [currentSelections]  # Found a complete schedule
- *   
- *   allSchedules = []
- *   for section in courses[currentIndex].sections:
- *     if not hasConflict(section, currentSelections):
- *       newSelections = currentSelections + [section]
- *       allSchedules += generateSchedules(courses, currentIndex + 1, newSelections)
- *   
- *   return allSchedules
+ * NEW: For each course, we now consider all required section types:
+ * - If course has only LEC: pick 1 lecture
+ * - If course has LEC + LAB: pick 1 lecture AND 1 lab
+ * - If course has LEC + LAB + TUT: pick 1 of each
  * 
- * Optimization: Stop early if maxSchedules reached (prevents timeout on large inputs)
+ * This ensures complete course registrations
  */
 function generateSchedulesRecursive(
   courseSections: { courseId: string; sections: Section[] }[],
@@ -191,12 +269,34 @@ function generateSchedulesRecursive(
   
   const { courseId, sections } = courseSections[currentIndex]
   
-  // Try each section for current course
-  for (const section of sections) {
-    // Check if this section conflicts with existing selections
-    if (!hasConflictWithSelections(section, currentSelections)) {
-      // Add this section and recurse
-      currentSelections.push({ courseId, section })
+  // Group sections by type (LEC, LAB, TUT, etc.)
+  const sectionsByType = groupSectionsByType(sections)
+  
+  // Generate all valid combinations (e.g., all LEC+LAB pairs)
+  const combinations = generateSectionCombinations(courseId, sectionsByType)
+  
+  // Try each combination
+  for (const sectionCombination of combinations) {
+    // Skip if sections within this combination conflict with each other
+    if (hasInternalConflicts(sectionCombination)) {
+      continue
+    }
+    
+    // Check if any section in this combination conflicts with existing selections
+    let hasConflict = false
+    for (const section of sectionCombination) {
+      if (hasConflictWithSelections(section, currentSelections)) {
+        hasConflict = true
+        break
+      }
+    }
+    
+    if (!hasConflict) {
+      // Add all sections in this combination
+      for (const section of sectionCombination) {
+        currentSelections.push({ courseId, section })
+      }
+      
       generateSchedulesRecursive(
         courseSections,
         currentIndex + 1,
@@ -204,7 +304,11 @@ function generateSchedulesRecursive(
         maxSchedules,
         result
       )
-      currentSelections.pop() // Backtrack
+      
+      // Backtrack - remove all sections we just added
+      for (let i = 0; i < sectionCombination.length; i++) {
+        currentSelections.pop()
+      }
     }
   }
 }
@@ -222,7 +326,7 @@ function generateSchedulesRecursive(
  */
 router.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { courseIds, term, maxSchedules = 50 } = req.body
+    const { courseIds, term, maxSchedules = 50, completedCourses = [] } = req.body
     
     if (!courseIds || !Array.isArray(courseIds) || courseIds.length === 0) {
       return res.status(400).json({
@@ -248,9 +352,19 @@ router.post('/generate', async (req: Request, res: Response) => {
           }
         })
         
+        // Deduplicate sections by sectionId + sectionCode + days + startTime + endTime
+        // This handles cases where the same section was imported multiple times
+        const uniqueSections = sections.reduce((acc, section) => {
+          const key = `${section.sectionId}-${section.sectionCode}-${section.days}-${section.startTime}-${section.endTime}`
+          if (!acc.has(key)) {
+            acc.set(key, section)
+          }
+          return acc
+        }, new Map())
+        
         return {
           courseId: courseId.toUpperCase(),
-          sections: sections as Section[]
+          sections: Array.from(uniqueSections.values()) as Section[]
         }
       })
     )
@@ -267,6 +381,28 @@ router.post('/generate', async (req: Request, res: Response) => {
     // Generate schedules using backtracking
     const schedules: GeneratedSchedule[] = []
     generateSchedulesRecursive(courseSections, 0, [], maxSchedules, schedules)
+    
+    // Validate prerequisites for each schedule
+    const transcript = {
+      completedCourses: completedCourses.map((c: string) => c.toUpperCase()),
+      currentYear: 'FOURTH_YEAR' as const // Assume 4th year for now
+    }
+    
+    for (const schedule of schedules) {
+      const prerequisiteInfo: { [courseId: string]: any } = {}
+      
+      for (const selection of schedule.selections) {
+        const result = await validatePrerequisites(selection.courseId, transcript)
+        prerequisiteInfo[selection.courseId] = {
+          isValid: result.isValid,
+          reason: result.reason,
+          missingCourses: result.missingCourses,
+          expressionEvaluated: result.expressionEvaluated
+        }
+      }
+      
+      schedule.prerequisiteInfo = prerequisiteInfo
+    }
     
     res.json({
       schedules,

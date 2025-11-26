@@ -85,15 +85,18 @@ export function ScheduleReviewPage({
           </div>
         </div>
 
-        {/* Unmet Prerequisites Warning */}
-        {currentSchedule.hasUnmetPrerequisites && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
+        {/* Prerequisites Info - Show if any course has prerequisites */}
+        {currentSchedule.prerequisiteInfo && 
+         Object.values(currentSchedule.prerequisiteInfo).some((info: any) => 
+           info.expressionEvaluated && info.expressionEvaluated !== 'None'
+         ) && (
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-lg">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-yellow-900">Unmet Prerequisites Warning</h3>
-                <p className="text-sm text-yellow-800 mt-1">
-                  This schedule contains courses with unmet prerequisites. Please review before finalizing.
+                <h3 className="text-blue-900">Prerequisites Information</h3>
+                <p className="text-sm text-blue-800 mt-1">
+                  Some courses in this schedule have prerequisites. Review them below and verify you meet the requirements.
                 </p>
               </div>
             </div>
@@ -135,7 +138,6 @@ export function ScheduleReviewPage({
               <Button
                 onClick={() => onFinalize(currentSchedule)}
                 className="w-full"
-                disabled={currentSchedule.hasUnmetPrerequisites}
               >
                 Finalize This Schedule
               </Button>
@@ -145,23 +147,52 @@ export function ScheduleReviewPage({
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h3 className="text-slate-900 mb-4">Courses in This Schedule</h3>
               <div className="space-y-2">
-                {currentSchedule.selections.map((selection, idx) => {
-                  const course = getCourseByCode(selection.courseCode);
-                  return (
-                    <div
-                      key={selection.courseCode}
-                      className={`p-3 rounded-lg border ${colors[idx % colors.length]}`}
-                    >
-                      <p className="text-sm">{selection.courseCode}</p>
-                      <p className="text-xs mt-1 opacity-80">
-                        {selection.section.sectionCode} - {selection.section.type}
-                      </p>
-                      <p className="text-xs mt-1 opacity-70">
-                        {selection.section.instructor}
-                      </p>
-                    </div>
-                  );
-                })}
+                {(() => {
+                  // Group selections by course code
+                  const grouped = new Map<string, typeof currentSchedule.selections>();
+                  currentSchedule.selections.forEach(selection => {
+                    if (!grouped.has(selection.courseCode)) {
+                      grouped.set(selection.courseCode, []);
+                    }
+                    grouped.get(selection.courseCode)!.push(selection);
+                  });
+
+                  // Render grouped courses
+                  return Array.from(grouped.entries()).map(([courseCode, sections], idx) => {
+                    const course = getCourseByCode(courseCode);
+                    const prereqInfo = currentSchedule.prerequisiteInfo?.[courseCode];
+                    
+                    return (
+                      <div
+                        key={courseCode}
+                        className={`p-3 rounded-lg border ${colors[idx % colors.length]}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{courseCode}</p>
+                            {sections.map((selection, sIdx) => (
+                              <div key={sIdx} className="text-xs mt-1 opacity-80">
+                                {selection.section.sectionCode} - {selection.section.type}
+                                {selection.section.instructor && (
+                                  <span className="opacity-70"> • {selection.section.instructor}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Prerequisite Info */}
+                        {prereqInfo && prereqInfo.expressionEvaluated && prereqInfo.expressionEvaluated !== 'None' && (
+                          <div className="mt-2 pt-2 border-t border-current/20">
+                            <p className="text-xs opacity-90">
+                              <strong>Prerequisites:</strong> {prereqInfo.expressionEvaluated}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>

@@ -18,6 +18,12 @@ build/
 
 # Database
 prisma/migrations/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/*.db
+prisma/*.db-journal
 
 # Development
 dist/

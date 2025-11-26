@@ -43,6 +43,7 @@ router.get('/search', async (req: Request, res: Response) => {
     
     // Search algorithm: OR condition on code and title
     // Uses Prisma's contains operator with case-insensitive mode
+    // Only return courses that have sections available
     const courses = await prisma.course.findMany({
       where: {
         OR: [
@@ -58,7 +59,10 @@ router.get('/search', async (req: Request, res: Response) => {
               mode: 'insensitive'
             }
           }
-        ]
+        ],
+        sections: {
+          some: {} // Only courses with at least one section
+        }
       },
       include: {
         prerequisiteExpression: true,
@@ -72,14 +76,31 @@ router.get('/search', async (req: Request, res: Response) => {
       }
     })
 
+    // Get section type information for each course
+    const coursesWithSectionInfo = await Promise.all(
+      courses.map(async (course) => {
+        const sections = await prisma.section.findMany({
+          where: { courseId: course.id },
+          select: { sectionType: true },
+          distinct: ['sectionType']
+        })
+        
+        return {
+          course,
+          sectionTypes: sections.map(s => s.sectionType).sort()
+        }
+      })
+    )
+    
     // Transform database results to match frontend Course interface
-    const transformedCourses = courses.map(course => ({
+    const transformedCourses = coursesWithSectionInfo.map(({ course, sectionTypes }) => ({
       code: course.id,
       name: course.title || 'No title available',
       credits: course.credits || 3,
       description: course.description || '',
       prerequisites: [], // Will be populated separately if needed
-      type: 'core' as const // This would come from a program-course mapping table
+      type: 'core' as const, // This would come from a program-course mapping table
+      sectionTypes: sectionTypes // NEW: e.g., ["LAB", "LEC"]
     }))
 
     res.json({
