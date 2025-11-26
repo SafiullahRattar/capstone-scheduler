@@ -1,14 +1,6 @@
-/**
- * @file server/routes/audit.ts
- * @description Academic audit file processing endpoints
- * 
- * Algorithm: HTML/PDF parsing with regex pattern matching
- * 
- * Design Decisions:
- * 1. Support multiple file formats (HTML, PDF) for flexibility
- * 2. Use streaming for large files to prevent memory issues
- * 3. Validate parsed data before database insertion
- * 4. Return detailed parsing report for debugging
+/*
+ * API endpoints for uploading and parsing Carleton academic audit files.
+ * Supports both HTML and PDF formats.
  */
 
 import { Router, Request, Response } from 'express'
@@ -25,16 +17,14 @@ const execAsync = promisify(exec)
 
 const router = Router()
 
-// Configure multer for file upload
-// Design Pattern: Strategy Pattern (multer uses different storage strategies)
-const storage = multer.memoryStorage() // Store in memory for processing
+// File upload configuration - store files in memory temporarily
+const storage = multer.memoryStorage()
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 10 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
-    // Validate file type
     const allowedTypes = ['text/html', 'application/pdf', 'text/plain']
     if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.html')) {
       cb(null, true)
@@ -44,23 +34,7 @@ const upload = multer({
   }
 })
 
-/**
- * POST /api/audit/upload
- * Upload and parse academic audit file
- * 
- * Multipart Form Data:
- * - file: Audit file (HTML or PDF)
- * 
- * Algorithm Steps:
- * 1. Receive file upload
- * 2. Parse file content based on type
- * 3. Extract student info and completed courses
- * 4. Validate course codes against database
- * 5. Create/update student record
- * 6. Create course completion records
- * 
- * Error Handling: Returns detailed parsing errors for debugging
- */
+// Upload endpoint - saves parsed audit data to database
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
@@ -74,7 +48,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     // Check if file is PDF
     if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
-      // Extract text from PDF using pdftotext command
+      // Convert PDF to text (using -layout flag to preserve column alignment)
       const tmpDir = os.tmpdir()
       const tmpPdfPath = path.join(tmpDir, `audit-${Date.now()}.pdf`)
       const tmpTxtPath = tmpPdfPath.replace('.pdf', '.txt')
@@ -84,19 +58,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         await execAsync(`pdftotext -layout "${tmpPdfPath}" "${tmpTxtPath}"`)
         const pdfText = fs.readFileSync(tmpTxtPath, 'utf-8')
         
-        // Clean up temporary files
+        // Delete temp files
         fs.unlinkSync(tmpPdfPath)
         fs.unlinkSync(tmpTxtPath)
         
         auditData = parseAuditPDF(pdfText)
       } catch (error) {
-        // Clean up on error
+        // Delete temp files even if parsing fails
         if (fs.existsSync(tmpPdfPath)) fs.unlinkSync(tmpPdfPath)
         if (fs.existsSync(tmpTxtPath)) fs.unlinkSync(tmpTxtPath)
         throw error
       }
     } else {
-      // Parse as HTML
+      // HTML format
       const fileContent = req.file.buffer.toString('utf-8')
       auditData = parseAuditHTML(fileContent)
     }
@@ -108,7 +82,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       })
     }
 
-    // Validate courses exist in database
+    // Check that all extracted courses actually exist in our database
     const validCourses: Array<{ courseId: string; grade: string }> = []
     const invalidCourses: string[] = []
     
@@ -124,7 +98,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
     }
 
-    // Save valid course completions
+    // Save to database
     await saveStudentAuditData({
       ...auditData,
       completedCourses: validCourses
@@ -169,7 +143,7 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
 
     // Check if file is PDF
     if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
-      // Extract text from PDF using pdftotext command
+      // Convert PDF to text (using -layout flag to preserve column alignment)
       const tmpDir = os.tmpdir()
       const tmpPdfPath = path.join(tmpDir, `audit-${Date.now()}.pdf`)
       const tmpTxtPath = tmpPdfPath.replace('.pdf', '.txt')
@@ -179,24 +153,24 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
         await execAsync(`pdftotext -layout "${tmpPdfPath}" "${tmpTxtPath}"`)
         const pdfText = fs.readFileSync(tmpTxtPath, 'utf-8')
         
-        // Clean up temporary files
+        // Delete temp files
         fs.unlinkSync(tmpPdfPath)
         fs.unlinkSync(tmpTxtPath)
         
         auditData = parseAuditPDF(pdfText)
       } catch (error) {
-        // Clean up on error
+        // Delete temp files even if parsing fails
         if (fs.existsSync(tmpPdfPath)) fs.unlinkSync(tmpPdfPath)
         if (fs.existsSync(tmpTxtPath)) fs.unlinkSync(tmpTxtPath)
         throw error
       }
     } else {
-      // Parse as HTML
+      // HTML format
       const fileContent = req.file.buffer.toString('utf-8')
       auditData = parseAuditHTML(fileContent)
     }
 
-    // Calculate remaining courses
+    // Figure out which required courses the student still needs
     const { getRemainingCourses } = require('../../cli/audit-parser')
     const remainingCourses = getRemainingCourses(auditData)
     

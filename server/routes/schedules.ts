@@ -1,24 +1,11 @@
-/**
- * @file server/routes/schedules.ts
- * @description Schedule generation and conflict detection endpoints
+/*
+ * Schedule generation using backtracking to find all conflict-free timetables.
  * 
- * Key Algorithm: Schedule Generation with Constraint Satisfaction
+ * Given a list of courses, try all possible section combinations and keep the ones
+ * where no two sections have overlapping times.
  * 
- * Problem: Given n courses, each with m sections, find all valid combinations
- * where no two sections have time conflicts.
- * 
- * This is a Constraint Satisfaction Problem (CSP):
- * - Variables: Section choice for each course
- * - Domain: All available sections for each course
- * - Constraints: No time conflicts between selected sections
- * 
- * Algorithm: Backtracking with Forward Checking
- * - Time Complexity: O(b^d) where b = avg sections per course, d = num courses
- * - Space Complexity: O(d) for recursion stack
- * - Optimizations: Early conflict detection, pruning invalid branches
- * 
- * For Defense: Explain why backtracking is appropriate here vs other algorithms
- * (branch and bound, dynamic programming, genetic algorithms)
+ * We use backtracking because it's efficient for this problem - we can stop exploring
+ * a branch as soon as we detect a conflict, rather than generating all combinations first.
  */
 
 import { Router, Request, Response } from 'express'
@@ -67,9 +54,7 @@ interface GeneratedSchedule {
   }
 }
 
-/**
- * Parse days string (e.g., "MWF") into array of day names
- */
+// Convert day abbreviations (MWF) to full names (Monday, Wednesday, Friday)
 function parseDays(daysStr: string | null): string[] {
   if (!daysStr) return []
   
@@ -84,21 +69,14 @@ function parseDays(daysStr: string | null): string[] {
   return daysStr.split('').map(d => dayMap[d] || d).filter(d => d)
 }
 
-/**
- * Check if two time slots conflict
- * 
- * Algorithm: Interval overlap detection
- * Two intervals [a1, a2] and [b1, b2] overlap if: a1 < b2 AND b1 < a2
- * 
- * Time Complexity: O(1)
- */
+// Check if two time slots overlap on the same day
+// Two classes conflict if they're on the same day and one starts before the other ends
 function hasTimeConflict(slot1: TimeSlot, slot2: TimeSlot): boolean {
   if (slot1.day !== slot2.day) return false
   
-  // Convert time strings to minutes since midnight
+  // Convert times like "0835" to minutes (8*60 + 35 = 515 minutes since midnight)
   const parseTime = (time: string): number => {
     if (time.length === 4) {
-      // Format: "0835"
       const hours = parseInt(time.substring(0, 2))
       const minutes = parseInt(time.substring(2, 4))
       return hours * 60 + minutes
@@ -114,9 +92,7 @@ function hasTimeConflict(slot1: TimeSlot, slot2: TimeSlot): boolean {
   return start1 < end2 && start2 < end1
 }
 
-/**
- * Convert section to time slots
- */
+// Turn a section's schedule into individual time slots (one per day it meets)
 function getTimeSlots(section: Section): TimeSlot[] {
   if (!section.days || !section.startTime || !section.endTime) {
     return []
@@ -130,11 +106,7 @@ function getTimeSlots(section: Section): TimeSlot[] {
   }))
 }
 
-/**
- * Check if a section conflicts with existing selections
- * 
- * Time Complexity: O(n * m) where n = selections, m = avg time slots per section
- */
+// Check if adding this section would create a time conflict with what's already in the schedule
 function hasConflictWithSelections(
   section: Section,
   currentSelections: ScheduleSelection[]
@@ -156,10 +128,7 @@ function hasConflictWithSelections(
   return false
 }
 
-/**
- * Group sections by type for a single course
- * Returns: { LEC: [...], LAB: [...], TUT: [...], ... }
- */
+// Organize course sections by type (lecture, lab, tutorial)
 function groupSectionsByType(sections: Section[]): { [type: string]: Section[] } {
   const grouped: { [type: string]: Section[] } = {}
   
@@ -173,12 +142,8 @@ function groupSectionsByType(sections: Section[]): { [type: string]: Section[] }
   return grouped
 }
 
-/**
- * Generate all combinations of section selections for a course
- * If a course has LEC + LAB, returns all (lecture, lab) pairs
- * 
- * Example: 3 LEC × 2 LAB = 6 combinations
- */
+// Generate all possible combinations when a course needs multiple section types
+// For example, if AERO2001 has 3 lectures and 2 labs, create all 6 LEC+LAB pairs
 function generateSectionCombinations(
   courseId: string,
   sectionsByType: { [type: string]: Section[] }
@@ -187,11 +152,9 @@ function generateSectionCombinations(
   
   if (types.length === 0) return []
   if (types.length === 1) {
-    // Only one type (e.g., just LEC) - return each section as a single-item array
     return sectionsByType[types[0]].map(section => [section])
   }
   
-  // Multiple types - generate all combinations
   const combinations: Section[][] = []
   
   function buildCombination(typeIndex: number, current: Section[]) {
@@ -212,9 +175,7 @@ function generateSectionCombinations(
   return combinations
 }
 
-/**
- * Check if a combination of sections (for one course) has internal conflicts
- */
+// Make sure a course's lecture doesn't conflict with its own lab/tutorial
 function hasInternalConflicts(sections: Section[]): boolean {
   for (let i = 0; i < sections.length; i++) {
     for (let j = i + 1; j < sections.length; j++) {
@@ -233,18 +194,8 @@ function hasInternalConflicts(sections: Section[]): boolean {
   return false
 }
 
-/**
- * Generate all valid schedules using backtracking
- * 
- * Algorithm: Recursive backtracking with constraint propagation
- * 
- * NEW: For each course, we now consider all required section types:
- * - If course has only LEC: pick 1 lecture
- * - If course has LEC + LAB: pick 1 lecture AND 1 lab
- * - If course has LEC + LAB + TUT: pick 1 of each
- * 
- * This ensures complete course registrations
- */
+// Main backtracking function - recursively try section combinations until we find valid schedules
+// For courses with multiple section types (LEC+LAB), we try all combinations
 function generateSchedulesRecursive(
   courseSections: { courseId: string; sections: Section[] }[],
   currentIndex: number,
@@ -305,7 +256,7 @@ function generateSchedulesRecursive(
         result
       )
       
-      // Backtrack - remove all sections we just added
+      // Backtrack by removing the sections we just tried
       for (let i = 0; i < sectionCombination.length; i++) {
         currentSelections.pop()
       }
@@ -313,17 +264,8 @@ function generateSchedulesRecursive(
   }
 }
 
-/**
- * POST /api/schedules/generate
- * Generate all valid schedules for selected courses
- * 
- * Request Body:
- * - courseIds: Array of course IDs
- * - term: Term (e.g., "Fall 2024")
- * - maxSchedules: Max number of schedules to return (default 50)
- * 
- * Response: Array of valid schedules with no time conflicts
- */
+// API endpoint to generate schedules
+// Takes a list of course IDs and returns all possible conflict-free schedules
 router.post('/generate', async (req: Request, res: Response) => {
   try {
     const { courseIds, term, maxSchedules = 50, completedCourses = [] } = req.body
@@ -342,7 +284,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       })
     }
     
-    // Fetch all sections for requested courses
+    // Get sections from database
     const courseSections = await Promise.all(
       courseIds.map(async (courseId: string) => {
         const sections = await prisma.section.findMany({
@@ -352,8 +294,7 @@ router.post('/generate', async (req: Request, res: Response) => {
           }
         })
         
-        // Deduplicate sections by sectionId + sectionCode + days + startTime + endTime
-        // This handles cases where the same section was imported multiple times
+        // Remove duplicate sections (in case same section was imported twice)
         const uniqueSections = sections.reduce((acc, section) => {
           const key = `${section.sectionId}-${section.sectionCode}-${section.days}-${section.startTime}-${section.endTime}`
           if (!acc.has(key)) {
@@ -369,7 +310,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       })
     )
     
-    // Check if all courses have sections
+    // Make sure all courses have at least one section
     const coursesWithoutSections = courseSections.filter(cs => cs.sections.length === 0)
     if (coursesWithoutSections.length > 0) {
       return res.status(404).json({
@@ -378,14 +319,14 @@ router.post('/generate', async (req: Request, res: Response) => {
       })
     }
     
-    // Generate schedules using backtracking
+    // Run backtracking algorithm
     const schedules: GeneratedSchedule[] = []
     generateSchedulesRecursive(courseSections, 0, [], maxSchedules, schedules)
     
-    // Validate prerequisites for each schedule
+    // Check prerequisites for courses in each schedule
     const transcript = {
       completedCourses: completedCourses.map((c: string) => c.toUpperCase()),
-      currentYear: 'FOURTH_YEAR' as const // Assume 4th year for now
+      currentYear: 'FOURTH_YEAR' as const
     }
     
     for (const schedule of schedules) {

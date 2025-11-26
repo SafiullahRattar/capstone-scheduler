@@ -99,39 +99,29 @@ export function parseAuditHTML(htmlContent: string): StudentAuditData {
   }
 }
 
-/**
- * Extract requirements from PDF audit text
- * Requirements are sections with course lists and completion status
- */
+// Extract program requirements from the PDF (which courses are needed for the degree)
 function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
   const requirements: RequirementInfo[] = []
   
-  // Pattern to find requirement sections with course lists
-  // Example: "4) 4.0 credits in NET 4001, NET 4005, NET 4007, NET 4009, NET 4010, NET 4011, NET 4901 [1.0]"
-  // Course lists can span multiple lines
+  // Match lines like "4) 4.0 credits in NET 4001, NET 4005, NET 4007..."
   const reqPattern = /\d+\)\s+([\d.]+)\s+credits?\s+in\s+([A-Z]{3,4}[^]+?)(?=\d+\.\d+\s+(?:cr\.|Credits)|NEEDS:|$)/gi
   
   for (const match of Array.from(pdfText.matchAll(reqPattern))) {
     const creditsText = match[1]
     let courseListText = match[2]
     
-    // Clean up the course list text - take only up to the next section indicator
     courseListText = courseListText.split(/\n(?=\d+\.\d+\s+cr\.|\nNEEDS:|\nTerm)/)[0]
     
-    // Extract course codes from the text (e.g., "NET 4001, NET 4005, SYSC 3000")
-    // Course codes can be separated by commas or newlines
+    // Pull out all course codes like "NET 4001", "SYSC 3000"
     const courseCodes = courseListText.match(/[A-Z]{3,4}\s+\d{4}/g) || []
-    const courseOptions = courseCodes.map(code => code.replace(/\s+/g, '')) // Remove spaces
+    const courseOptions = courseCodes.map(code => code.replace(/\s+/g, ''))
     
     if (courseOptions.length === 0) continue
     
-    // Generate title from first course prefix
     const title = courseOptions[0]
-    
-    // Parse credits required
     const creditsRequired = parseFloat(creditsText) || 0
     
-    // Try to find completion status in nearby lines
+    // Check if requirement is satisfied by looking at the next few lines
     const textAfterReq = pdfText.substring(pdfText.indexOf(match[0]))
     const nextLines = textAfterReq.substring(0, 300)
     
@@ -139,7 +129,7 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
     let creditsCompleted = 0
     let creditsInProgress = 0
     
-    // Look for completion indicators
+    // Check how many credits completed
     if (nextLines.includes('cr. Complete')) {
       const completeMatch = nextLines.match(/([\d.]+)\s+cr\.\s+Complete/)
       if (completeMatch) {
@@ -147,8 +137,7 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
       }
     }
     
-    // Check for in-progress courses
-    // Format: "IP                    3.00 Credits" or "IP\n3.00 Credits"
+    // Check for in-progress courses (format: "IP    3.00 Credits")
     const ipMatch = nextLines.match(/IP\s+([\d.]+)\s+Credits/)
     if (ipMatch) {
       status = 'IP'
@@ -176,47 +165,36 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
   return requirements
 }
 
-/**
- * Parse academic audit from PDF text format
- * PDF audits have lines formatted like:
- * "21FA   CHEM 1101           0.50   A+"
- * "Term   Course           Credits   Grade    Title"
- */
+// Parse the text extracted from a PDF audit
+// Lines look like: "21FA   CHEM 1101           0.50   A+"
 export function parseAuditPDF(pdfText: string): StudentAuditData {
-  // Extract student ID (9 digits)
   const studentIdMatch = pdfText.match(/(\d{9})/)
   const studentId = studentIdMatch ? studentIdMatch[1] : ''
 
-  // Extract student name (format: "Lastname, Firstname" or just appears in text)
   const nameMatch = pdfText.match(/([A-Z][a-z]+),\s+([A-Z][a-z]+)/)
   const name = nameMatch ? `${nameMatch[2]} ${nameMatch[1]}` : ''
 
-  // Extract program
-  const programMatch = pdfText.match(/Bachelor of Engineering\s*-\s*([A-Za-z\s]+)/i)
+  const programMatch = pdfText.match(/Bachelor of Engineering\s*-\s*([A-Z a-z\s]+)/i)
   const program = programMatch ? programMatch[1].trim() : ''
 
-  // Extract courses from PDF text
-  // Match lines like: "21FA   CHEM 1101           0.50   A+"
-  // The whitespace between columns varies, so we use \s+ for flexibility
+  // Extract all courses from the audit
   const completedCourses: Array<{ courseId: string; grade: string }> = []
   const currentCourses: Array<{ courseId: string; term: string }> = []
   const seenCompleted = new Set<string>()
   const seenCurrent = new Set<string>()
   
-  // Match course lines with very flexible whitespace
-  // Format: spaces + TERM + spaces + COURSE_CODE + spaces + COURSE_NUM + spaces + CREDITS + spaces + GRADE + optional(spaces + RP/CUR/etc)
+  // Regex to match course lines: "21FA   CHEM 1101           0.50   A+"
   const courseLinePattern = /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP))?/gm
   
   const matches = Array.from(pdfText.matchAll(courseLinePattern))
   
   for (const match of matches) {
-    const term = match[1]      // e.g., "21FA"
-    const courseCode = match[2] // e.g., "CHEM"
-    const courseNum = match[3]  // e.g., "1101"
+    const term = match[1]
+    const courseCode = match[2]
+    const courseNum = match[3]
     const courseId = courseCode + courseNum
-    let grade = match[5]        // e.g., "A+"
+    let grade = match[5]
     
-    // Check if this line has "CUR" after the grade
     const fullMatch = match[0]
     const isCurrent = fullMatch.includes('CUR') || grade === 'CUR'
     
@@ -231,7 +209,6 @@ export function parseAuditPDF(pdfText: string): StudentAuditData {
     }
   }
 
-  // Extract requirements
   const requirements = extractRequirementsFromPDF(pdfText)
 
   return {
