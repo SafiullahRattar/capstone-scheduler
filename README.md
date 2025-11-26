@@ -1,13 +1,17 @@
-# Smart Scheduler - Carleton Engineering Course Prerequisite System
+# Smart Scheduler - Carleton Engineering Course Scheduler
 
-A command-line tool for Carleton University engineering students to check course prerequisites and plan their academic schedule.
+A full-stack web application for Carleton University engineering students to validate prerequisites, generate conflict-free timetables, and plan their academic schedule.
 
 ## Project Status
 
-✅ **Completed**: Database schema and prerequisite data parsing  
-✅ **Completed**: CLI interface with course search and prerequisite lookup  
-🔄 **In Progress**: Timetable data integration (pending supervisor data)  
-⏳ **Planned**: Full prerequisite validation logic implementation  
+✅ **Completed**: Database schema with Prisma ORM  
+✅ **Completed**: Prerequisite validation with tree-based algorithm  
+✅ **Completed**: REST API backend with Express  
+✅ **Completed**: Schedule generation algorithm (backtracking CSP solver)  
+✅ **Completed**: Academic audit parser  
+✅ **Completed**: React frontend UI (from Figma)  
+🔄 **In Progress**: Frontend-backend integration  
+✅ **Completed**: Comprehensive technical documentation  
 
 ## Prerequisites
 
