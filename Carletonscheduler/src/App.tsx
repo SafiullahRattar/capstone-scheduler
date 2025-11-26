@@ -31,12 +31,14 @@ export default function App() {
   };
 
   const handleUploadComplete = async (file: File) => {
-    console.log('File uploaded:', file.name);
+    console.log('File uploaded:', file.name, 'Type:', file.type, 'Size:', file.size);
     
     try {
       // Create form data to upload file
       const formData = new FormData();
       formData.append('file', file);
+      
+      console.log('Sending request to http://localhost:3001/api/audit/parse');
       
       // Call backend API to parse audit file
       const response = await fetch('http://localhost:3001/api/audit/parse', {
@@ -44,10 +46,12 @@ export default function App() {
         body: formData
       });
       
+      console.log('Response status:', response.status, response.statusText);
+      
       if (!response.ok) {
         const error = await response.json();
         console.error('Audit parsing failed:', error);
-        alert('Failed to parse audit file. Please try manual entry.');
+        alert(`Failed to parse audit file: ${error.message || 'Unknown error'}. Please try manual entry.`);
         return;
       }
       
@@ -74,7 +78,8 @@ export default function App() {
       setCurrentPage('course-selection');
     } catch (error) {
       console.error('Error uploading audit file:', error);
-      alert('An error occurred while processing your file. Please try again or use manual entry.');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Error: ${errorMessage}\n\nPlease check the console for details or try manual entry.`);
     }
   };
 

@@ -15,7 +15,13 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { prisma } from '../index'
 import { parseAuditHTML, parseAuditPDF, saveStudentAuditData } from '../../cli/audit-parser'
-import { PdfReader } from 'pdfreader'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import * as fs from 'fs'
+import * as path from 'path'
+import * as os from 'os'
+
+const execAsync = promisify(exec)
 
 const router = Router()
 
@@ -64,10 +70,36 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       })
     }
 
-    const fileContent = req.file.buffer.toString('utf-8')
-    
-    // Parse audit file
-    const auditData = parseAuditHTML(fileContent)
+    let auditData
+
+    // Check if file is PDF
+    if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
+      // Extract text from PDF using pdftotext command
+      const tmpDir = os.tmpdir()
+      const tmpPdfPath = path.join(tmpDir, `audit-${Date.now()}.pdf`)
+      const tmpTxtPath = tmpPdfPath.replace('.pdf', '.txt')
+      
+      try {
+        fs.writeFileSync(tmpPdfPath, req.file.buffer)
+        await execAsync(`pdftotext -layout "${tmpPdfPath}" "${tmpTxtPath}"`)
+        const pdfText = fs.readFileSync(tmpTxtPath, 'utf-8')
+        
+        // Clean up temporary files
+        fs.unlinkSync(tmpPdfPath)
+        fs.unlinkSync(tmpTxtPath)
+        
+        auditData = parseAuditPDF(pdfText)
+      } catch (error) {
+        // Clean up on error
+        if (fs.existsSync(tmpPdfPath)) fs.unlinkSync(tmpPdfPath)
+        if (fs.existsSync(tmpTxtPath)) fs.unlinkSync(tmpTxtPath)
+        throw error
+      }
+    } else {
+      // Parse as HTML
+      const fileContent = req.file.buffer.toString('utf-8')
+      auditData = parseAuditHTML(fileContent)
+    }
     
     if (!auditData.studentId) {
       return res.status(400).json({
@@ -137,33 +169,27 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
 
     // Check if file is PDF
     if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
-      // Extract text from PDF
-      const pdfText = await new Promise<string>((resolve, reject) => {
-        const rows: Record<string, Record<string, string>> = {}
-        
-        new PdfReader().parseBuffer(req.file!.buffer, (err, item) => {
-          if (err) {
-            reject(err)
-          } else if (!item) {
-            // End of file - assemble text
-            const sortedRows = Object.keys(rows).sort((a, b) => parseFloat(a) - parseFloat(b))
-            const text = sortedRows.map(y => {
-              const row = rows[y]
-              const sortedCols = Object.keys(row).sort((a, b) => parseFloat(a) - parseFloat(b))
-              return sortedCols.map(x => row[x]).join(' ')
-            }).join('\n')
-            resolve(text)
-          } else if (item.text) {
-            // Accumulate text items by position
-            const y = item.y.toFixed(1)
-            const x = item.x.toFixed(1)
-            if (!rows[y]) rows[y] = {}
-            rows[y][x] = item.text
-          }
-        })
-      })
+      // Extract text from PDF using pdftotext command
+      const tmpDir = os.tmpdir()
+      const tmpPdfPath = path.join(tmpDir, `audit-${Date.now()}.pdf`)
+      const tmpTxtPath = tmpPdfPath.replace('.pdf', '.txt')
       
-      auditData = parseAuditPDF(pdfText)
+      try {
+        fs.writeFileSync(tmpPdfPath, req.file.buffer)
+        await execAsync(`pdftotext -layout "${tmpPdfPath}" "${tmpTxtPath}"`)
+        const pdfText = fs.readFileSync(tmpTxtPath, 'utf-8')
+        
+        // Clean up temporary files
+        fs.unlinkSync(tmpPdfPath)
+        fs.unlinkSync(tmpTxtPath)
+        
+        auditData = parseAuditPDF(pdfText)
+      } catch (error) {
+        // Clean up on error
+        if (fs.existsSync(tmpPdfPath)) fs.unlinkSync(tmpPdfPath)
+        if (fs.existsSync(tmpTxtPath)) fs.unlinkSync(tmpTxtPath)
+        throw error
+      }
     } else {
       // Parse as HTML
       const fileContent = req.file.buffer.toString('utf-8')
