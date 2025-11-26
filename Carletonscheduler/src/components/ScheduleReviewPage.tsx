@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Calendar, AlertTriangle, Download } from 'lucide-react';
 import { type GeneratedSchedule } from '../utils/scheduleGenerator';
-import { getCourseByCode } from '../utils/courseData';
 
 interface ScheduleReviewPageProps {
   schedules: GeneratedSchedule[];
@@ -159,7 +158,6 @@ export function ScheduleReviewPage({
 
                   // Render grouped courses
                   return Array.from(grouped.entries()).map(([courseCode, sections], idx) => {
-                    const course = getCourseByCode(courseCode);
                     const prereqInfo = currentSchedule.prerequisiteInfo?.[courseCode];
                     
                     return (
@@ -173,9 +171,6 @@ export function ScheduleReviewPage({
                             {sections.map((selection, sIdx) => (
                               <div key={sIdx} className="text-xs mt-1 opacity-80">
                                 {selection.section.sectionCode} - {selection.section.type}
-                                {selection.section.instructor && (
-                                  <span className="opacity-70"> • {selection.section.instructor}</span>
-                                )}
                               </div>
                             ))}
                           </div>
