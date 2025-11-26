@@ -7,7 +7,6 @@ import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
-import { type SchedulePreferences } from './components/DefinePreferences';
 
 type AppPage = 'login' | 'import' | 'course-selection' | 'schedule-review';
 
@@ -21,7 +20,6 @@ export default function App() {
   const [currentCourses, setCurrentCourses] = useState<Array<{courseId: string; term: string}>>([]);
   const [studentInfo, setStudentInfo] = useState<{name: string; studentId: string; program: string} | undefined>();
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>([]);
-  const [hasPreferences, setHasPreferences] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,9 +92,8 @@ export default function App() {
     }
   };
 
-  const handleGenerateSchedules = async (courses: string[], preferences?: SchedulePreferences) => {
+  const handleGenerateSchedules = async (courses: string[]) => {
     console.log('Generate schedules for:', courses);
-    console.log('With preferences:', preferences);
     
     // Generate schedules using backend API
     const schedules = await generateSchedules(courses, completedCourses);
@@ -106,25 +103,8 @@ export default function App() {
       return;
     }
     
-    // Rank schedules if preferences provided
-    if (preferences) {
-      setHasPreferences(true);
-      schedules.forEach((schedule, index) => {
-        schedule.rank = index + 1;
-      });
-      // Sort by score
-      schedules.sort((a, b) => (b.score || 0) - (a.score || 0));
-    } else {
-      setHasPreferences(false);
-    }
-    
     setGeneratedSchedules(schedules);
     setCurrentPage('schedule-review');
-  };
-
-  const handleDefinePreferences = () => {
-    console.log('Navigate to preferences');
-    // Preferences modal is handled within CourseSelectionPage
   };
 
   const handleElectiveRecommendations = () => {
@@ -187,7 +167,6 @@ export default function App() {
     return (
       <ScheduleReviewPage
         schedules={generatedSchedules}
-        hasPreferences={hasPreferences}
         onFinalize={handleFinalizeSchedule}
         onBack={handleBackToCourseSelection}
       />
@@ -203,7 +182,6 @@ export default function App() {
         studentInfo={studentInfo}
         onGenerateSchedules={handleGenerateSchedules}
         onGenerateSmartSchedule={handleGenerateSmartSchedule}
-        onDefinePreferences={handleDefinePreferences}
         onElectiveRecommendations={handleElectiveRecommendations}
       />
     );

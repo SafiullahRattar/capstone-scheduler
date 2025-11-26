@@ -26,8 +26,6 @@ export interface GeneratedSchedule {
     courseCode: string;
     section: Section;
   }[];
-  rank?: number;
-  score?: number;
   hasUnmetPrerequisites: boolean;
 }
 
@@ -67,8 +65,7 @@ export async function generateSchedules(
         courseCode: sel.courseId,
         section: mapApiSectionToFrontend(sel.section)
       })),
-      hasUnmetPrerequisites: false, // Backend validates prerequisites
-      score: schedule.score || 0
+      hasUnmetPrerequisites: false // Backend validates prerequisites
     }));
   } catch (error) {
     console.error('Error generating schedules:', error);

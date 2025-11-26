@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, Calendar, AlertTriangle, Download, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, AlertTriangle, Download } from 'lucide-react';
 import { type GeneratedSchedule } from '../utils/scheduleGenerator';
 import { getCourseByCode } from '../utils/courseData';
 
 interface ScheduleReviewPageProps {
   schedules: GeneratedSchedule[];
-  hasPreferences: boolean;
   onFinalize: (schedule: GeneratedSchedule) => void;
   onBack: () => void;
 }
@@ -29,7 +28,6 @@ const colors = [
 
 export function ScheduleReviewPage({
   schedules,
-  hasPreferences,
   onFinalize,
   onBack
 }: ScheduleReviewPageProps) {
@@ -109,12 +107,6 @@ export function ScheduleReviewPage({
             <div className="bg-white rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-slate-900">Schedule {currentIndex + 1}</h2>
-                {hasPreferences && currentSchedule.rank && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded text-yellow-800">
-                    <Star className="w-4 h-4 fill-yellow-500" />
-                    <span className="text-xs">Rank {currentSchedule.rank}</span>
-                  </div>
-                )}
               </div>
               
               <div className="text-center py-4 border-y border-slate-200 my-4">
@@ -147,14 +139,6 @@ export function ScheduleReviewPage({
               >
                 Finalize This Schedule
               </Button>
-
-              {hasPreferences && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-slate-700">
-                    💡 Schedules are ranked based on your preferences
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Course List */}

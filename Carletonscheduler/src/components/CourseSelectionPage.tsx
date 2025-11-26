@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, X, CheckCircle, AlertTriangle, Calendar, Sparkles, Settings } from 'lucide-react';
+import { Search, X, CheckCircle, AlertTriangle, Calendar, Sparkles } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import { ElectiveRecommendations } from './ElectiveRecommendations';
-import { DefinePreferences, type SchedulePreferences } from './DefinePreferences';
 
 interface CourseSelectionPageProps {
   hasAuditData: boolean;
@@ -15,9 +14,8 @@ interface CourseSelectionPageProps {
     studentId: string;
     program: string;
   };
-  onGenerateSchedules: (courses: string[], preferences?: SchedulePreferences) => void;
+  onGenerateSchedules: (courses: string[]) => void;
   onGenerateSmartSchedule: () => void;
-  onDefinePreferences: () => void;
   onElectiveRecommendations: () => void;
 }
 
@@ -28,7 +26,6 @@ export function CourseSelectionPage({
   studentInfo,
   onGenerateSchedules,
   onGenerateSmartSchedule,
-  onDefinePreferences,
   onElectiveRecommendations
 }: CourseSelectionPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,8 +33,6 @@ export function CourseSelectionPage({
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [courseDetails, setCourseDetails] = useState<Map<string, Course>>(new Map());
   const [showResults, setShowResults] = useState(false);
-  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
-  const [preferences, setPreferences] = useState<SchedulePreferences | undefined>();
   const [showElectives, setShowElectives] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -93,22 +88,11 @@ export function CourseSelectionPage({
   };
 
   const handleGenerateSchedules = () => {
-    onGenerateSchedules(selectedCourses, preferences);
-  };
-
-  const handleSavePreferences = (prefs: SchedulePreferences) => {
-    setPreferences(prefs);
+    onGenerateSchedules(selectedCourses);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <DefinePreferences
-        open={showPreferencesModal}
-        onClose={() => setShowPreferencesModal(false)}
-        onSave={handleSavePreferences}
-        initialPreferences={preferences}
-      />
-      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -343,7 +327,7 @@ export function CourseSelectionPage({
             <div className="bg-blue-600 text-white rounded-lg shadow-lg p-6">
               <h3 className="mb-2">Ready to Build?</h3>
               <p className="text-sm text-blue-100 mb-4">
-                Generate optimized schedules based on your selected courses
+                Generate conflict-free schedules based on your selected courses
               </p>
               <Button
                 onClick={handleGenerateSchedules}
@@ -356,10 +340,10 @@ export function CourseSelectionPage({
             </div>
 
             {/* Optional Features */}
-            <div className="bg-white rounded-lg shadow-lg p-6 space-y-3">
-              <h3 className="text-slate-900 mb-4">Optional Features</h3>
-              
-              {hasAuditData && (
+            {hasAuditData && (
+              <div className="bg-white rounded-lg shadow-lg p-6 space-y-3">
+                <h3 className="text-slate-900 mb-4">Optional Features</h3>
+                
                 <button
                   onClick={() => setShowElectives(!showElectives)}
                   className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-colors text-left"
@@ -372,21 +356,8 @@ export function CourseSelectionPage({
                     <p className="text-xs text-slate-600">View compatible electives</p>
                   </div>
                 </button>
-              )}
-
-              <button
-                onClick={() => setShowPreferencesModal(true)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
-              >
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Settings className="w-5 h-5 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-900">Define Preferences</p>
-                  <p className="text-xs text-slate-600">Customize your schedule</p>
-                </div>
-              </button>
-            </div>
+              </div>
+            )}
 
             {/* Info Card */}
             {!hasAuditData && (
