@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
 
 export interface Course {
   code: string;
@@ -23,14 +23,12 @@ export async function searchCourses(query: string): Promise<Course[]> {
     const response = await fetch(`${API_BASE_URL}/courses/search?q=${encodeURIComponent(query)}`);
     
     if (!response.ok) {
-      console.error('Course search failed:', response.statusText);
       return [];
     }
     
     const data = await response.json();
     
-    // Map API response to Course interface
-    return data.results.map((course: any) => ({
+    return data.results.map((course: Course & { type?: string }) => ({
       code: course.code,
       name: course.name || course.code,
       credits: course.credits || 0,
@@ -38,9 +36,8 @@ export async function searchCourses(query: string): Promise<Course[]> {
       description: course.description || '',
       type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionTypes: course.sectionTypes || []
-    })).slice(0, 8); // Limit to 8 results
-  } catch (error) {
-    console.error('Error searching courses:', error);
+    })).slice(0, SCHEDULE_CONFIG.MAX_SEARCH_RESULTS);
+  } catch {
     return [];
   }
 }
@@ -53,8 +50,6 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
     const response = await fetch(`${API_BASE_URL}/courses/${encodeURIComponent(code)}`);
     
     if (!response.ok) {
-      // Course not found or no sections - return a placeholder with hasSections: false
-      console.warn(`Course ${code} not found in database or has no sections`);
       return {
         code: code,
         name: code,
@@ -78,8 +73,7 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
       sectionCount: course.sectionCount || 0,
       hasSections: (course.sectionCount || 0) > 0
     };
-  } catch (error) {
-    console.error('Error fetching course:', error);
+  } catch {
     return {
       code: code,
       name: code,

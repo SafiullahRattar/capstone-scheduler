@@ -1,31 +1,14 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Download, Info } from 'lucide-react';
-import { type GeneratedSchedule } from '../utils/scheduleGenerator';
+import { type GeneratedSchedule, type PrerequisiteInfo } from '../utils/scheduleGenerator';
+import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
 
 interface ScheduleReviewPageProps {
   schedules: GeneratedSchedule[];
   onFinalize: (schedule: GeneratedSchedule) => void;
   onBack: () => void;
 }
-
-const timeSlots = [
-  '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
-];
-
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-const courseColors = [
-  { bg: '#fee2e2', border: '#fca5a5', text: '#7f1d1d' },
-  { bg: '#dbeafe', border: '#93c5fd', text: '#1e3a8a' },
-  { bg: '#d1fae5', border: '#6ee7b7', text: '#064e3b' },
-  { bg: '#fef3c7', border: '#fcd34d', text: '#78350f' },
-  { bg: '#ede9fe', border: '#c4b5fd', text: '#4c1d95' },
-  { bg: '#cffafe', border: '#67e8f9', text: '#164e63' },
-  { bg: '#fce7f3', border: '#f9a8d4', text: '#831843' },
-  { bg: '#ffedd5', border: '#fdba74', text: '#7c2d12' },
-];
 
 export function ScheduleReviewPage({
   schedules,
@@ -51,10 +34,10 @@ export function ScheduleReviewPage({
   const getTimeSlotPosition = (startTime: string, endTime: string) => {
     const start = parseTime(startTime);
     const end = parseTime(endTime);
-    const dayStart = parseTime('08:00');
+    const dayStart = parseTime(TIMETABLE_CONFIG.TIME_SLOTS[0]);
     
-    const top = ((start - dayStart) / 60) * 60; // 60px per hour
-    const height = ((end - start) / 60) * 60;
+    const top = ((start - dayStart) / 60) * TIMETABLE_CONFIG.HOUR_HEIGHT_PX;
+    const height = ((end - start) / 60) * TIMETABLE_CONFIG.HOUR_HEIGHT_PX;
     
     return { top, height };
   };
@@ -68,9 +51,9 @@ export function ScheduleReviewPage({
     groupedCourses.get(selection.courseCode)!.push(selection);
   });
 
-  const courseColorMap = new Map<string, typeof courseColors[0]>();
+  const courseColorMap = new Map<string, typeof COURSE_COLORS[number]>();
   Array.from(groupedCourses.keys()).forEach((code, idx) => {
-    courseColorMap.set(code, courseColors[idx % courseColors.length]);
+    courseColorMap.set(code, COURSE_COLORS[idx % COURSE_COLORS.length]);
   });
 
   return (
@@ -113,7 +96,7 @@ export function ScheduleReviewPage({
 
         {/* Prerequisites Notice */}
         {currentSchedule.prerequisiteInfo && 
-         Object.values(currentSchedule.prerequisiteInfo).some((info: any) => 
+         Object.values(currentSchedule.prerequisiteInfo).some((info: PrerequisiteInfo) => 
            info.expressionEvaluated && info.expressionEvaluated !== 'None'
          ) && (
           <div className="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl text-sm">
@@ -138,7 +121,7 @@ export function ScheduleReviewPage({
               <div className="space-y-3">
                 {Array.from(groupedCourses.entries()).map(([courseCode, sections]) => {
                   const prereqInfo = currentSchedule.prerequisiteInfo?.[courseCode];
-                  const colors = courseColorMap.get(courseCode) || courseColors[0];
+                  const colors = courseColorMap.get(courseCode) || COURSE_COLORS[0];
                   
                   return (
                     <div
@@ -182,7 +165,7 @@ export function ScheduleReviewPage({
                 {/* Header Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(5, 1fr)', gap: '4px', marginBottom: '4px' }}>
                   <div></div>
-                  {days.map(day => (
+                  {TIMETABLE_CONFIG.DAYS.map(day => (
                     <div key={day} className="text-sm font-semibold text-gray-900 p-2 text-center bg-gray-50 rounded">
                       {day.slice(0, 3)}
                     </div>
@@ -193,28 +176,28 @@ export function ScheduleReviewPage({
                 <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(5, 1fr)', gap: '4px' }}>
                   {/* Time labels */}
                   <div>
-                    {timeSlots.map(time => (
-                      <div key={time} style={{ height: '60px' }} className="text-xs text-gray-500 flex items-start pt-1 pr-2 justify-end">
+                    {TIMETABLE_CONFIG.TIME_SLOTS.map(time => (
+                      <div key={time} style={{ height: `${TIMETABLE_CONFIG.HOUR_HEIGHT_PX}px` }} className="text-xs text-gray-500 flex items-start pt-1 pr-2 justify-end">
                         {time}
                       </div>
                     ))}
                   </div>
 
                   {/* Day columns */}
-                  {days.map(day => (
-                    <div key={day} className="relative bg-gray-50 rounded" style={{ height: `${timeSlots.length * 60}px` }}>
+                  {TIMETABLE_CONFIG.DAYS.map(day => (
+                    <div key={day} className="relative bg-gray-50 rounded" style={{ height: `${TIMETABLE_CONFIG.TIME_SLOTS.length * TIMETABLE_CONFIG.HOUR_HEIGHT_PX}px` }}>
                       {/* Hour grid lines */}
-                      {timeSlots.map((_, idx) => (
+                      {TIMETABLE_CONFIG.TIME_SLOTS.map((_, idx) => (
                         <div
                           key={idx}
                           className="absolute left-0 right-0 border-t border-gray-200"
-                          style={{ top: `${idx * 60}px` }}
+                          style={{ top: `${idx * TIMETABLE_CONFIG.HOUR_HEIGHT_PX}px` }}
                         />
                       ))}
 
                       {/* Course blocks */}
                       {currentSchedule.selections.map((selection) => {
-                        const colors = courseColorMap.get(selection.courseCode) || courseColors[0];
+                        const colors = courseColorMap.get(selection.courseCode) || COURSE_COLORS[0];
                         return selection.section.timeSlots
                           .filter(slot => slot.day === day)
                           .map((slot, slotIdx) => {

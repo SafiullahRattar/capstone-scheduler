@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
 
 export interface TimeSlot {
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
@@ -39,6 +39,27 @@ export interface GeneratedSchedule {
   };
 }
 
+interface ApiSection {
+  sectionCode: string;
+  sectionType: string;
+  days: string;
+  startTime: string;
+  endTime: string;
+  instructor: string | null;
+  capacity: number;
+  enrolled: number;
+}
+
+interface ApiScheduleSelection {
+  courseId: string;
+  section: ApiSection;
+}
+
+interface ApiSchedule {
+  selections: ApiScheduleSelection[];
+  prerequisiteInfo?: { [courseId: string]: PrerequisiteInfo };
+}
+
 /**
  * Generate all possible schedules using the backend API
  * Falls back to error message if API fails
@@ -56,40 +77,34 @@ export async function generateSchedules(
       body: JSON.stringify({
         courseIds: courseCodes,
         completedCourses: completedCourses,
-        // Don't filter by term - use all available sections
-        maxSchedules: 50
+        maxSchedules: SCHEDULE_CONFIG.MAX_SCHEDULES
       })
     });
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Schedule generation failed:', error);
       throw new Error(error.message || 'Failed to generate schedules');
     }
 
     const data = await response.json();
     
-    // Map API response to frontend format
-    return data.schedules.map((schedule: any, index: number) => {
-      // Check if any course has prerequisites (for informational display)
+    return data.schedules.map((schedule: ApiSchedule, index: number) => {
       const hasPrerequisites = schedule.prerequisiteInfo && 
-        Object.values(schedule.prerequisiteInfo).some((info: any) => 
+        Object.values(schedule.prerequisiteInfo).some((info: PrerequisiteInfo) => 
           info.expressionEvaluated && info.expressionEvaluated !== 'None'
         );
       
       return {
         id: index + 1,
-        selections: schedule.selections.map((sel: any) => ({
+        selections: schedule.selections.map((sel: ApiScheduleSelection) => ({
           courseCode: sel.courseId,
           section: mapApiSectionToFrontend(sel.section)
         })),
-        hasUnmetPrerequisites: hasPrerequisites || false, // Used to show info banner
+        hasUnmetPrerequisites: hasPrerequisites || false,
         prerequisiteInfo: schedule.prerequisiteInfo || {}
       };
     });
   } catch (error) {
-    console.error('Error generating schedules:', error);
-    // Re-throw the error so the UI can display it to the user
     throw error;
   }
 }
@@ -97,9 +112,8 @@ export async function generateSchedules(
 /**
  * Map backend section format to frontend Section interface
  */
-function mapApiSectionToFrontend(apiSection: any): Section {
-  // Parse days string (e.g., "MWF" -> ["Monday", "Wednesday", "Friday"])
-  const dayMap: Record<string, 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'> = {
+function mapApiSectionToFrontend(apiSection: ApiSection): Section {
+  const dayMap: Record<string, TimeSlot['day']> = {
     'M': 'Monday',
     'T': 'Tuesday',
     'W': 'Wednesday',
@@ -107,12 +121,11 @@ function mapApiSectionToFrontend(apiSection: any): Section {
     'F': 'Friday'
   };
 
-  const days = apiSection.days 
-    ? apiSection.days.split('').map((d: string) => dayMap[d]).filter(Boolean)
+  const days: TimeSlot['day'][] = apiSection.days 
+    ? apiSection.days.split('').map((d: string) => dayMap[d]).filter((d): d is TimeSlot['day'] => Boolean(d))
     : [];
 
-  // Create time slots for each day
-  const timeSlots: TimeSlot[] = days.map((day: any) => ({
+  const timeSlots: TimeSlot[] = days.map((day) => ({
     day,
     startTime: formatTime(apiSection.startTime),
     endTime: formatTime(apiSection.endTime)

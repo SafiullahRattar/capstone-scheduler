@@ -202,8 +202,13 @@ export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete 
         {/* Help Link */}
         <p className="text-center text-sm text-gray-500">
           Need help finding your Academic Audit?{' '}
-          <a href="#" className="text-[#bf112b] hover:underline font-medium">
-            View instructions
+          <a 
+            href="https://central.carleton.ca" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-[#bf112b] hover:underline font-medium"
+          >
+            Go to Carleton Central
           </a>
         </p>
       </main>
