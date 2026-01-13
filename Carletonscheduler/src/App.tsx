@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
@@ -32,14 +32,124 @@ interface CourseSuggestion {
   name?: string;
 }
 
+interface AppState {
+  currentPage: AppPage;
+  hasAuditData: boolean;
+  completedCourses: string[];
+  currentCourses: CurrentCourse[];
+  remainingCourses: string[];
+  studentInfo?: StudentInfo;
+  generatedSchedules: GeneratedSchedule[];
+}
+
+const STORAGE_KEY = 'scheduler-state';
+
+const pageToPath: Record<AppPage, string> = {
+  'import': '/',
+  'course-selection': '/courses',
+  'schedule-review': '/schedules'
+};
+
+const pathToPage: Record<string, AppPage> = {
+  '/': 'import',
+  '/courses': 'course-selection',
+  '/schedules': 'schedule-review'
+};
+
+function getInitialPage(): AppPage {
+  const path = window.location.pathname;
+  return pathToPage[path] || 'import';
+}
+
+function loadState(): Partial<AppState> | null {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
+function saveState(state: AppState) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<AppPage>('import');
-  const [hasAuditData, setHasAuditData] = useState(false);
-  const [completedCourses, setCompletedCourses] = useState<string[]>([]);
-  const [currentCourses, setCurrentCourses] = useState<CurrentCourse[]>([]);
-  const [remainingCourses, setRemainingCourses] = useState<string[]>([]);
-  const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>();
-  const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>([]);
+  const savedState = loadState();
+  const initialPage = getInitialPage();
+  
+  // If URL says we're on a page that requires data, but we have no saved state, redirect to import
+  const hasRequiredData = savedState && (
+    (initialPage === 'course-selection') ||
+    (initialPage === 'schedule-review' && (savedState.generatedSchedules?.length ?? 0) > 0)
+  );
+  
+  const [currentPage, setCurrentPage] = useState<AppPage>(
+    hasRequiredData ? initialPage : (savedState?.currentPage || 'import')
+  );
+  const [hasAuditData, setHasAuditData] = useState(savedState?.hasAuditData || false);
+  const [completedCourses, setCompletedCourses] = useState<string[]>(savedState?.completedCourses || []);
+  const [currentCourses, setCurrentCourses] = useState<CurrentCourse[]>(savedState?.currentCourses || []);
+  const [remainingCourses, setRemainingCourses] = useState<string[]>(savedState?.remainingCourses || []);
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>(savedState?.studentInfo);
+  const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(savedState?.generatedSchedules || []);
+
+  // Navigate to a page and update URL
+  const navigateTo = useCallback((page: AppPage, replace = false) => {
+    const path = pageToPath[page];
+    if (replace) {
+      window.history.replaceState({ page }, '', path);
+    } else {
+      window.history.pushState({ page }, '', path);
+    }
+    setCurrentPage(page);
+  }, []);
+
+  // Save state whenever it changes
+  useEffect(() => {
+    const state: AppState = {
+      currentPage,
+      hasAuditData,
+      completedCourses,
+      currentCourses,
+      remainingCourses,
+      studentInfo,
+      generatedSchedules
+    };
+    saveState(state);
+  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, studentInfo, generatedSchedules]);
+
+  // Sync URL with current page on mount
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    const expectedPath = pageToPath[currentPage];
+    if (currentPath !== expectedPath) {
+      window.history.replaceState({ page: currentPage }, '', expectedPath);
+    }
+  }, []);
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.page) {
+        setCurrentPage(event.state.page);
+      } else {
+        // Fallback: parse URL
+        const page = pathToPage[window.location.pathname] || 'import';
+        setCurrentPage(page);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handleManualEntry = () => {
     setHasAuditData(true);
@@ -47,13 +157,13 @@ export default function App() {
       'ECOR 1010', 'ECOR 1042', 'ECOR 1043', 'ECOR 1044', 
       'ECOR 1045', 'MATH 1004', 'MATH 1104', 'COMP 1405'
     ]);
-    setCurrentPage('course-selection');
+    navigateTo('course-selection');
   };
 
   const handleSkip = () => {
     setHasAuditData(false);
     setCompletedCourses([]);
-    setCurrentPage('course-selection');
+    navigateTo('course-selection');
   };
 
   const handleUploadComplete = async (file: File) => {
@@ -84,7 +194,7 @@ export default function App() {
       setCompletedCourses(completedCourseIds);
       setCurrentCourses(data.currentCourses || []);
       setRemainingCourses(data.remainingCourses || []);
-      setCurrentPage('course-selection');
+      navigateTo('course-selection');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       alert(`Error uploading file: ${message}. Please try manual entry.`);
@@ -101,7 +211,7 @@ export default function App() {
       }
 
       setGeneratedSchedules(schedules);
-      setCurrentPage('schedule-review');
+      navigateTo('schedule-review');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to generate schedules: ${message}`);
@@ -113,7 +223,7 @@ export default function App() {
   };
 
   const handleBackToCourseSelection = () => {
-    setCurrentPage('course-selection');
+    navigateTo('course-selection');
   };
 
   const fetchCourseSuggestions = async (): Promise<CourseSuggestion[]> => {
