@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Upload, FileText, Edit3, ArrowRight } from 'lucide-react';
+import { Upload, FileText, Edit3, ArrowRight, Info } from 'lucide-react';
 
 interface AcademicHistoryImportProps {
   onManualEntry: () => void;
@@ -48,6 +48,7 @@ export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete 
     
     if (validTypes.includes(file.type) || validExtensions.includes(fileExtension)) {
       setSelectedFile(file);
+      setUploadError(null);
     } else {
       alert('Please upload a valid HTML or PDF file.');
     }
@@ -67,29 +68,35 @@ export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <FileText className="w-8 h-8 text-blue-600" />
-          </div>
-          <h1 className="text-slate-900 mb-2">Import Academic History</h1>
-          <p className="text-slate-600">
-            Upload your Academic Audit to help us provide personalized course recommendations
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header Bar */}
+      <header className="bg-[#bf112b] shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-4">
+          <h1 className="text-white text-lg font-semibold tracking-tight">Carleton Course Scheduler</h1>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-6 py-12">
+        {/* Page Title */}
+        <div className="mb-10 text-center">
+          <h2 className="text-3xl font-semibold text-gray-900 mb-3">Import Academic History</h2>
+          <p className="text-gray-600 text-lg max-w-xl mx-auto">
+            Upload your Academic Audit to receive personalized course recommendations and prerequisite validation.
           </p>
         </div>
 
         {/* Main Upload Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h2 className="text-slate-900 mb-6">Automated Audit Parsing</h2>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Upload Audit File</h3>
           
           {/* Upload Area */}
           <div
-            className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+            className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ${
               dragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-300 bg-slate-50 hover:border-slate-400'
+                ? 'border-[#bf112b] bg-red-50 scale-[1.01]'
+                : selectedFile
+                ? 'border-green-300 bg-green-50'
+                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -100,103 +107,106 @@ export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete 
               <input
                 type="file"
                 id="file-upload"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 onChange={handleChange}
                 accept=".html,.htm,.pdf"
               />
             )}
             
-            <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              selectedFile ? 'bg-green-100' : dragActive ? 'bg-red-100' : 'bg-gray-100'
+            }`}>
+              <Upload className={`w-8 h-8 ${
+                selectedFile ? 'text-green-600' : dragActive ? 'text-[#bf112b]' : 'text-gray-400'
+              }`} />
+            </div>
             
             {selectedFile ? (
-              <div className="space-y-2">
-                <p className="text-slate-900">{selectedFile.name}</p>
-                <p className="text-sm text-slate-500">
-                  {(selectedFile.size / 1024).toFixed(2)} KB
-                </p>
+              <div className="space-y-4 relative z-10">
+                <div className="inline-flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg">
+                  <FileText className="w-5 h-5 text-[#bf112b]" />
+                  <span className="text-gray-900 font-medium">{selectedFile.name}</span>
+                  <span className="text-gray-500 text-sm">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                </div>
                 {uploadError && (
-                  <p className="text-sm text-red-600 mt-2">{uploadError}</p>
+                  <p className="text-sm text-red-600">{uploadError}</p>
                 )}
-                <Button 
-                  onClick={handleUpload} 
-                  className="mt-4 relative z-10"
-                  disabled={isUploading}
-                >
-                  {isUploading ? 'Uploading...' : 'Upload File'}
-                </Button>
+                <div className="flex items-center justify-center gap-4 pt-2">
+                  <Button onClick={handleUpload} disabled={isUploading}>
+                    {isUploading ? 'Processing...' : 'Upload and Continue'}
+                  </Button>
+                  <button
+                    onClick={() => setSelectedFile(null)}
+                    className="text-sm text-gray-500 hover:text-[#bf112b] transition-colors"
+                  >
+                    Choose different file
+                  </button>
+                </div>
               </div>
             ) : (
               <>
-                <p className="text-slate-700 mb-2">
-                  Drag and drop your Academic Audit file here, or click to browse
+                <p className="text-gray-700 font-medium mb-1">
+                  Drag and drop your Academic Audit file here
                 </p>
-                <p className="text-sm text-slate-500">
-                  Maximum file size: 10MB
+                <p className="text-sm text-gray-500">
+                  or click to browse (HTML or PDF, max 10MB)
                 </p>
               </>
             )}
           </div>
 
-          {/* Supported File Types */}
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-slate-700">
-              <span className="text-slate-900">Supported File Types:</span> HTML (preferred), PDF
-            </p>
-            <p className="text-sm text-slate-600 mt-1">
-              💡 HTML files provide the most accurate parsing results
-            </p>
+          {/* Info Note */}
+          <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <span className="text-sm text-blue-800">HTML files provide the most accurate parsing. Save your audit webpage as HTML from Carleton Central.</span>
           </div>
         </div>
 
         {/* Alternative Options */}
-        <div className="grid md:grid-cols-2 gap-4 mb-6">
-          {/* Manual Entry Option */}
+        <div className="grid md:grid-cols-2 gap-4 mb-10">
           <button
             onClick={onManualEntry}
-            className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md transition-shadow border-2 border-transparent hover:border-blue-200"
+            className="group bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-[#bf112b] hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Edit3 className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-red-50 flex items-center justify-center transition-colors">
+                <Edit3 className="w-5 h-5 text-gray-600 group-hover:text-[#bf112b] transition-colors" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-slate-900 mb-1">Manual Entry</h3>
-                <p className="text-sm text-slate-600">
-                  Enter your course history manually if you prefer not to upload a file
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Manual Entry</h4>
+                <p className="text-sm text-gray-600">
+                  Enter completed courses manually
                 </p>
               </div>
             </div>
           </button>
 
-          {/* Skip Option */}
           <button
             onClick={onSkip}
-            className="bg-white rounded-lg shadow p-6 text-left hover:shadow-md transition-shadow border-2 border-transparent hover:border-slate-200"
+            className="group bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-[#bf112b] hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <ArrowRight className="w-6 h-6 text-slate-600" />
+              <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-red-50 flex items-center justify-center transition-colors">
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-[#bf112b] transition-colors" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-slate-900 mb-1">Skip for Now</h3>
-                <p className="text-sm text-slate-600">
-                  Continue to course selection. You can provide your history at any time
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Skip for Now</h4>
+                <p className="text-sm text-gray-600">
+                  Continue without academic history
                 </p>
               </div>
             </div>
           </button>
         </div>
 
-        {/* Help Text */}
-        <div className="text-center">
-          <p className="text-sm text-slate-600">
-            Need help finding your Academic Audit?{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-700">
-              View Instructions
-            </a>
-          </p>
-        </div>
-      </div>
+        {/* Help Link */}
+        <p className="text-center text-sm text-gray-500">
+          Need help finding your Academic Audit?{' '}
+          <a href="#" className="text-[#bf112b] hover:underline font-medium">
+            View instructions
+          </a>
+        </p>
+      </main>
     </div>
   );
 }

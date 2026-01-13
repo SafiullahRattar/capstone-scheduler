@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, X, CheckCircle, AlertTriangle, Calendar, Sparkles } from 'lucide-react';
+import { Search, X, Check, AlertCircle, Plus } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 
 interface CourseSelectionPageProps {
@@ -61,7 +61,6 @@ export function CourseSelectionPage({
   const addCourse = async (courseCode: string) => {
     if (!selectedCourses.includes(courseCode)) {
       setSelectedCourses([...selectedCourses, courseCode]);
-      // Fetch and cache course details
       const course = await getCourseByCode(courseCode);
       if (course) {
         setCourseDetails(new Map(courseDetails.set(courseCode, course)));
@@ -76,14 +75,11 @@ export function CourseSelectionPage({
     const toAdd = courseCodes.filter(c => !selectedCourses.includes(c));
     if (toAdd.length === 0) return;
     
-    // Add all courses to selection at once
     setSelectedCourses(prev => [...prev, ...toAdd]);
     
-    // Fetch all course details in parallel
     const coursePromises = toAdd.map(code => getCourseByCode(code));
     const courses = await Promise.all(coursePromises);
     
-    // Update course details map
     setCourseDetails(prev => {
       const newMap = new Map(prev);
       courses.forEach((course, index) => {
@@ -110,7 +106,6 @@ export function CourseSelectionPage({
   };
 
   const handleGenerateSchedules = () => {
-    // Filter to only courses that have sections available
     const coursesWithSections = selectedCourses.filter(code => {
       const course = courseDetails.get(code);
       return course && course.hasSections !== false;
@@ -129,197 +124,202 @@ export function CourseSelectionPage({
     onGenerateSchedules(coursesWithSections);
   };
 
+  const coursesWithSectionsCount = selectedCourses.filter(code => {
+    const course = courseDetails.get(code);
+    return course && course.hasSections !== false;
+  }).length;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Calendar className="w-8 h-8 text-blue-600" />
-          </div>
-          <h1 className="text-slate-900 mb-2">Course Selection</h1>
-          <p className="text-slate-600">
-            Search and select the courses you want to take this term
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header Bar */}
+      <header className="bg-[#bf112b] shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <h1 className="text-white text-lg font-semibold tracking-tight">Carleton Course Scheduler</h1>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Course Selection</h2>
+          <p className="text-gray-600">Select courses to generate conflict-free schedules</p>
         </div>
 
-        {/* Student Info and Smart Schedule Generation */}
+        {/* Student Info Banner */}
         {hasAuditData && studentInfo && (
-          <div className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg shadow-lg p-6">
+          <div className="mb-8 bg-white border border-gray-200 rounded-xl shadow-sm p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex-1">
-                <h2 className="text-slate-900 mb-1">Welcome, {studentInfo.name}!</h2>
-                <p className="text-sm text-slate-600">
-                  {studentInfo.program} • Student ID: {studentInfo.studentId}
-                </p>
-                <p className="text-sm text-slate-600 mt-1">
-                  ✅ {completedCourses.length} completed • 📚 {currentCourses.length} in progress • 🎯 {remainingCourses.length} remaining
-                </p>
+              <div>
+                <p className="font-semibold text-gray-900 text-lg">{studentInfo.name}</p>
+                <p className="text-sm text-gray-600">{studentInfo.program} | {studentInfo.studentId}</p>
+                <div className="flex gap-6 mt-3">
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-gray-900">{completedCourses.length}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-gray-900">{currentCourses.length}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">In Progress</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-[#bf112b]">{remainingCourses.length}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Remaining</div>
+                  </div>
+                </div>
               </div>
-              <Button
-                onClick={async () => {
-                  setIsGenerating(true);
-                  try {
-                    await onGenerateSmartSchedule();
-                  } finally {
-                    setIsGenerating(false);
-                  }
-                }}
-                disabled={isGenerating || remainingCourses.length === 0}
-                className="bg-green-600 hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4" />
-                {isGenerating 
-                  ? 'Generating...' 
-                  : remainingCourses.length === 0 
-                    ? 'No Remaining Courses' 
-                    : 'Generate Smart Schedule'}
-              </Button>
+              {remainingCourses.length > 0 && (
+                <Button
+                  onClick={async () => {
+                    setIsGenerating(true);
+                    try {
+                      await onGenerateSmartSchedule();
+                    } finally {
+                      setIsGenerating(false);
+                    }
+                  }}
+                  disabled={isGenerating}
+                  className="shadow-sm"
+                >
+                  {isGenerating ? 'Generating...' : 'Auto-Generate Schedule'}
+                </Button>
+              )}
             </div>
             
-            {/* Completed Courses Collapsible */}
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-slate-700 hover:text-slate-900 font-medium">
-                View Completed Courses ({completedCourses.length})
-              </summary>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {completedCourses.map((courseCode) => (
-                  <span
-                    key={courseCode}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    {courseCode}
+            {/* Collapsible Sections */}
+            <div className="space-y-3 text-sm border-t border-gray-100 pt-4">
+              <details className="group">
+                <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
+                  <span className="w-5 h-5 rounded bg-gray-100 flex items-center justify-center text-xs group-open:bg-gray-200 transition-colors">
+                    {completedCourses.length}
                   </span>
-                ))}
-              </div>
-            </details>
-
-            {/* Current Courses Collapsible */}
-            {currentCourses.length > 0 && (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm text-slate-700 hover:text-slate-900 font-medium">
-                  View Current Courses ({currentCourses.length})
+                  Completed courses
                 </summary>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {currentCourses.map((course) => (
-                    <span
-                      key={course.courseId}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm"
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      {course.courseId}
-                      <span className="text-xs opacity-75">({course.term})</span>
+                <div className="mt-3 flex flex-wrap gap-2 pl-7">
+                  {completedCourses.map((code) => (
+                    <span key={code} className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md text-xs font-medium">
+                      {code}
                     </span>
                   ))}
                 </div>
               </details>
-            )}
 
-            {/* Remaining Required Courses Collapsible */}
-            {remainingCourses.length > 0 ? (
-              <details className="mt-4" open>
-                <summary className="cursor-pointer text-sm text-slate-700 hover:text-slate-900 font-medium">
-                  View Remaining Required Courses ({remainingCourses.length}) - Click to add
-                </summary>
-                <div className="mt-3">
-                  {/* Add All Button */}
-                  {remainingCourses.some(c => !selectedCourses.includes(c)) && (
-                    <Button
-                      onClick={() => addAllCourses(remainingCourses)}
-                      variant="outline"
-                      size="sm"
-                      className="mb-3 text-orange-700 border-orange-300 hover:bg-orange-50"
-                    >
-                      + Add All Remaining ({remainingCourses.filter(c => !selectedCourses.includes(c)).length})
-                    </Button>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {remainingCourses.map((courseCode) => {
-                      const isSelected = selectedCourses.includes(courseCode);
-                      return (
-                        <button
-                          key={courseCode}
-                          onClick={() => !isSelected && addCourse(courseCode)}
-                          disabled={isSelected}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
-                            isSelected
-                              ? 'bg-green-100 text-green-700 cursor-default'
-                              : 'bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer'
-                          }`}
-                        >
-                          {isSelected ? (
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          ) : (
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                          )}
-                          {courseCode}
-                          {!isSelected && <span className="text-xs opacity-60">+ Add</span>}
-                        </button>
-                      );
-                    })}
+              {currentCourses.length > 0 && (
+                <details className="group">
+                  <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-blue-100 flex items-center justify-center text-xs text-blue-700">
+                      {currentCourses.length}
+                    </span>
+                    Currently enrolled
+                  </summary>
+                  <div className="mt-3 flex flex-wrap gap-2 pl-7">
+                    {currentCourses.map((course) => (
+                      <span key={course.courseId} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-xs font-medium">
+                        {course.courseId}
+                      </span>
+                    ))}
                   </div>
+                </details>
+              )}
+
+              {remainingCourses.length > 0 && (
+                <details open className="group">
+                  <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-amber-100 flex items-center justify-center text-xs text-amber-700">
+                      {remainingCourses.length}
+                    </span>
+                    Remaining requirements
+                  </summary>
+                  <div className="mt-3 pl-7">
+                    {remainingCourses.some(c => !selectedCourses.includes(c)) && (
+                      <button
+                        onClick={() => addAllCourses(remainingCourses)}
+                        className="mb-3 text-xs font-medium text-[#bf112b] hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add all remaining courses
+                      </button>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {remainingCourses.map((code) => {
+                        const isSelected = selectedCourses.includes(code);
+                        return (
+                          <button
+                            key={code}
+                            onClick={() => !isSelected && addCourse(code)}
+                            disabled={isSelected}
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 inline mr-1" />}
+                            {code}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
+              )}
+
+              {remainingCourses.length === 0 && hasAuditData && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <Check className="w-5 h-5 text-green-600" />
+                  <span className="text-green-800 font-medium">All degree requirements completed or in progress</span>
                 </div>
-              </details>
-            ) : hasAuditData && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700 flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" />
-                  All degree requirements are completed or in progress!
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  Use the search below to add electives or explore other courses.
-                </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main Selection Area */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Course Search Bar */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-slate-900 mb-4">Search Courses</h2>
-              
+            {/* Search */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Search Courses</h3>
               <div ref={searchRef} className="relative">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Search by course code or name (e.g., ECOR 1010)"
+                    placeholder="Search by course code or name..."
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     onFocus={() => searchQuery && setShowResults(true)}
-                    className="pl-10"
+                    className="pl-10 h-11"
                   />
                 </div>
 
-                {/* Search Results Dropdown */}
                 {showResults && searchResults.length > 0 && (
-                  <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-xl border border-slate-200 max-h-96 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto">
                     {searchResults.map((course) => (
                       <button
                         key={course.code}
                         onClick={() => addCourse(course.code)}
                         disabled={selectedCourses.includes(course.code)}
-                        className="w-full p-4 text-left hover:bg-slate-50 border-b border-slate-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <p className="text-slate-900">{course.code}</p>
-                            <p className="text-sm text-slate-600 mt-1">{course.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-xs text-slate-500">{course.credits} credits</p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-semibold text-gray-900">{course.code}</span>
+                            <span className="text-gray-600 ml-2">{course.name}</span>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {course.credits} credits
                               {course.sectionTypes && course.sectionTypes.length > 0 && (
-                                <span className="text-xs text-blue-600 font-medium">
-                                  • {course.sectionTypes.join(' + ')}
-                                </span>
+                                <span className="ml-2 text-gray-400">| {course.sectionTypes.join(', ')}</span>
                               )}
                             </div>
                           </div>
-                          {selectedCourses.includes(course.code) && (
-                            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                          {selectedCourses.includes(course.code) ? (
+                            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                              <Check className="w-4 h-4 text-green-600" />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-[#bf112b] group-hover:text-white transition-colors">
+                              <Plus className="w-4 h-4 text-gray-400" />
+                            </div>
                           )}
                         </div>
                       </button>
@@ -328,102 +328,101 @@ export function CourseSelectionPage({
                 )}
 
                 {showResults && searchQuery && searchResults.length === 0 && (
-                  <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-xl border border-slate-200 p-4">
-                    <p className="text-slate-600 text-center">No courses found</p>
+                  <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500 shadow-lg">
+                    No courses found matching "{searchQuery}"
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Selected Courses List */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-slate-900 mb-4">
-                Selected Courses ({selectedCourses.length})
-              </h2>
+            {/* Selected Courses */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Selected Courses 
+                {selectedCourses.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-[#bf112b] text-white text-sm rounded-full">
+                    {selectedCourses.length}
+                  </span>
+                )}
+              </h3>
 
               {selectedCourses.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No courses selected yet</p>
-                  <p className="text-sm mt-1">Search and add courses to get started</p>
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Search className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500">
+                    No courses selected yet.<br />
+                    <span className="text-sm">Search above or add from remaining requirements.</span>
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {selectedCourses.map((courseCode) => {
                     const course = courseDetails.get(courseCode);
                     if (!course) return null;
 
-                    const hasUnmetPrerequisites = !areAllPrerequisitesMet(course.prerequisites);
+                    const hasUnmetPrereqs = !areAllPrerequisitesMet(course.prerequisites);
                     const noSections = course.hasSections === false;
 
                     return (
                       <div
                         key={courseCode}
-                        className={`border rounded-lg p-4 ${
+                        className={`border rounded-lg p-4 transition-all ${
                           noSections
-                            ? 'border-red-300 bg-red-50'
-                            : hasUnmetPrerequisites && hasAuditData
-                            ? 'border-yellow-300 bg-yellow-50'
-                            : 'border-slate-200'
+                            ? 'border-red-200 bg-red-50'
+                            : hasUnmetPrereqs && hasAuditData
+                            ? 'border-amber-200 bg-amber-50'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-slate-900">{course.code}</h3>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-900">{course.code}</span>
                               {noSections && (
-                                <span className="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded">
+                                <span className="text-xs px-2 py-0.5 bg-red-200 text-red-800 rounded-full font-medium">
                                   No sections available
                                 </span>
                               )}
-                              {hasUnmetPrerequisites && hasAuditData && !noSections && (
-                                <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                              {hasUnmetPrereqs && hasAuditData && !noSections && (
+                                <span className="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full font-medium flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Prerequisites not met
+                                </span>
                               )}
                             </div>
-                            <p className="text-sm text-slate-600 mb-2">{course.name}</p>
+                            <p className="text-sm text-gray-600 mt-1">{course.name}</p>
                             
-                            {/* Prerequisites */}
                             {course.prerequisites.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-slate-200">
-                                <p className="text-xs text-slate-500 mb-2">Prerequisites:</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {course.prerequisites.map((prereq) => {
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Prerequisites: </span>
+                                <span className="text-xs">
+                                  {course.prerequisites.map((prereq, i) => {
                                     const status = checkPrerequisiteStatus(prereq);
                                     return (
-                                      <div
-                                        key={prereq}
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs ${
-                                          status === 'met'
-                                            ? 'bg-green-100 text-green-700'
-                                            : status === 'not-met'
-                                            ? 'bg-yellow-100 text-yellow-700'
-                                            : 'bg-slate-100 text-slate-700'
-                                        }`}
-                                      >
-                                        {hasAuditData && (
-                                          <>
-                                            {status === 'met' ? (
-                                              <CheckCircle className="w-3 h-3" />
-                                            ) : status === 'not-met' ? (
-                                              <AlertTriangle className="w-3 h-3" />
-                                            ) : null}
-                                          </>
-                                        )}
-                                        <span>{prereq}</span>
-                                      </div>
+                                      <span key={prereq}>
+                                        <span className={`font-medium ${
+                                          status === 'met' ? 'text-green-600' :
+                                          status === 'not-met' ? 'text-amber-600' :
+                                          'text-gray-600'
+                                        }`}>
+                                          {prereq}
+                                        </span>
+                                        {i < course.prerequisites.length - 1 && ', '}
+                                      </span>
                                     );
                                   })}
-                                </div>
+                                </span>
                               </div>
                             )}
                           </div>
-
                           <button
                             onClick={() => removeCourse(courseCode)}
-                            className="text-slate-400 hover:text-red-600 transition-colors"
+                            className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500 transition-all"
                             aria-label="Remove course"
                           >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -432,38 +431,38 @@ export function CourseSelectionPage({
                 </div>
               )}
             </div>
-
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Generate Schedules CTA */}
-            <div className="bg-blue-600 text-white rounded-lg shadow-lg p-6">
-              <h3 className="mb-2">Ready to Build?</h3>
-              <p className="text-sm text-blue-100 mb-4">
-                Generate conflict-free schedules based on your selected courses
+          <div className="space-y-6">
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sticky top-6">
+              <h3 className="font-semibold text-gray-900 mb-3">Generate Schedule</h3>
+              <p className="text-sm text-gray-600 mb-5">
+                {selectedCourses.length === 0 
+                  ? 'Select courses to generate schedules'
+                  : coursesWithSectionsCount === selectedCourses.length
+                  ? `${selectedCourses.length} courses ready to schedule`
+                  : `${coursesWithSectionsCount} of ${selectedCourses.length} courses have available sections`
+                }
               </p>
               <Button
                 onClick={handleGenerateSchedules}
                 disabled={selectedCourses.length === 0}
-                variant="secondary"
-                className="w-full"
+                className="w-full h-11 text-base shadow-sm"
               >
                 Generate Schedules
               </Button>
             </div>
 
-            {/* Info Card */}
             {!hasAuditData && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-slate-700">
-                  💡 Upload your Academic Audit to see prerequisite status for each course
-                </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-800">
+                <p className="font-medium mb-1">Tip</p>
+                <p>Upload your Academic Audit on the previous page to see prerequisite validation.</p>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
