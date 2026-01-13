@@ -7,6 +7,7 @@ export interface TimeSlot {
 }
 
 export interface Section {
+  sectionId: string;
   sectionCode: string;
   type: 'Lecture' | 'Tutorial' | 'Lab';
   instructor: string;
@@ -40,6 +41,7 @@ export interface GeneratedSchedule {
 }
 
 interface ApiSection {
+  sectionId: string;
   sectionCode: string;
   sectionType: string;
   days: string;
@@ -132,6 +134,7 @@ function mapApiSectionToFrontend(apiSection: ApiSection): Section {
   }));
 
   return {
+    sectionId: apiSection.sectionId,
     sectionCode: apiSection.sectionCode,
     type: apiSection.sectionType as 'Lecture' | 'Tutorial' | 'Lab',
     instructor: apiSection.instructor || 'TBA',

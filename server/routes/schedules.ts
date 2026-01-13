@@ -23,6 +23,7 @@ interface TimeSlot {
 interface Section {
   id: string
   courseId: string
+  sectionId: string | null
   sectionCode: string
   sectionType: string
   instructor: string | null

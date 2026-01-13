@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, Download, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Info, Copy, Check } from 'lucide-react';
 import { type GeneratedSchedule, type PrerequisiteInfo } from '../utils/scheduleGenerator';
 import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
 
@@ -16,6 +16,7 @@ export function ScheduleReviewPage({
   onBack
 }: ScheduleReviewPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const currentSchedule = schedules[currentIndex];
 
   const handlePrevious = () => {
@@ -24,6 +25,19 @@ export function ScheduleReviewPage({
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < schedules.length - 1 ? prev + 1 : 0));
+  };
+
+  const copyToClipboard = async (text: string, itemId: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedItem(itemId);
+    setTimeout(() => setCopiedItem(null), 2000);
+  };
+
+  const copyAllCRNs = () => {
+    const crns = currentSchedule.selections
+      .map(s => s.section.sectionId)
+      .join(', ');
+    copyToClipboard(crns, 'all-crns');
   };
 
   const parseTime = (time: string): number => {
@@ -72,7 +86,7 @@ export function ScheduleReviewPage({
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 pb-32">
         {/* Page Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -234,6 +248,99 @@ export function ScheduleReviewPage({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Quick Copy Section */}
+        <div className="mt-8 bg-white border-2 border-gray-300 rounded-xl shadow-md overflow-hidden" style={{ marginBottom: '150px' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+            <div>
+              <h3 className="font-semibold text-gray-900">Quick Copy for Registration</h3>
+              <p className="text-sm text-gray-500 mt-0.5">Click any code to copy to clipboard</p>
+            </div>
+            <button
+              onClick={copyAllCRNs}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[#bf112b] text-[#ffffff] hover:bg-[#a00f25] rounded-lg transition-colors shadow-sm"
+            >
+              {copiedItem === 'all-crns' ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy All CRNs
+                </>
+              )}
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Course</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">CRN</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Time</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Days</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentSchedule.selections.map((selection, idx) => {
+                  const colors = courseColorMap.get(selection.courseCode) || COURSE_COLORS[0];
+                  const itemId = `${selection.courseCode}-${selection.section.sectionCode}`;
+                  const days = selection.section.timeSlots.map(s => s.day.slice(0, 3)).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+                  const times = selection.section.timeSlots.length > 0 
+                    ? `${selection.section.timeSlots[0].startTime} - ${selection.section.timeSlots[0].endTime}`
+                    : 'TBA';
+                  
+                  return (
+                    <tr key={idx} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => copyToClipboard(selection.courseCode, `course-${itemId}`)}
+                          className="flex items-center gap-2 font-medium hover:text-[#bf112b] transition-colors"
+                          style={{ color: colors.text }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: colors.border }}
+                          />
+                          {selection.courseCode}
+                          {copiedItem === `course-${itemId}` && (
+                            <Check className="w-3 h-3 text-green-600" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {selection.section.type}
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => copyToClipboard(selection.section.sectionId, `crn-${itemId}`)}
+                          className="font-mono text-gray-900 hover:text-[#bf112b] transition-colors flex items-center gap-1"
+                        >
+                          {selection.section.sectionId}
+                          {copiedItem === `crn-${itemId}` ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 opacity-30 hover:opacity-100" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 font-mono text-xs">
+                        {times}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {days}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>
