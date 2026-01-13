@@ -81,9 +81,23 @@ function saveState(state: AppState) {
   }
 }
 
+function clearState() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function App() {
-  const savedState = loadState();
   const initialPage = getInitialPage();
+  
+  // If URL is explicitly '/', clear state and start fresh
+  if (initialPage === 'import') {
+    clearState();
+  }
+  
+  const savedState = initialPage === 'import' ? null : loadState();
   
   // If URL says we're on a page that requires data, but we have no saved state, redirect to import
   const hasRequiredData = savedState && (
@@ -92,7 +106,7 @@ export default function App() {
   );
   
   const [currentPage, setCurrentPage] = useState<AppPage>(
-    hasRequiredData ? initialPage : (savedState?.currentPage || 'import')
+    hasRequiredData ? initialPage : (initialPage === 'import' ? 'import' : (savedState?.currentPage || 'import'))
   );
   const [hasAuditData, setHasAuditData] = useState(savedState?.hasAuditData || false);
   const [completedCourses, setCompletedCourses] = useState<string[]>(savedState?.completedCourses || []);
@@ -151,18 +165,23 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  const handleStartOver = () => {
+    setHasAuditData(false);
+    setCompletedCourses([]);
+    setCurrentCourses([]);
+    setRemainingCourses([]);
+    setStudentInfo(undefined);
+    setGeneratedSchedules([]);
+    clearState();
+    navigateTo('import');
+  };
+
   const handleManualEntry = () => {
     setHasAuditData(true);
     setCompletedCourses([
       'ECOR 1010', 'ECOR 1042', 'ECOR 1043', 'ECOR 1044', 
       'ECOR 1045', 'MATH 1004', 'MATH 1104', 'COMP 1405'
     ]);
-    navigateTo('course-selection');
-  };
-
-  const handleSkip = () => {
-    setHasAuditData(false);
-    setCompletedCourses([]);
     navigateTo('course-selection');
   };
 
@@ -216,10 +235,6 @@ export default function App() {
       const message = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to generate schedules: ${message}`);
     }
-  };
-
-  const handleFinalizeSchedule = (_schedule: GeneratedSchedule) => {
-    alert('Schedule finalized! This would typically save or export your schedule.');
   };
 
   const handleBackToCourseSelection = () => {
@@ -288,7 +303,6 @@ export default function App() {
     return (
       <ScheduleReviewPage
         schedules={generatedSchedules}
-        onFinalize={handleFinalizeSchedule}
         onBack={handleBackToCourseSelection}
       />
     );
@@ -304,6 +318,7 @@ export default function App() {
         studentInfo={studentInfo}
         onGenerateSchedules={handleGenerateSchedules}
         onGenerateSmartSchedule={handleGenerateSmartSchedule}
+        onStartOver={handleStartOver}
       />
     );
   }
@@ -311,7 +326,6 @@ export default function App() {
   return (
     <AcademicHistoryImport
       onManualEntry={handleManualEntry}
-      onSkip={handleSkip}
       onUploadComplete={handleUploadComplete}
     />
   );

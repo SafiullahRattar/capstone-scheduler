@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Upload, FileText, Edit3, ArrowRight, Info } from 'lucide-react';
+import { Upload, FileText, Edit3, Info } from 'lucide-react';
 
 interface AcademicHistoryImportProps {
   onManualEntry: () => void;
-  onSkip: () => void;
   onUploadComplete: (file: File) => void;
 }
 
-export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete }: AcademicHistoryImportProps) {
+export function AcademicHistoryImport({ onManualEntry, onUploadComplete }: AcademicHistoryImportProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -163,10 +162,10 @@ export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete 
         </div>
 
         {/* Alternative Options */}
-        <div className="grid md:grid-cols-2 gap-4 mb-10">
+        <div className="mb-10">
           <button
             onClick={onManualEntry}
-            className="group bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-[#bf112b] hover:shadow-md transition-all duration-200"
+            className="group w-full bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-[#bf112b] hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-red-50 flex items-center justify-center transition-colors">
@@ -176,23 +175,6 @@ export function AcademicHistoryImport({ onManualEntry, onSkip, onUploadComplete 
                 <h4 className="font-semibold text-gray-900 mb-1">Manual Entry</h4>
                 <p className="text-sm text-gray-600">
                   Enter completed courses manually
-                </p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={onSkip}
-            className="group bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-[#bf112b] hover:shadow-md transition-all duration-200"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-red-50 flex items-center justify-center transition-colors">
-                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-[#bf112b] transition-colors" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-1">Skip for Now</h4>
-                <p className="text-sm text-gray-600">
-                  Continue without academic history
                 </p>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, X, Check, AlertCircle, Plus } from 'lucide-react';
+import { Search, X, Check, AlertCircle, Plus, RotateCcw } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 
 interface CourseSelectionPageProps {
@@ -16,6 +16,7 @@ interface CourseSelectionPageProps {
   };
   onGenerateSchedules: (courses: string[]) => void;
   onGenerateSmartSchedule: () => void;
+  onStartOver: () => void;
 }
 
 export function CourseSelectionPage({
@@ -25,7 +26,8 @@ export function CourseSelectionPage({
   remainingCourses = [],
   studentInfo,
   onGenerateSchedules,
-  onGenerateSmartSchedule
+  onGenerateSmartSchedule,
+  onStartOver
 }: CourseSelectionPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Course[]>([]);
@@ -133,8 +135,15 @@ export function CourseSelectionPage({
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header Bar */}
       <header className="bg-[#bf112b] shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-white text-lg font-semibold tracking-tight">Carleton Course Scheduler</h1>
+          <button
+            onClick={onStartOver}
+            className="text-white/80 hover:text-white text-sm flex items-center gap-1 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Start Over
+          </button>
         </div>
       </header>
 

@@ -6,13 +6,11 @@ import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
 
 interface ScheduleReviewPageProps {
   schedules: GeneratedSchedule[];
-  onFinalize: (schedule: GeneratedSchedule) => void;
   onBack: () => void;
 }
 
 export function ScheduleReviewPage({
   schedules,
-  onFinalize,
   onBack
 }: ScheduleReviewPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -161,10 +159,7 @@ export function ScheduleReviewPage({
             </div>
 
             {/* Actions */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
-              <Button onClick={() => onFinalize(currentSchedule)} className="w-full h-11 shadow-sm">
-                Select This Schedule
-              </Button>
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
               <Button variant="outline" className="w-full h-10">
                 <Download className="w-4 h-4 mr-2" />
                 Export
