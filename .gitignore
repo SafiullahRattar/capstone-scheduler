@@ -32,3 +32,6 @@ dist/
 *.swp
 *.swo
 docs/
+PRESENTATION.md
+presentation.typ
+presentation.pdf
