@@ -8,6 +8,8 @@ export interface Course {
   description: string;
   type?: 'core' | 'technical-elective' | 'complementary-elective';
   sectionTypes?: string[]; // e.g., ["LEC", "LAB", "TUT"]
+  sectionCount?: number;
+  hasSections?: boolean;
 }
 
 /**
@@ -51,8 +53,17 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
     const response = await fetch(`${API_BASE_URL}/courses/${encodeURIComponent(code)}`);
     
     if (!response.ok) {
-      console.error('Course fetch failed:', response.statusText);
-      return undefined;
+      // Course not found or no sections - return a placeholder with hasSections: false
+      console.warn(`Course ${code} not found in database or has no sections`);
+      return {
+        code: code,
+        name: code,
+        credits: 0,
+        prerequisites: [],
+        description: 'Course not available in database',
+        hasSections: false,
+        sectionCount: 0
+      };
     }
     
     const course = await response.json();
@@ -63,10 +74,20 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
       credits: course.credits || 0,
       prerequisites: course.prerequisites || [],
       description: course.description || '',
-      type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined
+      type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
+      sectionCount: course.sectionCount || 0,
+      hasSections: (course.sectionCount || 0) > 0
     };
   } catch (error) {
     console.error('Error fetching course:', error);
-    return undefined;
+    return {
+      code: code,
+      name: code,
+      credits: 0,
+      prerequisites: [],
+      description: 'Error loading course',
+      hasSections: false,
+      sectionCount: 0
+    };
   }
 }

@@ -93,16 +93,22 @@ export default function App() {
   const handleGenerateSchedules = async (courses: string[]) => {
     console.log('Generate schedules for:', courses);
     
-    // Generate schedules using backend API
-    const schedules = await generateSchedules(courses, completedCourses);
-    
-    if (schedules.length === 0) {
-      alert('No schedules could be generated. This may be because:\n- Course sections are not yet loaded in the database\n- The selected courses have time conflicts\n- Some courses are not available this term');
-      return;
+    try {
+      // Generate schedules using backend API
+      const schedules = await generateSchedules(courses, completedCourses);
+      
+      if (schedules.length === 0) {
+        alert('No schedules could be generated. This may be because:\n- Course sections are not yet loaded in the database\n- The selected courses have time conflicts\n- Some courses are not available this term');
+        return;
+      }
+      
+      setGeneratedSchedules(schedules);
+      setCurrentPage('schedule-review');
+    } catch (error) {
+      console.error('Schedule generation error:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate schedules: ${message}\n\nThis usually means some courses don't have sections available in the database.`);
     }
-    
-    setGeneratedSchedules(schedules);
-    setCurrentPage('schedule-review');
   };
 
   const handleFinalizeSchedule = (schedule: GeneratedSchedule) => {
@@ -115,41 +121,82 @@ export default function App() {
   };
 
   const handleGenerateSmartSchedule = async () => {
-    console.log('Generating smart schedule based on completed courses:', completedCourses);
+    console.log('Generating smart schedule based on remaining courses:', remainingCourses);
     
     try {
-      // Call backend to get recommended next courses
-      const response = await fetch('http://localhost:3001/api/courses/recommend-next', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          completedCourses,
-          program: studentInfo?.program
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Failed to get course recommendations:', error);
-        alert('Failed to generate course recommendations. Please try manual selection.');
-        return;
+      // If we have remaining courses from the audit, use those
+      if (remainingCourses.length > 0) {
+        // Call backend to find which remaining courses have sections available
+        const response = await fetch('http://localhost:3001/api/audit/suggest-courses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            remainingCourses,
+            completedCourses: completedCourses.map(c => ({ courseId: c })),
+            maxSuggestions: 10
+          })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Failed to get course suggestions:', error);
+          alert('Failed to find available courses. Please try manual selection.');
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('Course suggestions:', data);
+        
+        // Prioritize courses that are ready to take (prerequisites met)
+        const readyToTake = data.readyToTake || [];
+        
+        if (readyToTake.length === 0) {
+          alert(`No courses from your remaining requirements are available with met prerequisites.\n\nFound ${data.totalFound} courses in database but all have unmet prerequisites.\n\nPlease try manual course selection.`);
+          return;
+        }
+        
+        // Take up to 5 courses (typical full-time load)
+        const coursesToSchedule = readyToTake.slice(0, 5).map((course: any) => course.code);
+        console.log('Scheduling courses:', coursesToSchedule);
+        
+        // Generate schedules with these courses
+        await handleGenerateSchedules(coursesToSchedule);
+      } else {
+        // Fallback: No remaining courses, use general recommendations
+        const response = await fetch('http://localhost:3001/api/courses/recommend-next', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            completedCourses,
+            program: studentInfo?.program
+          })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Failed to get course recommendations:', error);
+          alert('Failed to generate course recommendations. Please try manual selection.');
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('Recommended courses:', data);
+        
+        if (data.recommendations.length === 0) {
+          alert('No course recommendations available. This could mean:\n- All available courses have unmet prerequisites\n- You have completed all available courses\n\nPlease try manual course selection.');
+          return;
+        }
+        
+        // Take top 5 recommended courses (typical full-time course load)
+        const topCourses = data.recommendations.slice(0, 5).map((course: any) => course.code);
+        
+        // Generate schedules with these courses
+        await handleGenerateSchedules(topCourses);
       }
-      
-      const data = await response.json();
-      console.log('Recommended courses:', data);
-      
-      if (data.recommendations.length === 0) {
-        alert('No course recommendations available. This could mean:\n- All available courses have unmet prerequisites\n- You have completed all available courses\n\nPlease try manual course selection.');
-        return;
-      }
-      
-      // Take top 5 recommended courses (typical full-time course load)
-      const topCourses = data.recommendations.slice(0, 5).map((course: any) => course.code);
-      
-      // Generate schedules with these courses
-      await handleGenerateSchedules(topCourses);
     } catch (error) {
       console.error('Error generating smart schedule:', error);
       alert('An error occurred while generating your schedule. Please try manual selection.');

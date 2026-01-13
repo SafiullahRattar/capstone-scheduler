@@ -32,6 +32,7 @@ export function CourseSelectionPage({
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [courseDetails, setCourseDetails] = useState<Map<string, Course>>(new Map());
   const [showResults, setShowResults] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,6 +72,29 @@ export function CourseSelectionPage({
     setShowResults(false);
   };
 
+  const addAllCourses = async (courseCodes: string[]) => {
+    const toAdd = courseCodes.filter(c => !selectedCourses.includes(c));
+    if (toAdd.length === 0) return;
+    
+    // Add all courses to selection at once
+    setSelectedCourses(prev => [...prev, ...toAdd]);
+    
+    // Fetch all course details in parallel
+    const coursePromises = toAdd.map(code => getCourseByCode(code));
+    const courses = await Promise.all(coursePromises);
+    
+    // Update course details map
+    setCourseDetails(prev => {
+      const newMap = new Map(prev);
+      courses.forEach((course, index) => {
+        if (course) {
+          newMap.set(toAdd[index], course);
+        }
+      });
+      return newMap;
+    });
+  };
+
   const removeCourse = (courseCode: string) => {
     setSelectedCourses(selectedCourses.filter(code => code !== courseCode));
   };
@@ -86,7 +110,23 @@ export function CourseSelectionPage({
   };
 
   const handleGenerateSchedules = () => {
-    onGenerateSchedules(selectedCourses);
+    // Filter to only courses that have sections available
+    const coursesWithSections = selectedCourses.filter(code => {
+      const course = courseDetails.get(code);
+      return course && course.hasSections !== false;
+    });
+    
+    if (coursesWithSections.length === 0) {
+      alert('None of the selected courses have sections available in the database.\n\nPlease select different courses or check back later.');
+      return;
+    }
+    
+    if (coursesWithSections.length < selectedCourses.length) {
+      const skipped = selectedCourses.filter(code => !coursesWithSections.includes(code));
+      alert(`The following courses will be skipped (no sections available):\n${skipped.join(', ')}\n\nGenerating schedule with ${coursesWithSections.length} courses.`);
+    }
+    
+    onGenerateSchedules(coursesWithSections);
   };
 
   return (
@@ -117,11 +157,23 @@ export function CourseSelectionPage({
                 </p>
               </div>
               <Button
-                onClick={onGenerateSmartSchedule}
-                className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
+                onClick={async () => {
+                  setIsGenerating(true);
+                  try {
+                    await onGenerateSmartSchedule();
+                  } finally {
+                    setIsGenerating(false);
+                  }
+                }}
+                disabled={isGenerating || remainingCourses.length === 0}
+                className="bg-green-600 hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
-                Generate Smart Schedule
+                {isGenerating 
+                  ? 'Generating...' 
+                  : remainingCourses.length === 0 
+                    ? 'No Remaining Courses' 
+                    : 'Generate Smart Schedule'}
               </Button>
             </div>
             
@@ -165,23 +217,60 @@ export function CourseSelectionPage({
             )}
 
             {/* Remaining Required Courses Collapsible */}
-            {remainingCourses.length > 0 && (
-              <details className="mt-4">
+            {remainingCourses.length > 0 ? (
+              <details className="mt-4" open>
                 <summary className="cursor-pointer text-sm text-slate-700 hover:text-slate-900 font-medium">
-                  View Remaining Required Courses ({remainingCourses.length})
+                  View Remaining Required Courses ({remainingCourses.length}) - Click to add
                 </summary>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {remainingCourses.map((courseCode) => (
-                    <span
-                      key={courseCode}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm"
+                <div className="mt-3">
+                  {/* Add All Button */}
+                  {remainingCourses.some(c => !selectedCourses.includes(c)) && (
+                    <Button
+                      onClick={() => addAllCourses(remainingCourses)}
+                      variant="outline"
+                      size="sm"
+                      className="mb-3 text-orange-700 border-orange-300 hover:bg-orange-50"
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      {courseCode}
-                    </span>
-                  ))}
+                      + Add All Remaining ({remainingCourses.filter(c => !selectedCourses.includes(c)).length})
+                    </Button>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {remainingCourses.map((courseCode) => {
+                      const isSelected = selectedCourses.includes(courseCode);
+                      return (
+                        <button
+                          key={courseCode}
+                          onClick={() => !isSelected && addCourse(courseCode)}
+                          disabled={isSelected}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                            isSelected
+                              ? 'bg-green-100 text-green-700 cursor-default'
+                              : 'bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          ) : (
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                          )}
+                          {courseCode}
+                          {!isSelected && <span className="text-xs opacity-60">+ Add</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </details>
+            ) : hasAuditData && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  All degree requirements are completed or in progress!
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  Use the search below to add electives or explore other courses.
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -265,12 +354,15 @@ export function CourseSelectionPage({
                     if (!course) return null;
 
                     const hasUnmetPrerequisites = !areAllPrerequisitesMet(course.prerequisites);
+                    const noSections = course.hasSections === false;
 
                     return (
                       <div
                         key={courseCode}
                         className={`border rounded-lg p-4 ${
-                          hasUnmetPrerequisites && hasAuditData
+                          noSections
+                            ? 'border-red-300 bg-red-50'
+                            : hasUnmetPrerequisites && hasAuditData
                             ? 'border-yellow-300 bg-yellow-50'
                             : 'border-slate-200'
                         }`}
@@ -279,7 +371,12 @@ export function CourseSelectionPage({
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="text-slate-900">{course.code}</h3>
-                              {hasUnmetPrerequisites && hasAuditData && (
+                              {noSections && (
+                                <span className="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded">
+                                  No sections available
+                                </span>
+                              )}
+                              {hasUnmetPrerequisites && hasAuditData && !noSections && (
                                 <AlertTriangle className="w-4 h-4 text-yellow-600" />
                               )}
                             </div>

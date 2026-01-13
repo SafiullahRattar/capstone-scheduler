@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import * as fs from 'fs'
+import { expandElectiveCategories, ELECTIVE_CATEGORIES } from './elective-mappings'
 
 const prisma = new PrismaClient()
 
@@ -30,6 +31,7 @@ export interface StudentAuditData {
 /**
  * Calculate which courses the student still needs to take
  * Returns courses from unfulfilled requirements that haven't been completed or enrolled in
+ * Expands elective categories into actual course lists
  */
 export function getRemainingCourses(auditData: StudentAuditData): string[] {
   const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
@@ -41,8 +43,11 @@ export function getRemainingCourses(auditData: StudentAuditData): string[] {
     const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
     
     if (creditsNeeded > 0) {
+      // Expand elective categories to actual course codes
+      const expandedOptions = expandElectiveCategories(req.courseOptions)
+      
       // This requirement needs more courses
-      for (const course of req.courseOptions) {
+      for (const course of expandedOptions) {
         // Add course if it's not completed and not currently enrolled
         if (!completedSet.has(course) && !currentSet.has(course)) {
           remainingCourses.add(course)
@@ -54,12 +59,115 @@ export function getRemainingCourses(auditData: StudentAuditData): string[] {
   return Array.from(remainingCourses).sort()
 }
 
+/**
+ * Get unfulfilled requirements with expanded course options
+ * Useful for schedule suggestion where we need to know what requirements need courses
+ */
+export function getUnfulfilledRequirements(auditData: StudentAuditData): Array<RequirementInfo & { expandedOptions: string[] }> {
+  const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
+  const currentSet = new Set(auditData.currentCourses.map(c => c.courseId))
+  
+  return auditData.requirements
+    .filter(req => {
+      const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
+      return creditsNeeded > 0
+    })
+    .map(req => {
+      const expandedOptions = expandElectiveCategories(req.courseOptions)
+        .filter(c => !completedSet.has(c) && !currentSet.has(c))
+      return { ...req, expandedOptions }
+    })
+}
+
+// Extract requirements from HTML audit
+function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
+  const requirements: RequirementInfo[] = []
+  
+  // Match subrequirements with their full context to extract credit info
+  // Pattern: div.subrequirement with rqdHours, status span, title, and subrequirementTotals table
+  const subreqPattern = /<div[^>]*class="subrequirement"[^>]*rqdHours="([\d.]+)"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*(?=<div class="subrequirement"|<\/div>\s*<hr)/g
+  
+  for (const match of Array.from(htmlContent.matchAll(subreqPattern))) {
+    const rqdHours = parseFloat(match[1]) || 0
+    const subreqContent = match[2]
+    
+    // Skip zero-credit and very high credit requirements (300 is used for "excess" tracking)
+    if (rqdHours === 0 || rqdHours >= 100) continue
+    
+    // Extract status
+    const statusMatch = subreqContent.match(/class="status\s+(Status_\w+)"/)
+    const statusClass = statusMatch ? statusMatch[1] : 'Status_NO'
+    
+    // Extract title
+    const titleMatch = subreqContent.match(/<span[^>]*class="subreqTitle[^"]*"[^>]*>([\s\S]*?)<\/span>/)
+    if (!titleMatch) continue
+    
+    const titleHtml = titleMatch[1]
+    const title = titleHtml
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    
+    // Extract actual credits completed from subrequirementTotals
+    let creditsCompleted = 0
+    let creditsInProgress = 0
+    
+    const completedMatch = subreqContent.match(/<span class="hours number">\s*([\d.]+)<\/span><span class="hourslabel fieldlabel">cr\. Complete/)
+    if (completedMatch) {
+      creditsCompleted = parseFloat(completedMatch[1]) || 0
+    }
+    
+    const ipMatch = subreqContent.match(/class="subreqIpHours"[\s\S]*?<td class="hours number">\s*([\d.]+)/)
+    if (ipMatch) {
+      creditsInProgress = parseFloat(ipMatch[1]) || 0
+    }
+    
+    // Determine status from class
+    let status: 'OK' | 'NO' | 'IP' | 'NONE' = 'NO'
+    if (statusClass.includes('OK')) status = 'OK'
+    else if (statusClass.includes('IP')) status = 'IP'
+    else if (statusClass.includes('NONE')) status = 'NONE'
+    
+    // Extract course codes from title (e.g., "SYSC 4907", "COMP 3005")
+    const coursePattern = /[A-Z]{3,4}\s*\d{4}/g
+    const courseCodes = (title.match(coursePattern) || [])
+      .map(code => code.replace(/\s+/g, ''))
+    
+    // Detect elective categories
+    let electiveCategory: string | null = null
+    if (title.toLowerCase().includes('complementary studies')) {
+      electiveCategory = 'COMPLEMENTARY_STUDIES'
+    } else if (title.toLowerCase().includes('computer science elective')) {
+      electiveCategory = 'CS_ELECTIVE'
+    } else if (title.toLowerCase().includes('basic science')) {
+      electiveCategory = 'SCIENCE_ELECTIVE'
+    } else if (title.match(/sysc or elec.*3000/i) || title.match(/elec or sysc.*3000/i)) {
+      electiveCategory = 'SYSC_ELEC_ELECTIVE'
+    }
+    
+    // Include requirements with specific courses OR elective categories
+    if (courseCodes.length > 0 || electiveCategory) {
+      requirements.push({
+        title: title.substring(0, 100),
+        status,
+        creditsRequired: rqdHours,
+        creditsCompleted,
+        creditsInProgress,
+        courseOptions: courseCodes.length > 0 ? courseCodes : [electiveCategory || 'ELECTIVE']
+      })
+    }
+  }
+  
+  return requirements
+}
+
 export function parseAuditHTML(htmlContent: string): StudentAuditData {
-  // Extract student ID
-  const studentIdMatch = htmlContent.match(/<h[^>]*>(\d{9})<\/h>/)
+  // Extract student ID - look in header info area
+  const studentIdMatch = htmlContent.match(/(\d{9})/)
   const studentId = studentIdMatch ? studentIdMatch[1] : ''
 
-  // Extract student name
+  // Extract student name from header
   const nameMatch = htmlContent.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/)
   const name = nameMatch ? `${nameMatch[2]} ${nameMatch[1]}` : ''
 
@@ -89,13 +197,16 @@ export function parseAuditHTML(htmlContent: string): StudentAuditData {
     }
   }
 
+  // Extract requirements from HTML
+  const requirements = extractRequirementsFromHTML(htmlContent)
+
   return {
     studentId,
     name,
     program,
     completedCourses,
     currentCourses,
-    requirements: [] // TODO: Extract requirements from HTML
+    requirements
   }
 }
 

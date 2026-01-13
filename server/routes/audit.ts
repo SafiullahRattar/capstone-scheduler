@@ -6,7 +6,8 @@
 import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { prisma } from '../index'
-import { parseAuditHTML, parseAuditPDF, saveStudentAuditData } from '../../cli/audit-parser'
+import { parseAuditHTML, parseAuditPDF, saveStudentAuditData, getUnfulfilledRequirements, getRemainingCourses } from '../../cli/audit-parser'
+import { expandElectiveCategories, ELECTIVE_CATEGORIES } from '../../cli/elective-mappings'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs'
@@ -191,6 +192,108 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
     res.status(500).json({
       error: 'Internal Server Error',
       message: error instanceof Error ? error.message : 'Failed to parse audit file'
+    })
+  }
+})
+
+/**
+ * POST /api/audit/suggest-courses
+ * Suggest courses based on parsed audit data
+ * 
+ * Takes audit data (from /parse endpoint) and returns courses that:
+ * 1. Satisfy unfulfilled requirements
+ * 2. Have sections available in the database
+ * 3. Prerequisites are met based on completed courses
+ * 
+ * Body:
+ * - remainingCourses: Array of course IDs from audit parsing
+ * - completedCourses: Array of {courseId, grade} from audit
+ * - maxSuggestions: Optional limit (default 20)
+ */
+router.post('/suggest-courses', async (req: Request, res: Response) => {
+  try {
+    const { remainingCourses, completedCourses, maxSuggestions = 20 } = req.body
+
+    if (!remainingCourses || !Array.isArray(remainingCourses)) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'remainingCourses array is required'
+      })
+    }
+
+    const completedIds = (completedCourses || []).map((c: any) => 
+      typeof c === 'string' ? c.toUpperCase() : c.courseId?.toUpperCase()
+    ).filter(Boolean)
+
+    // Find which remaining courses actually exist in our database with sections
+    const coursesWithSections = await prisma.course.findMany({
+      where: {
+        id: { in: remainingCourses.map((c: string) => c.toUpperCase()) },
+        sections: { some: {} } // Must have at least one section
+      },
+      include: {
+        prerequisiteNodes: {
+          where: { nodeType: 'COURSE' },
+          select: { requiredCourseId: true }
+        },
+        _count: {
+          select: { sections: true }
+        }
+      }
+    })
+
+    // Helper to check if prerequisites are met
+    const arePrerequisitesMet = (prerequisites: string[]): boolean => {
+      if (prerequisites.length === 0) return true
+      return prerequisites.every(prereq => completedIds.includes(prereq.toUpperCase()))
+    }
+
+    // Filter and rank suggestions
+    const suggestions = coursesWithSections
+      .map(course => {
+        const prerequisites = course.prerequisiteNodes
+          .filter(node => node.requiredCourseId)
+          .map(node => node.requiredCourseId as string)
+
+        const prereqsMet = arePrerequisitesMet(prerequisites)
+        const missingPrereqs = prereqsMet ? [] : 
+          prerequisites.filter(p => !completedIds.includes(p.toUpperCase()))
+
+        return {
+          code: course.id,
+          name: course.title || 'No title available',
+          credits: course.credits || 0.5,
+          description: course.description || '',
+          prerequisites,
+          prereqsMet,
+          missingPrereqs,
+          sectionCount: course._count.sections,
+          // Score: prioritize courses with prereqs met and more sections available
+          score: (prereqsMet ? 100 : 0) + course._count.sections
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, maxSuggestions)
+
+    // Separate into ready-to-take and needs-prereqs
+    const readyToTake = suggestions.filter(s => s.prereqsMet)
+    const needsPrereqs = suggestions.filter(s => !s.prereqsMet)
+
+    res.json({
+      suggestions,
+      readyToTake,
+      needsPrereqs,
+      totalFound: coursesWithSections.length,
+      totalRequested: remainingCourses.length,
+      coursesNotInDatabase: remainingCourses.filter(
+        (c: string) => !coursesWithSections.some(cs => cs.id === c.toUpperCase())
+      )
+    })
+  } catch (error) {
+    console.error('Suggest courses error:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Failed to suggest courses'
     })
   }
 })
