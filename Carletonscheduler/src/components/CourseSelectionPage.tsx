@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, X, Check, AlertCircle, Plus, RotateCcw } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
+
+const DEBOUNCE_MS = 300;
 
 interface CourseSelectionPageProps {
   hasAuditData: boolean;
@@ -35,7 +37,9 @@ export function CourseSelectionPage({
   const [courseDetails, setCourseDetails] = useState<Map<string, Course>>(new Map());
   const [showResults, setShowResults] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,16 +52,51 @@ export function CourseSelectionPage({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      const results = await searchCourses(query);
-      setSearchResults(results);
-      setShowResults(true);
-    } else {
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
+
+  const performSearch = useCallback(async (query: string) => {
+    if (query.trim().length < 2) {
       setSearchResults([]);
       setShowResults(false);
+      setIsSearching(false);
+      return;
     }
+    
+    const results = await searchCourses(query);
+    setSearchResults(results);
+    setShowResults(true);
+    setIsSearching(false);
+  }, []);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
+    // Clear previous debounce timer
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    if (!query.trim() || query.trim().length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      setIsSearching(false);
+      return;
+    }
+    
+    // Show searching indicator
+    setIsSearching(true);
+    
+    // Debounce the actual search
+    debounceRef.current = setTimeout(() => {
+      performSearch(query);
+    }, DEBOUNCE_MS);
   };
 
   const addCourse = async (courseCode: string) => {
@@ -293,12 +332,23 @@ export function CourseSelectionPage({
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Search by course code or name..."
+                    placeholder="Search by course code or name (min 2 chars)..."
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
-                    onFocus={() => searchQuery && setShowResults(true)}
+                    onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowResults(true)}
                     className="pl-10 h-11"
                   />
+                  {isSearching && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div 
+                        className="w-4 h-4 border-2 border-gray-300 rounded-full"
+                        style={{ 
+                          borderTopColor: '#bf112b',
+                          animation: 'spin 1s linear infinite'
+                        }} 
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {showResults && searchResults.length > 0 && (

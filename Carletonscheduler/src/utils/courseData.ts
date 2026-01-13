@@ -7,20 +7,72 @@ export interface Course {
   prerequisites: string[];
   description: string;
   type?: 'core' | 'technical-elective' | 'complementary-elective';
-  sectionTypes?: string[]; // e.g., ["LEC", "LAB", "TUT"]
+  sectionTypes?: string[];
   sectionCount?: number;
   hasSections?: boolean;
 }
 
+// Cache for search results - stores results for 5 minutes
+const searchCache = new Map<string, { results: Course[]; timestamp: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Cache for individual course lookups
+const courseCache = new Map<string, { course: Course; timestamp: number }>();
+
+// Current abort controller for search requests
+let currentSearchController: AbortController | null = null;
+
+/**
+ * Clear expired cache entries
+ */
+function cleanCache() {
+  const now = Date.now();
+  for (const [key, value] of searchCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      searchCache.delete(key);
+    }
+  }
+  for (const [key, value] of courseCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      courseCache.delete(key);
+    }
+  }
+}
+
+// Clean cache periodically
+setInterval(cleanCache, 60 * 1000);
+
 /**
  * Search for courses using the backend API
- * Falls back to empty array on error to prevent UI crashes
+ * - Returns cached results if available
+ * - Cancels any in-flight requests when a new search starts
  */
 export async function searchCourses(query: string): Promise<Course[]> {
-  if (!query.trim()) return [];
+  const normalizedQuery = query.trim().toLowerCase();
+  
+  // Check minimum query length
+  if (normalizedQuery.length < 2) return [];
+  
+  // Check cache first
+  const cached = searchCache.get(normalizedQuery);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.results;
+  }
+  
+  // Cancel any in-flight search request
+  if (currentSearchController) {
+    currentSearchController.abort();
+  }
+  
+  // Create new abort controller for this request
+  currentSearchController = new AbortController();
+  const signal = currentSearchController.signal;
   
   try {
-    const response = await fetch(`${API_BASE_URL}/courses/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(
+      `${API_BASE_URL}/courses/search?q=${encodeURIComponent(normalizedQuery)}`,
+      { signal }
+    );
     
     if (!response.ok) {
       return [];
@@ -28,7 +80,7 @@ export async function searchCourses(query: string): Promise<Course[]> {
     
     const data = await response.json();
     
-    return data.results.map((course: Course & { type?: string }) => ({
+    const results = data.results.map((course: Course & { type?: string }) => ({
       code: course.code,
       name: course.name || course.code,
       credits: course.credits || 0,
@@ -37,51 +89,77 @@ export async function searchCourses(query: string): Promise<Course[]> {
       type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionTypes: course.sectionTypes || []
     })).slice(0, SCHEDULE_CONFIG.MAX_SEARCH_RESULTS);
-  } catch {
+    
+    // Cache the results
+    searchCache.set(normalizedQuery, { results, timestamp: Date.now() });
+    
+    return results;
+  } catch (error) {
+    // Don't treat aborted requests as errors
+    if (error instanceof Error && error.name === 'AbortError') {
+      return [];
+    }
     return [];
   }
 }
 
 /**
  * Get a single course by its code
+ * - Returns cached result if available
  */
 export async function getCourseByCode(code: string): Promise<Course | undefined> {
+  const normalizedCode = code.trim().toUpperCase();
+  
+  // Check cache first
+  const cached = courseCache.get(normalizedCode);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.course;
+  }
+  
   try {
-    const response = await fetch(`${API_BASE_URL}/courses/${encodeURIComponent(code)}`);
+    const response = await fetch(`${API_BASE_URL}/courses/${encodeURIComponent(normalizedCode)}`);
     
     if (!response.ok) {
-      return {
-        code: code,
-        name: code,
+      const fallback: Course = {
+        code: normalizedCode,
+        name: normalizedCode,
         credits: 0,
         prerequisites: [],
         description: 'Course not available in database',
         hasSections: false,
         sectionCount: 0
       };
+      courseCache.set(normalizedCode, { course: fallback, timestamp: Date.now() });
+      return fallback;
     }
     
-    const course = await response.json();
+    const data = await response.json();
     
-    return {
-      code: course.code,
-      name: course.name || course.code,
-      credits: course.credits || 0,
-      prerequisites: course.prerequisites || [],
-      description: course.description || '',
-      type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
-      sectionCount: course.sectionCount || 0,
-      hasSections: (course.sectionCount || 0) > 0
+    const course: Course = {
+      code: data.code,
+      name: data.name || data.code,
+      credits: data.credits || 0,
+      prerequisites: data.prerequisites || [],
+      description: data.description || '',
+      type: data.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
+      sectionCount: data.sectionCount || 0,
+      hasSections: (data.sectionCount || 0) > 0
     };
+    
+    // Cache the result
+    courseCache.set(normalizedCode, { course, timestamp: Date.now() });
+    
+    return course;
   } catch {
-    return {
-      code: code,
-      name: code,
+    const fallback: Course = {
+      code: normalizedCode,
+      name: normalizedCode,
       credits: 0,
       prerequisites: [],
       description: 'Error loading course',
       hasSections: false,
       sectionCount: 0
     };
+    return fallback;
   }
 }
