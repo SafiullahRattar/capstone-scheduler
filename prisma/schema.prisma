@@ -52,11 +52,10 @@ model PrerequisiteNode {
 
 model Section {
   id          String   @id @default(cuid())
-  sectionId   String?
+  crn         String?
   courseId    String
   sectionCode String
   sectionType String
-  crn         String?
   instructor  String?
   days        String?
   startTime   String?
@@ -72,6 +71,8 @@ model Section {
   updatedAt   DateTime @updatedAt
   course      Course   @relation(fields: [courseId], references: [id])
 
+  @@index([courseId])
+  @@index([term])
   @@map("sections")
 }
 

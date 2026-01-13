@@ -35,7 +35,7 @@ export function ScheduleReviewPage({
 
   const copyAllCRNs = () => {
     const crns = currentSchedule.selections
-      .map(s => s.section.sectionId)
+      .map(s => s.section.crn)
       .join(', ');
     copyToClipboard(crns, 'all-crns');
   };
@@ -319,10 +319,10 @@ export function ScheduleReviewPage({
                       </td>
                       <td className="py-3 px-4">
                         <button
-                          onClick={() => copyToClipboard(selection.section.sectionId, `crn-${itemId}`)}
+                          onClick={() => copyToClipboard(selection.section.crn, `crn-${itemId}`)}
                           className="font-mono text-gray-900 hover:text-[#bf112b] transition-colors flex items-center gap-1"
                         >
-                          {selection.section.sectionId}
+                          {selection.section.crn}
                           {copiedItem === `crn-${itemId}` ? (
                             <Check className="w-3 h-3 text-green-600" />
                           ) : (

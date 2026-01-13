@@ -23,7 +23,7 @@ interface TimeSlot {
 interface Section {
   id: string
   courseId: string
-  sectionId: string | null
+  crn: string | null
   sectionCode: string
   sectionType: string
   instructor: string | null
@@ -297,7 +297,7 @@ router.post('/generate', async (req: Request, res: Response) => {
         
         // Remove duplicate sections (in case same section was imported twice)
         const uniqueSections = sections.reduce((acc, section) => {
-          const key = `${section.sectionId}-${section.sectionCode}-${section.days}-${section.startTime}-${section.endTime}`
+          const key = `${section.crn}-${section.sectionCode}-${section.days}-${section.startTime}-${section.endTime}`
           if (!acc.has(key)) {
             acc.set(key, section)
           }
