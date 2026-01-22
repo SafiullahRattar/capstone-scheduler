@@ -30,10 +30,8 @@
       #text(weight: "semibold")[Input: PDF Audit from Carleton Central]
       #rect(fill: rgb("#f5f5f5"), radius: 4pt, inset: 10pt, width: 100%)[
         #text(size: 11pt)[
-          - No API exists for student data
-          - Audit only available as PDF download
           - Contains complete academic history
-          - Unstructured text embedded in PDF
+          - Audit only available as PDF download
         ]
         #v(0.3em)
         #rect(fill: white, stroke: 1pt + rgb("#ccc"), inset: 8pt, width: 100%)[
@@ -531,8 +529,6 @@
           - Filter courses already completed
           - Validate prerequisites for selections
           - Generate conflict-free schedules
-          
-          All in one session, no account required.
         ]
       ]
     ]
