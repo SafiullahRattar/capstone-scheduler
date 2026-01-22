@@ -141,9 +141,60 @@ export function CourseSelectionPage({
     return completedCourses.includes(prerequisite) ? 'met' : 'not-met';
   };
 
-  const areAllPrerequisitesMet = (prerequisites: string[]): boolean => {
-    if (!hasAuditData || prerequisites.length === 0) return true;
-    return prerequisites.every(prereq => completedCourses.includes(prereq));
+  const evaluatePrerequisiteNode = (
+    node: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null },
+    allNodes: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[]
+  ): { met: boolean; childStatuses?: { nodeId: string; met: boolean }[] } => {
+    if (node.nodeType === 'COURSE') {
+      const met = node.requiredCourseId ? completedCourses.includes(node.requiredCourseId) : false;
+      return { met };
+    }
+
+    if (node.nodeType === 'YEAR_STANDING' || node.nodeType === 'PERMISSION' || node.nodeType === 'OTHER_REQUIREMENT') {
+      return { met: true };
+    }
+
+    if (node.nodeType === 'AND') {
+      const children = allNodes.filter(child => child.parentId === node.id);
+      const results = children.map(child => evaluatePrerequisiteNode(child, allNodes));
+      const allMet = results.every(r => r.met);
+      return {
+        met: allMet,
+        childStatuses: results.map((r, i) => ({ nodeId: children[i].id, met: r.met }))
+      };
+    }
+
+    if (node.nodeType === 'OR') {
+      const children = allNodes.filter(child => child.parentId === node.id);
+      const results = children.map(child => evaluatePrerequisiteNode(child, allNodes));
+      const anyMet = results.some(r => r.met);
+      return {
+        met: anyMet,
+        childStatuses: results.map((r, i) => ({ nodeId: children[i].id, met: r.met }))
+      };
+    }
+
+    return { met: false };
+  };
+
+  const areAllPrerequisitesMet = (
+    prerequisites: string[],
+    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[]
+  ): boolean => {
+    if (!hasAuditData) return true;
+    if (prerequisites.length === 0) return true;
+    if (!prerequisiteTree || prerequisiteTree.length === 0) return true;
+
+    const hasCourseRequirements = prerequisiteTree.some(node => node.nodeType === 'COURSE' && node.requiredCourseId);
+    if (!hasCourseRequirements) return true;
+
+    const rootNode = prerequisiteTree.find(node => !node.parentId);
+    if (!rootNode) {
+      return prerequisites.every(prereq => completedCourses.includes(prereq));
+    }
+
+    const result = evaluatePrerequisiteNode(rootNode, prerequisiteTree);
+    return result.met;
   };
 
   const handleGenerateSchedules = () => {
@@ -421,7 +472,10 @@ export function CourseSelectionPage({
                     const course = courseDetails.get(courseCode);
                     if (!course) return null;
 
-                    const hasUnmetPrereqs = !areAllPrerequisitesMet(course.prerequisites);
+                    const isCompleted = completedCourses.includes(courseCode);
+                    const hasUnmetPrereqs = isCompleted
+                      ? false
+                      : !areAllPrerequisitesMet(course.prerequisites, course.prerequisiteTree);
                     const noSections = course.hasSections === false;
 
                     return (
@@ -430,6 +484,8 @@ export function CourseSelectionPage({
                         className={`border rounded-lg p-4 transition-all ${
                           noSections
                             ? 'border-red-200 bg-red-50'
+                            : isCompleted
+                            ? 'border-green-200 bg-green-50'
                             : hasUnmetPrereqs && hasAuditData
                             ? 'border-amber-200 bg-amber-50'
                             : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -439,12 +495,18 @@ export function CourseSelectionPage({
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-gray-900">{course.code}</span>
-                              {noSections && (
+                              {isCompleted && (
+                                <span className="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full font-medium flex items-center gap-1">
+                                  <Check className="w-3 h-3" />
+                                  Already completed
+                                </span>
+                              )}
+                              {noSections && !isCompleted && (
                                 <span className="text-xs px-2 py-0.5 bg-red-200 text-red-800 rounded-full font-medium">
                                   No sections available
                                 </span>
                               )}
-                              {hasUnmetPrereqs && hasAuditData && !noSections && (
+                              {hasUnmetPrereqs && hasAuditData && !noSections && !isCompleted && (
                                 <span className="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full font-medium flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" />
                                   Prerequisites not met
@@ -452,8 +514,8 @@ export function CourseSelectionPage({
                               )}
                             </div>
                             <p className="text-sm text-gray-600 mt-1">{course.name}</p>
-                            
-                            {course.prerequisites.length > 0 && (
+
+                            {!isCompleted && course.prerequisites.length > 0 && (
                               <div className="mt-3 pt-3 border-t border-gray-200">
                                 <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Prerequisites: </span>
                                 <span className="text-xs">
@@ -471,7 +533,7 @@ export function CourseSelectionPage({
                                         {i < course.prerequisites.length - 1 && ', '}
                                       </span>
                                     );
-                                  })}
+                                   })}
                                 </span>
                               </div>
                             )}

@@ -106,9 +106,7 @@
           *Advantages:*
           - Deterministic: exact characters
           - Fast: no image processing
-          - Accurate: reads stored text
-          
-          *Tool:* `pdftotext` (Poppler library)
+          *Tool:* `pdftotext` 
         ]
       ]
     ]

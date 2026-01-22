@@ -1,0 +1,286 @@
+Prepared: 01/22/26 - 11:20 AM                                                                 101238885
+Adamvoski, Pietro
+PROGRAM CODE: BENG-8P                                                                Catalog Year 202130
+                             Bachelor of Engineering - Software Engineering
+
+Email: PIETROADAMVOSKI@cmail.carleton.ca
+Admit Term: 2021 Fall
+Your program is in the Faculty:Engineering & Design
+
+ACE for Current Admission:
+202230 EC 202310 EC 202320 EC 202330 EC
+202410 EC 202420 EC 202430 EC 202510 EC
+
+
+   *** Academic Continuation Code Legend ***
+(EC)- Eligible to Continue                   (PE)- Pending
+(CN)- Eligible to Continue in non-honours    (AW)- Academic Warning
+(WT)- Required to Withdraw for 2 terms       (CA)- Continue in Alternate
+(WY)- Required to Withdraw for 2 years       (DP)- Dismissed from Program
+(NA)- No Assessment
+                      AT LEAST ONE REQUIREMENT HAS NOT BEEN SATISFIED
+***IMPORTANT NOTES***
+ALL ENGINEERING STUDENTS must refer to the Engineering Academic
+Support Web-site at: www.carleton.ca/engineering/uas
+for program and registration directions and information, and for
+Faculty news.
+The list of acceptable COMPLEMENTARY STUDIES ELECTIVES
+for the current calendar year will be listed on this site.
+
+The Bachelor of Engineering requires that the most recent
+attempt of a course be a passing grade in order to be eligible
+for graduation. Please verify your graduation eligibility with
+your Departmental Advisor: https://carleton.ca/
+engineering-design/current-students/undergraduate-advisors/
+
+For accreditation purposes, errors in the Degree Audit Report
+CANNOT be accommodated.
+
+             CO-OP OPTION FOR COMPUTER SYSTEMS, COMMUNICATIONS &
+             SOFTWARE ENGINEERING - Four work terms are required
+
+IP         1) 8.0 Overall CGPA required
+                                                                              8.61 CGPA
+
+     -     2) Four co-op work terms in SYSC
+             UNIVERSITY YEAR STANDING IN ENGINEERING
+
+     +        Fourth Year Standing - 14.0 or more credits completed
+              ALL REQUIREMENTS BELOW MUST BE MET IN ORDER TO GRADUATE
+
+
+                                                Page 1 of 6
+                   18.50 cr. Complete
+**YEAR STATUS IN ENGINEERING**
+See Academic Regulations and Requirements for the Bachelor of
+Engineering Degree in the undergraduate calendar
+
+            RESIDENCY REQUIREMENTS
+
+IP +        A minimum of 10.5 Carleton credits.
+                18.50 Credits
+            IP                 2.50 Credits
+          SUMMARY OF CREDITS AND CGPA
+          Engineering Program Only
+     EARNED:           18.50 Credits
+                       17.00 CGPA Credits                     146.50 Points   8.61 CGPA
+     IP                 2.50 Credits
+
+OK         COMPLEMENTARY STUDIES, CCDP 2100, ECOR 1055/1056/1057/2995
+           1.5 credits required
+     EARNED:              1.50 Credits
+
+     +    1) CCDP 2100 (formerly ALSS 1000)
+                 0.50 cr. Complete
+            Term Course             Credits Grade     Title
+            23WN CCDP 2100             0.50 SAT
+
+
+     +    2) 1.0 credit in Complementary Studies
+                    1.00 cr. Complete
+            Term Course             Credits Grade     Title
+            22WN ENST 1020             0.50 A-
+            25FA PHIL 1301             0.50 A+
+
+
+     +    3) FIRST YEAR REQUIREMENT
+             The Introduction to Engineering Disciplines requirement
+             must be met through the successful completion of
+             ECOR 1055 [0.0], ECOR 1056 [0.0], ECOR 1057 [0.0]
+                   0.00 cr. Complete
+            Term   Course           Credits   Grade   Title
+            21FA   ECOR 1055           0.00   SAT
+            22WN   ECOR 1056           0.00   SAT
+            21FA   ECOR 1057           0.00   SAT
+
+
+     +    4) Successful completion of ECOR 2995 [0.0]
+                   0.00 cr. Complete
+            Term Course             Credits Grade     Title
+            24WN ECOR 2995             0.00 SAT
+
+OK         FIRST YEAR
+     EARNED:         4.50 Credits
+
+
+
+                                                Page 2 of 6
+     +    1) 4.0 credits in CHEM 1101, ECOR 1041, ECOR 1042,
+             ECOR 1043, ECOR 1044, ECOR 1045, ECOR 1046, ECOR 1047,
+             ECOR 1048, MATH 1004, MATH 1104, PHYS 1004
+                    4.00 cr. Complete
+            Term   Course           Credits   Grade   Title
+            21FA   CHEM 1101           0.50   A+
+            22WN   ECOR 1041           0.25   B
+            22WN   ECOR 1042           0.25   A
+            22WN   ECOR 1043           0.25   A+
+            22WN   ECOR 1044           0.25   A-
+            21FA   ECOR 1045           0.25   B
+            21FA   ECOR 1046           0.25   A-
+            21FA   ECOR 1047           0.25   B+
+            21FA   ECOR 1048           0.25   A-
+            21FA   MATH 1004           0.50   A
+            22WN   MATH 1104           0.50   A
+            22WN   PHYS 1004           0.50   B+
+
+
+     +    2) 0.5 credit in Basic Science Electives
+                    0.50 cr. Complete
+            Term Course             Credits Grade     Title
+            24SU BIOL 1010             0.50 A
+
+OK         SECOND YEAR
+     EARNED:        4.50 Credits
+
+     +    1) 4.5 credits in COMP 1805, COMP 2804, ELEC 2501,
+             MATH 1005, SYSC 2004, SYSC 2006, SYSC 2100, SYSC 2310,
+             SYSC 2320
+                    4.50 cr. Complete
+            Term   Course           Credits   Grade    Title
+            22FA   COMP 1805           0.50   A-
+            23WN   COMP 2804           0.50   SAT
+            23SU   ELEC 2501           0.50   C     RP
+            22FA   MATH 1005           0.50   A-
+            23SU   SYSC 2004           0.50   B
+            23WN   SYSC 2006           0.50   B     RP
+            23SU   SYSC 2100           0.50   C-
+            22FA   SYSC 2310           0.50   C
+            23WN   SYSC 2320           0.50   SAT
+
+IP        THIRD YEAR
+     EARNED:         4.50 Credits
+     IP              1.00 Credit
+
+IP +      1) 5.0 credits in COMP 3005, ECOR 2050, SYSC 3101,
+             SYSC 3110, SYSC 3120, SYSC 3303, SYSC 3310,
+             SYSC 4001, SYSC 4106, SYSC 4120
+                    4.00 cr. Complete
+             IP                    1.00 Credit
+
+
+
+
+                                                Page 3 of 6
+            Term   Course           Credits   Grade    Title
+            24WN   COMP 3005           0.50   A
+            23FA   ECOR 2050           0.50   A-
+            24WN   SYSC 3101           0.50   A-
+            23FA   SYSC 3110           0.50   C
+            23FA   SYSC 3120           0.50   B-
+            26WN   SYSC 3303           0.50   CUR
+            23FA   SYSC 3310           0.50   D-
+            25FA   SYSC 4001           0.50   DEF
+            24WN   SYSC 4106           0.50   A+
+            24WN   SYSC 4120           0.50   B-
+
+
+     +    2) 0.5 credit from ELEC 2507, ELEC 4705 or Basic
+             Science Electives
+                    0.50 cr. Complete
+            Term Course             Credits Grade      Title
+            21FA BIOL 1902             0.50 B
+
+IP        FOURTH YEAR
+     EARNED:        3.50 Credits
+     IP             1.50 Credits
+
+     +    1) 2.0 credits in ECOR 4995, SYSC 4101, SYSC 4806,
+             SYSC 4810
+                    2.00 cr. Complete
+            Term   Course           Credits   Grade    Title
+            24FA   ECOR 4995           0.50   B-
+            24FA   SYSC 4101           0.50   A-
+            24FA   SYSC 4806           0.50   A-
+            24FA   SYSC 4810           0.50   C-
+
+
+IP +      2) 1.0 credit from SYSC 4907 [1.0]
+                    0.00 cr. Complete
+             IP                    1.00 Credit
+            Term Course             Credits Grade      Title
+            26WN SYSC 4907             1.00 CUR
+
+
+IP +      3) 1.0 credit from SYSC or ELEC courses at the 3000-level
+             or above
+                    0.50 cr. Complete
+             IP                    0.50 Credits
+            Term Course             Credits Grade      Title
+            25WN SYSC 4130             0.50 A
+            26WN SYSC 4416             0.50 CUR
+
+
+     +    4) 1.0 credit in ELEC or SYSC at the 3000-level or
+             1.0 credit in Computer Science Electives for Software
+             Engineering. With permission of the department 1.0
+             credit in SYSC at the 5000-level may be used.
+                    1.00 cr. Complete
+            Term Course             Credits Grade      Title
+            25WN SYSC 4205             0.50 C
+            25WN SYSC 4504             0.50 A-
+
+            COURSES SET ASIDE
+
+
+                                                 Page 4 of 6
+             Failed and/or Forfeited Courses
+             Term Course           Credits Grade    Title
+             22FA ELEC 2501           0.00 F     >X RP
+             22FA SYSC 2006           0.00 F     >X RP
+
+             COURSES SET ASIDE
+
+             No credit in this degree program
+             Term Course           Credits Grade      Title
+             22FA COOP 1000           0.00 SAT
+
+**** IMPORTANT NOTICE ****
+This Degree Audit Report is a summary of your degree program
+requirements matched to your individual student record. While
+the University makes every effort to make your Degree Audit
+Report as accurate as possible, it is your responsibility to
+review your Degree Audit Report carefully to ensure you
+satisfy published requirements using the University's
+Undergraduate Calendar. Requirements will not be waived based
+on Degree Audit Report discrepancies. Completion of all degree
+requirements is the sole responsibility of the individual
+student. Please report any discrepancies to your School or
+Major department advisor.
+
+THIS DEGREE AUDIT REPORT IS UNOFFICIAL AND FOR INTERNAL USE ONLY
+IT IS NOT TO BE USED FOR SCHOLARSHIP OR DEAN'S LIST ASSESSMENTS
+
+                                **********END OF REPORT**********
+Legend
+COMPLETION STATUS
+OK Complete
+PLC Planned
+IP In Progress
+NO Unfulfilled
++ Sub-requirement Complete
+- Sub-requirement Unfulfilled
+* Variable Value
+
+SPECIAL GRADES
+LOP Letter of Permission
+CLP Current LOP
+CUO Current Ottawa Univ.
+EXC Exchange Course
+CEX Current Exchange Course
+TR Transfer Course
+TX TR Forfeited on Adm
+CR Credit
+NR No Record
+
+                                                Page 5 of 6
+COURSE CODES
+>R Repeatable Course
+RP Repeated Course
+>X Forfeited Course
+EPD Extra to Previous Degree
+
+
+
+
+                               Page 6 of 6
+

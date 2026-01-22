@@ -1,10 +1,20 @@
 import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
 
+export interface PrerequisiteNode {
+  id: string;
+  nodeType: string;
+  requiredCourseId: string | null;
+  requiredYear: string | null;
+  requiredGrade: string | null;
+  parentId: string | null;
+}
+
 export interface Course {
   code: string;
   name: string;
   credits: number;
   prerequisites: string[];
+  prerequisiteTree?: PrerequisiteNode[];
   description: string;
   type?: 'core' | 'technical-elective' | 'complementary-elective';
   sectionTypes?: string[];
@@ -85,6 +95,7 @@ export async function searchCourses(query: string): Promise<Course[]> {
       name: course.name || course.code,
       credits: course.credits || 0,
       prerequisites: course.prerequisites || [],
+      prerequisiteTree: course.prerequisiteTree || [],
       description: course.description || '',
       type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionTypes: course.sectionTypes || []
@@ -140,6 +151,7 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
       name: data.name || data.code,
       credits: data.credits || 0,
       prerequisites: data.prerequisites || [],
+      prerequisiteTree: data.prerequisiteTree || [],
       description: data.description || '',
       type: data.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionCount: data.sectionCount || 0,

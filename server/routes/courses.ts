@@ -66,6 +66,17 @@ router.get('/search', async (req: Request, res: Response) => {
       },
       include: {
         prerequisiteExpression: true,
+        prerequisiteNodes: {
+          select: {
+            id: true,
+            nodeType: true,
+            requiredCourseId: true,
+            requiredYear: true,
+            requiredGrade: true,
+            parentId: true
+          },
+          orderBy: { createdAt: 'asc' }
+        },
         _count: {
           select: { sections: true }
         }
@@ -93,15 +104,22 @@ router.get('/search', async (req: Request, res: Response) => {
     )
     
     // Transform database results to match frontend Course interface
-    const transformedCourses = coursesWithSectionInfo.map(({ course, sectionTypes }) => ({
-      code: course.id,
-      name: course.title || 'No title available',
-      credits: course.credits || 3,
-      description: course.description || '',
-      prerequisites: [], // Will be populated separately if needed
-      type: 'core' as const, // This would come from a program-course mapping table
-      sectionTypes: sectionTypes // NEW: e.g., ["LAB", "LEC"]
-    }))
+    const transformedCourses = coursesWithSectionInfo.map(({ course, sectionTypes }) => {
+      const prerequisites = course.prerequisiteNodes
+        .filter(node => node.requiredCourseId)
+        .map(node => node.requiredCourseId as string);
+
+      return {
+        code: course.id,
+        name: course.title || 'No title available',
+        credits: course.credits || 3,
+        description: course.description || '',
+        prerequisites,
+        prerequisiteTree: course.prerequisiteNodes,
+        type: 'core' as const,
+        sectionTypes: sectionTypes
+      };
+    })
 
     res.json({
       results: transformedCourses,
@@ -135,8 +153,15 @@ router.get('/:courseId', async (req: Request, res: Response) => {
       include: {
         prerequisiteExpression: true,
         prerequisiteNodes: {
-          where: { nodeType: 'COURSE' },
-          select: { requiredCourseId: true }
+          select: {
+            id: true,
+            nodeType: true,
+            requiredCourseId: true,
+            requiredYear: true,
+            requiredGrade: true,
+            parentId: true
+          },
+          orderBy: { createdAt: 'asc' }
         },
         _count: {
           select: { sections: true }
@@ -151,7 +176,7 @@ router.get('/:courseId', async (req: Request, res: Response) => {
       })
     }
 
-    // Extract prerequisite course IDs from prerequisite nodes
+    // Extract prerequisite course IDs from prerequisite nodes (for backward compatibility)
     const prerequisites = course.prerequisiteNodes
       .filter(node => node.requiredCourseId)
       .map(node => node.requiredCourseId as string)
@@ -162,6 +187,7 @@ router.get('/:courseId', async (req: Request, res: Response) => {
       credits: course.credits || 3,
       description: course.description || '',
       prerequisites,
+      prerequisiteTree: course.prerequisiteNodes,
       prerequisiteExpression: course.prerequisiteExpression?.expression,
       sectionCount: course._count.sections
     }
