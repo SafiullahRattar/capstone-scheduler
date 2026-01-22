@@ -78,9 +78,9 @@ This separation allows our scheduler to give accurate feedback about which requi
 
 "Students sometimes retake courses, so we need to handle duplicates. We use two sets to track what we've seen - one for completed courses and one for current courses.
 
-Before adding a course, we check if it's already in the set. If it is, we skip it. This means if a student failed a course and is retaking it, we only record the current attempt. Or if they're retaking to improve a grade, we only keep the current or most recent attempt.
+Since the PDF is organized chronologically with older terms first, when we encounter a repeated course, we check if it's already in our completed courses list. If it is, we overwrite the older grade with the newer one. This is important because students often retake courses to improve their grades.
 
-For example, if the audit shows SYSC 2004 with an F in one term and a B-plus in another, we filter out the failed attempt and only keep the passing grade. This ensures our data reflects the student's actual academic standing."
+For example, if the audit shows SYSC 2004 with a C-minus in the Fall term and a B-plus in the Winter term, we initially add the C-minus. When we encounter the B-plus, we overwrite the C-minus with the B-plus. This ensures our system correctly identifies that the student meets prerequisites requiring B-plus or higher, reflecting their actual academic standing."
 
 
 [SLIDE 11: STUDENT INFO EXTRACTION]
@@ -154,6 +154,359 @@ To summarize: minimum length filtering eliminates useless queries, debouncing co
 
 [CONCLUSION]
 
-"In conclusion, our PDF parsing approach provides accurate, deterministic extraction of student course data using text stream extraction and regex patterns. Our search optimizations significantly reduce server load while improving user experience through debouncing and caching. Together, these components enable the Carleton Smart Course Scheduler to function efficiently without requiring user accounts or persistent sessions.
+ "In conclusion, our PDF parsing approach provides accurate, deterministic extraction of student course data using text stream extraction and regex patterns. Our search optimizations significantly reduce server load while improving user experience through debouncing and caching. Together, these components enable the Carleton Smart Course Scheduler to function efficiently without requiring user accounts or persistent sessions.
 
-Thank you for your attention. I'm happy to answer any questions."
+ Thank you for your attention. I'm happy to answer any questions."
+
+
+================================================================
+Q&A PREPARATION NOTES
+================================================================
+
+[DATA STRUCTURE DETAILS]
+
+StudentAuditData Interface:
+- studentId: string - 9-digit student number, extracted as first 9-digit sequence in PDF
+- name: string - Full name, reordered from "Last, First" to "First Last"
+- program: string - Program name extracted from "Bachelor of Engineering - [Program]" pattern
+- completedCourses: Array<{courseId, grade}> - Successfully completed courses with grades
+- currentCourses: Array<{courseId, term}> - Currently enrolled courses with term identifier
+- requirements: RequirementInfo[] - Degree requirements from the audit
+
+RequirementInfo Interface:
+- title: string - Name of requirement (e.g., "SYSC 4907" or "4.0 credits in...")
+- status: 'OK'|'NO'|'IP'|'NONE' - OK=satisfied, NO=missing credits, IP=in progress, NONE=not applicable
+- creditsRequired: number - Total credits needed for this requirement
+- creditsCompleted: number - Credits already earned toward this requirement
+- creditsInProgress: number - Credits currently enrolled that count toward this requirement
+- courseOptions: string[] - Array of course codes that satisfy this requirement
+
+[WHY REQUIREMENTS ARRAY STORES courseOptions]
+
+The requirements array stores which courses can fulfill each degree requirement. For example:
+- Requirement: "4.0 credits in NET 4001, NET 4005, NET 4007"
+- courseOptions: ["NET4001", "NET4005", "NET4007"]
+
+The scheduler uses this to:
+1. Check which requirements are satisfied by comparing against completedCourses and currentCourses
+2. Calculate remaining credits: creditsRequired - creditsCompleted - creditsInProgress
+3. Suggest courses to take next by looking at courseOptions from unfulfilled requirements
+4. Filter out already-taken courses from suggestions
+
+[ALGORITHM: PARSE AUDIT PDF - LINE BY LINE]
+
+1. Extract student info (lines 282-289):
+   - Student ID: First 9-digit number found with regex /(\d{9})/
+   - Name: Pattern "Lastname, Firstname" → reordered to "Firstname Lastname"
+   - Program: Text after "Bachelor of Engineering - "
+
+2. Initialize data structures (lines 292-295):
+   - completedCourses: [] - array to store finished courses
+   - currentCourses: [] - array to store in-progress courses
+   - seenCompleted: Set<string>() - tracks courses already added to completed
+   - seenCurrent: Set<string>() - tracks courses already added to current
+   - Sets used for O(1) lookup instead of O(n) array search
+
+3. Define course line regex (line 298):
+   - ^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP|DEF))?/gm
+   - ^ matches line start
+   - \s* allows leading whitespace
+   - (\d{2}(?:FA|WN|SU)) captures term (22FA, 23WN, 24SU)
+   - \s+ whitespace separator
+   - ([A-Z]{3,4}) captures department (SYSC, COMP, ELEC, MATH)
+   - \s+ whitespace separator
+   - (\d{4}) captures course number (3303, 4907)
+   - \s+ whitespace separator
+   - ([\d.]+) captures credits (0.50, 0.25, 1.00)
+   - \s+ whitespace separator
+   - ([A-Z+\-]+) captures grade (A+, A, A-, B+, etc.)
+   - (?:\s+(?:RP|CUR|SAT|TR|UNS|IP|DEF))? optional status flags
+   - /gm flags: global (all matches) and multiline (^ matches each line)
+
+4. Extract all matches (line 300):
+   - matchAll returns iterator, convert to array
+   - Processes entire document in one pass - O(n) where n = document length
+
+5. Process each match (lines 302-321):
+   - Extract term, courseCode, courseNum from capture groups
+   - Concatenate: courseCode + courseNum = "SYSC" + "4907" = "SYSC4907"
+   - This normalization matches database format (no spaces)
+   - Check if current: fullMatch includes 'CUR' or 'DEF', or grade equals 'CUR' or 'DEF'
+   - If current and not seenCurrent:
+     - Add to currentCourses array with term
+     - Add to seenCurrent set to prevent duplicates
+   - If completed (has grade, not CUR/DEF/UNS/F/X/NR) and not seenCompleted:
+     - Add to completedCourses array with grade
+     - Add to seenCompleted set to prevent duplicates
+
+6. Extract requirements (line 323):
+   - Calls extractRequirementsFromPDF()
+   - This function looks for patterns like "4.0 credits in NET 4001, NET 4005"
+   - Extracts course list and determines status (OK/NO/IP)
+   - Returns array of RequirementInfo objects
+
+7. Return assembled data structure (lines 325-332)
+
+[DECISION: WHY TWO SETS FOR DEDUPLICATION]
+
+We use separate sets (seenCompleted and seenCurrent) because:
+1. Same course can appear as completed AND current (student retaking)
+2. Sets provide O(1) lookup vs O(n) for array.includes()
+3. Prevents adding same course twice to same array
+4. Example: SYSC2004 failed in 21FA, retaking in 22FA
+   - First match: grade='F' → not completed, not current (F filtered out)
+   - Second match: grade='CUR' → currentCourses, seenCurrent.add('SYSC2004')
+   - If student takes again and completes, new entry goes to completedCourses
+
+[ALGORITHM: HANDLING REPEATED COMPLETED COURSES]
+
+Key insight: PDF is chronological (oldest term first)
+Therefore, later matches = more recent grades = better grades
+
+Logic (lines 312-321):
+1. When encountering a completed course (not CUR/DEF/UNS/F/X/NR):
+2. Check if courseId already exists in completedCourses array
+3. If exists (findIndex >= 0):
+   - Overwrite the grade with newer one
+   - Example: C- → B+ (student improved grade)
+4. If new:
+   - Add to completedCourses
+   - Add to seenCompleted set
+
+Why this works:
+- F grades: filtered out by grade check
+- C- then B+: C- added first, then B+ overwrites
+- B+ then A+: B+ added first, then A+ overwrites
+- Prerequisite validation sees best grade
+- Correctly handles "B+ or higher" requirements
+
+Example scenario:
+```
+21FA  SYSC 2004  0.50  C-    → Added: {courseId: "SYSC2004", grade: "C-"}
+22FA  SYSC 2004  0.50  B+    → Overwrites: {courseId: "SYSC2004", grade: "B+"}
+```
+
+Prerequisite check: "SYSC2004 with B+ or higher"
+- System sees: B+
+- Result: ✅ Satisfied (not with old C-)
+
+Time complexity: O(n * c) where n = matches, c = current completed courses
+Space complexity: O(c) for completedCourses array
+
+[DECISION: WHY FILTER OUT FAILING GRADES]
+
+Filtered grades: F, X, UNS, NR, DEF (treated as current), CUR (treated as current)
+Reason: Failed courses don't satisfy prerequisites
+Example: Student fails SYSC2004 with F grade
+- We don't add to completedCourses
+- Scheduler correctly identifies SYSC2004 as unfulfilled prerequisite
+- When student retakes and gets B+, that grade is recorded
+
+[DECISION: NORMALIZE COURSE IDs]
+
+PDF has: "SYSC 3303" (with space)
+Database stores: "SYSC3303" (no space)
+We remove space during parsing to match database format
+Allows efficient lookups: database query WHERE id = 'SYSC3303'
+
+[DECISION: WHY MATCHAll INSTEAD OF SPLIT/LOOP]
+
+Alternative: Split text by lines, parse each line with regex
+matchAll approach:
+- Single pass through document - O(n)
+- Built-in iterator is efficient
+- Returns all matches with captured groups directly
+split/loop approach:
+- Splitting creates array of all lines - O(n) memory
+- Must iterate and apply regex to each line - also O(n) but more code
+- matchAll is cleaner and more idiomatic JavaScript
+
+[ALGORITHM: GET REMAINING COURSES]
+
+function getRemainingCourses(auditData):
+1. Create Sets from completed and current courses for O(1) lookup
+2. Initialize empty Set for remaining courses
+3. For each requirement in auditData.requirements:
+   - Calculate credits needed: required - completed - inProgress
+   - If credits needed > 0:
+     - Get courseOptions (courses satisfying this requirement)
+     - For each course option:
+       - If not in completed AND not in current:
+         - Add to remaining courses Set
+4. Convert Set to array and sort alphabetically
+
+Time complexity: O(r * c) where r = requirements, c = courses per requirement
+Space complexity: O(u) where u = unique remaining courses
+
+[DECISION: WHY SET FOR REMAINING COURSES]
+
+Using Set prevents duplicates:
+- Two different requirements might include the same course as option
+- Example: SYSC4001 might satisfy both "technical elective" and "SYSC elective"
+- Set automatically handles deduplication
+- Final conversion to array produces unique, sorted list
+
+[ALGORITHM: SEARCH OPTIMIZATION COMBINED]
+
+Combined effect of three strategies:
+
+Without optimization:
+User types "SYSC4001" (8 chars) → 8 API calls, 8 DB queries
+
+With minimum length (2 chars):
+"S", "SY" blocked → 6 API calls, 6 DB queries
+
+With debouncing (300ms):
+All 8 chars typed within 300ms → 1 API call, 1 DB query
+
+With caching (5min TTL):
+Search "SYSC" → API call, DB query, cache result
+Search "SYSC" again → cache hit, no API/DB
+
+Best case: Typing "SYSC4001" fast, then searching "SYSC" again
+→ 1 API call total
+
+[DECISION: WHY 300ms DEBOUNCE]
+
+300ms balances responsiveness and efficiency:
+- Too short (100ms): Still many partial queries
+- Too long (1000ms): User perceives lag
+- Human typing average: 200-300ms between keystrokes
+- 300ms catches most typing without feeling sluggish
+
+[DECISION: WHY IN-MEMORY CACHE NOT LOCALSTORAGE]
+
+In-memory Map (browser tab):
+- Pros: Fast (no serialization), automatic cleanup on tab close, no quota limits
+- Cons: Lost if tab refreshed, not shared across tabs
+- localStorage:
+  - Pros: Persists across tabs, refreshes
+  - Cons: Slower (JSON serialization), limited to ~5MB, must manually manage TTL
+
+We chose in-memory because:
+- Course data doesn't need to persist across sessions
+- User re-uploads audit each visit anyway
+- Performance matters more than persistence
+- Avoids managing cache invalidation across sessions
+
+[DECISION: WHY 5 MINUTE TTL]
+
+Course data changes infrequently:
+- Course catalog updates once per term
+- Schedules update before term starts
+- During session (typically <30 minutes): no changes expected
+- 5 minutes long enough to benefit from caching
+- 5 minutes short enough to minimize stale data risk
+
+Alternative: No TTL (cache forever)
+- Risk: User might see stale course availability
+- Better to err on side of fresh data
+
+[EDGE CASES HANDLED]
+
+1. PDF parsing - malformed course lines:
+   - Regex only matches well-formed lines
+   - Badly formatted lines ignored gracefully
+   - Doesn't crash on partial data
+
+2. Missing student info:
+   - studentIdMatch, nameMatch, programMatch checked for null
+   - Empty strings used as fallback
+   - System continues with partial data
+
+3. Duplicate courses:
+    - Sets prevent duplicates in same category
+    - Retakes handled by overwriting with newer grade (PDF is chronological)
+    - Example: C- (old) → B+ (new), keeps B+
+
+4. Failed courses retaken:
+    - F grade filtered out (doesn't satisfy prerequisites)
+    - Current CUR or later completion added
+    - Retaken passing grade overwrites earlier attempts
+    - User sees accurate academic standing
+
+5. Elective categories:
+   - "CS_ELECTIVE" expanded to actual course list
+   - Allows requirement tracking for electives
+   - Simplified mapping (hardcoded in development)
+
+6. Prerequisite validation:
+   - Both completed and current satisfy "course taken"
+   - Only completed satisfy "grade requirement"
+   - Accurate feedback for planning
+
+[COMPLEXITY ANALYSIS]
+
+PDF Parsing:
+- Time: O(n) where n = PDF text length (single regex pass)
+- Space: O(m) where m = number of courses (arrays + sets)
+
+Remaining Courses Calculation:
+- Time: O(r * c) where r = requirements, c = avg courses per requirement
+- Space: O(u) where u = unique remaining courses
+
+Search with optimizations:
+- Without cache: O(1) per query after min length and debounce
+- With cache hit: O(1) (no DB query)
+- Cache space: O(k) where k = unique queries in 5 minutes
+
+[ALTERNATIVE APPROACHES CONSIDERED]
+
+1. OCR for PDF parsing:
+   - Rejected due to probabilistic errors
+   - Character confusion (B/8, I/1, 0/O)
+   - Critical for grade accuracy
+
+2. PDF parsing library (pdf.js):
+   - More complex to implement
+   - pdftotext is simpler, deterministic
+   - Already proven reliable for text extraction
+
+3. Database-level full-text search:
+   - Would require PostgreSQL or specialized index
+   - Current approach (LIKE with case-insensitive) is simpler
+   - Sufficient for <1000 courses
+
+4. Redis for caching:
+   - Overkill for single-session use case
+   - In-memory browser cache is adequate
+   - Avoids additional infrastructure
+
+[DATA VALIDATION]
+
+Student ID:
+- Must be exactly 9 digits
+- Extracted from first match in document
+- Used as primary key for student records
+
+Course ID:
+- Must be 7-8 characters (3-4 letters + 4 digits)
+- Normalized to remove spaces
+- Must exist in courses database to be saved
+
+Term:
+- Format: 2 digits + FA/WN/SU (22FA, 23WN)
+- Used for identifying current vs past courses
+
+Grade:
+- Letters A-D with optional +/-
+- Plus special grades: TR, SAT, F, X, UNS, NR, CUR, DEF
+- Validated against known list
+
+[INTEGRATION WITH REST OF SYSTEM]
+
+Parsed audit data flows to:
+1. Database (saveStudentAuditData):
+   - Creates/updates student record
+   - Stores course completions with grades
+   - Allows persistent tracking across sessions
+
+2. Scheduler:
+   - prerequisiteValidator checks completedCourses/currentCourses
+   - scheduleGenerator filters out completed courses
+   - Suggestions based on unfulfilled requirements
+
+3. Frontend:
+   - Displays student info, completed courses, current courses
+   - Shows remaining courses to complete degree
+   - Provides prerequisite checking feedback

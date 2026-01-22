@@ -313,10 +313,16 @@ export function parseAuditPDF(pdfText: string): StudentAuditData {
       currentCourses.push({ courseId, term })
       seenCurrent.add(courseId)
     } else if (grade && grade !== 'CUR' && grade !== 'DEF' && grade !== 'UNS' && 
-               grade !== 'F' && grade !== 'X' && grade !== 'NR' &&
-               !seenCompleted.has(courseId)) {
-      completedCourses.push({ courseId, grade })
-      seenCompleted.add(courseId)
+               grade !== 'F' && grade !== 'X' && grade !== 'NR') {
+      // PDF is chronological (oldest first), so later matches are more recent grades
+      // If course already seen, overwrite with the more recent grade
+      const existingIndex = completedCourses.findIndex(c => c.courseId === courseId)
+      if (existingIndex >= 0) {
+        completedCourses[existingIndex].grade = grade  // Overwrite with newer grade
+      } else {
+        completedCourses.push({ courseId, grade })
+        seenCompleted.add(courseId)
+      }
     }
   }
 

@@ -168,6 +168,36 @@
   )
 ]
 
+#slide[
+  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Course Extraction Pattern]
+  #v(0.5em)
+
+  #rect(fill: rgb("#2d2d2d"), radius: 6pt, inset: 12pt, width: 100%)[
+    #text(font: "DejaVu Sans Mono", fill: rgb("#f0f0f0"), size: 10pt)[
+      ```
+      /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP|DEF))?/gm
+      ```
+    ]
+  ]
+
+  #v(0.5em)
+  #table(
+    columns: (1.5fr, 2fr, 1fr),
+    stroke: 0.5pt + rgb("#ddd"),
+    inset: 6pt,
+    fill: (col, row) => if row == 0 { rgb("#bf112b") } else if calc.rem(row, 2) == 0 { rgb("#fafafa") } else { white },
+    text(fill: white, weight: "bold", size: 11pt)[Pattern], 
+    text(fill: white, weight: "bold", size: 11pt)[Purpose], 
+    text(fill: white, weight: "bold", size: 11pt)[Example],
+    [`(\d{2}(?:FA|WN|SU))`], [Term: 2-digit year + semester], ["22FA"],
+    [`([A-Z]{3,4})`], [Department code], ["SYSC"],
+    [`(\d{4})`], [Course number], ["3303"],
+    [`([\d.]+)`], [Credits], ["0.50"],
+    [`([A-Z+\-]+)`], [Grade with modifiers], ["A-"],
+    [`(?:RP|CUR|SAT|...)?`], [Optional status flags], ["CUR", "DEF"],
+  )
+]
+
 // 4. PDF Processing Pipeline
 #slide[
   #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Processing Pipeline]
@@ -226,35 +256,6 @@
 ]
 
 // 5. Course Line Pattern
-#slide[
-  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Course Extraction Pattern]
-  #v(0.5em)
-
-  #rect(fill: rgb("#2d2d2d"), radius: 6pt, inset: 12pt, width: 100%)[
-    #text(font: "DejaVu Sans Mono", fill: rgb("#f0f0f0"), size: 10pt)[
-      ```
-      /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP|DEF))?/gm
-      ```
-    ]
-  ]
-
-  #v(0.5em)
-  #table(
-    columns: (1.5fr, 2fr, 1fr),
-    stroke: 0.5pt + rgb("#ddd"),
-    inset: 6pt,
-    fill: (col, row) => if row == 0 { rgb("#bf112b") } else if calc.rem(row, 2) == 0 { rgb("#fafafa") } else { white },
-    text(fill: white, weight: "bold", size: 11pt)[Pattern], 
-    text(fill: white, weight: "bold", size: 11pt)[Purpose], 
-    text(fill: white, weight: "bold", size: 11pt)[Example],
-    [`(\d{2}(?:FA|WN|SU))`], [Term: 2-digit year + semester], ["22FA"],
-    [`([A-Z]{3,4})`], [Department code], ["SYSC"],
-    [`(\d{4})`], [Course number], ["3303"],
-    [`([\d.]+)`], [Credits], ["0.50"],
-    [`([A-Z+\-]+)`], [Grade with modifiers], ["A-"],
-    [`(?:RP|CUR|SAT|...)?`], [Optional status flags], ["CUR", "DEF"],
-  )
-]
 
 // 6. Processing Matches
 #slide[
@@ -421,8 +422,11 @@
           const seenCompleted = new Set<string>()
           const seenCurrent = new Set<string>()
 
-          // Check before adding:
-          if (!seenCompleted.has(courseId)) {
+          const existingIndex = completedCourses
+            .findIndex(c => c.courseId === courseId)
+          if (existingIndex >= 0) {
+            completedCourses[existingIndex].grade = grade
+          } else {
             completedCourses.push({ courseId, grade })
             seenCompleted.add(courseId)
           }
@@ -432,6 +436,8 @@
       #v(0.3em)
       #text(size: 11pt)[
         Two Sets: same course can appear as completed (old attempt) and current (retaking).
+        #v(0.2em)
+        Since PDF is chronological, we keep the most recent grade.
       ]
     ],
     [
@@ -614,10 +620,6 @@
           - Each query scans courses table
           - Joins with sections table
           - Multiplied by concurrent users
-          
-          *User experience:*
-          - Results flicker with each response
-          - Wasted bandwidth
         ]
       ]
     ]
@@ -757,54 +759,12 @@
     columns: (1fr, 1fr),
     gutter: 1em,
     [
-      #text(weight: "bold", size: 12pt)[Where is it stored?]
-      #text(size: 11pt)[
-        In-memory `Map` in the browser tab. Cleared on page refresh or tab close. Not localStorage.
-      ]
-    ],
-    [
       #text(weight: "bold", size: 12pt)[Why 5 minutes TTL?]
       #text(size: 11pt)[
-        Course data doesn't change during a session. 5 min covers typical usage without stale data risk.
+        We will implement live section data fetching, and update class capacity every 5 minutes. Currently, section data is static.
       ]
     ]
   )
-]
-
-// 17. Backend Search Endpoint
-#slide[
-  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Backend Search Endpoint]
-  #v(0.5em)
-
-  #rect(fill: rgb("#f5f5f5"), radius: 4pt, inset: 10pt, width: 100%)[
-    #text(size: 10pt)[
-      ```typescript
-      router.get('/search', async (req: Request, res: Response) => {
-        const { q, limit = '20' } = req.query
-        const limitNum = Math.min(parseInt(limit as string) || 20, 100)
-        
-        const courses = await prisma.course.findMany({
-          where: {
-            OR: [
-              { id: { contains: q.toUpperCase(), mode: 'insensitive' } },
-              { title: { contains: q, mode: 'insensitive' } }
-            ],
-            sections: { some: {} }  // Only courses with available sections
-          },
-          take: limitNum,
-          orderBy: { id: 'asc' }
-        })
-        
-        res.json({ results: courses, count: courses.length })
-      })
-      ```
-    ]
-  ]
-
-  #v(0.3em)
-  #text(size: 11pt)[
-    OR clause: matches course code or title. `sections: { some: {} }` filters out courses with no sections (can't schedule them). Default limit 20, max 100.
-  ]
 ]
 
 // 18. Search Optimization Results
@@ -833,8 +793,6 @@
     [
       #text(weight: "bold", size: 14pt)[Combined Effect]
       #text(size: 11pt)[
-        Typical session: 50+ keystrokes, ~5-10 actual searches needed.
-        
         Significant reduction in API calls and server load.
       ]
     ],
