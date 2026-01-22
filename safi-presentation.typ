@@ -237,7 +237,7 @@
   #rect(fill: rgb("#2d2d2d"), radius: 6pt, inset: 12pt, width: 100%)[
     #text(font: "DejaVu Sans Mono", fill: rgb("#f0f0f0"), size: 10pt)[
       ```
-      /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP))?/gm
+      /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP|DEF))?/gm
       ```
     ]
   ]
@@ -256,7 +256,7 @@
     [`(\d{4})`], [Course number], ["3303"],
     [`([\d.]+)`], [Credits], ["0.50"],
     [`([A-Z+\-]+)`], [Grade with modifiers], ["A-"],
-    [`(?:RP|CUR|SAT|...)?`], [Optional status flags], ["CUR"],
+    [`(?:RP|CUR|SAT|...)?`], [Optional status flags], ["CUR", "DEF"],
   )
 ]
 
@@ -345,12 +345,13 @@
       ]
     ],
     [
-      #text(weight: "bold", size: 11pt)[Current (CUR)]
+      #text(weight: "bold", size: 11pt)[Current/Deferred (CUR, DEF)]
       #rect(fill: rgb("#fffaf0"), stroke: 1pt + rgb("#ff8c00"), radius: 4pt, inset: 8pt)[
         #text(size: 10pt)[
-          Currently enrolled
+          Currently enrolled (CUR)
+          Deferred (DEF) - grade pending
           Stored with term
-          No grade yet
+          Counts as "course taken" but no grade yet
         ]
       ]
     ],
@@ -840,7 +841,7 @@
       #text(size: 11pt)[
         Typical session: 50+ keystrokes, ~5-10 actual searches needed.
         
-        Result: 80-90% reduction in API calls.
+        Significant reduction in API calls and server load.
       ]
     ],
     [

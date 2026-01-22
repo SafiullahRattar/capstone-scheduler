@@ -295,7 +295,7 @@ export function parseAuditPDF(pdfText: string): StudentAuditData {
   const seenCurrent = new Set<string>()
   
   // Regex to match course lines: "21FA   CHEM 1101           0.50   A+"
-  const courseLinePattern = /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP))?/gm
+  const courseLinePattern = /^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)(?:\s+(?:RP|CUR|SAT|TR|UNS|IP|DEF))?/gm
   
   const matches = Array.from(pdfText.matchAll(courseLinePattern))
   
@@ -307,12 +307,12 @@ export function parseAuditPDF(pdfText: string): StudentAuditData {
     let grade = match[5]
     
     const fullMatch = match[0]
-    const isCurrent = fullMatch.includes('CUR') || grade === 'CUR'
+    const isCurrent = fullMatch.includes('CUR') || fullMatch.includes('DEF') || grade === 'CUR' || grade === 'DEF'
     
     if (isCurrent && !seenCurrent.has(courseId)) {
       currentCourses.push({ courseId, term })
       seenCurrent.add(courseId)
-    } else if (grade && grade !== 'CUR' && grade !== 'UNS' && 
+    } else if (grade && grade !== 'CUR' && grade !== 'DEF' && grade !== 'UNS' && 
                grade !== 'F' && grade !== 'X' && grade !== 'NR' &&
                !seenCompleted.has(courseId)) {
       completedCourses.push({ courseId, grade })
