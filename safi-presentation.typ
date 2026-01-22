@@ -237,6 +237,13 @@
   #text(size: 14pt)[
     *Logic:* We maintain a `Set` of completed IDs. We strictly filter out failure codes (`F`, `UNS`, etc.) to ensure the scheduler does not assume a prerequisite is met when it isn't.
   ]
+
+  #v(0.5em)
+  #rect(fill: rgb("#e6fffa"), stroke: 1pt + rgb("#00aa88"), radius: 4pt, inset: 8pt)[
+    #text(size: 13pt)[
+      *Duplicate Prevention:* The `seenCompleted` Set ensures each course is only stored once. If a student takes a course, fails it, then passes it later, only the passing grade is tracked. O(1) lookup prevents accidental duplicate entries.
+    ]
+  ]
 ]
 
 // 6. Handling "Current" Courses (CUR)
@@ -255,7 +262,7 @@
     #text(font: "DejaVu Sans Mono", size: 11pt)[
       ```typescript
       const isCurrent = fullMatch.includes('CUR') || grade === 'CUR'
-      
+
       if (isCurrent && !seenCurrent.has(courseId)) {
         // Track separately for "In Progress" logic
         currentCourses.push({ courseId, term })
@@ -270,6 +277,15 @@
   #v(0.5em)
   #text(size: 14pt)[
     This separation is crucial. `completedCourses` allows access to courses requiring a grade (e.g., "C- in SYSC 3303"). `currentCourses` allows access to courses just requiring the credit.
+  ]
+
+  #v(0.5em)
+  #rect(fill: rgb("#e6fffa"), stroke: 1pt + rgb("#00aa88"), radius: 4pt, inset: 8pt)[
+    #text(size: 13pt)[
+      *Additional Handling:*
+      - `SAT` (Satisfied): 0-credit courses like ECOR 1055/1056/1057
+      - `TR` (Transfer Credit): INCLUDED for prerequisite checks - transfer credits count toward degree requirements
+    ]
   ]
 ]
 
@@ -319,5 +335,259 @@
   #v(0.5em)
   #text(size: 14pt)[
     *Impact:* This allows the system to recommend specific courses (e.g., `BIOL 1103`) when a user has an unfilled "Science Elective" slot, rather than just showing a generic placeholder.
+  ]
+
+  #v(0.5em)
+  #rect(fill: rgb("#fffaf0"), stroke: 1pt + rgb("#ff8c00"), radius: 4pt, inset: 8pt)[
+    #text(size: 13pt)[
+      *Note:* This infrastructure is actively used in our `/parse` endpoint. The `getRemainingCourses()` function expands these categories and returns concrete course codes that can be scheduled. However, the elective lists are currently dummy data and will need official Carleton lists in future iterations.
+    ]
+  ]
+]
+
+// 8. Grade Types Handled
+#slide[
+  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Grade Types & Handling Strategy]
+  #v(0.2em)
+  #text(size: 18pt, fill: rgb("#666666"))[Comprehensive grade classification for prerequisite validation]
+  #v(0.5em)
+
+  #grid(
+    columns: (1fr, 1fr, 1fr),
+    gutter: 1em,
+    [
+      #text(weight: "bold", size: 13pt)[Valid Passing Grades]
+      #rect(fill: rgb("#e6fffa"), stroke: 1pt + rgb("#00aa88"), radius: 4pt, inset: 8pt)[
+        #text(size: 12pt)[
+          *Standard:* A+, A, A-, B+, B, B-, C+, C, C-, D+, D, D-
+          *Status Flags:* SAT (Satisfied)
+          *Accepted:* These count toward degree progress
+        ]
+      ]
+    ],
+    [
+      #text(weight: "bold", size: 13pt)[Transfer Credits]
+      #rect(fill: rgb("#e6fffa"), stroke: 1pt + rgb("#00aa88"), radius: 4pt, inset: 8pt)[
+        #text(size: 12pt)[
+          *TR (Transfer Course)*
+          *Important:* INCLUDED for prerequisite checks
+          *Reason:* Transfer credits satisfy requirements
+        ]
+      ]
+    ],
+    [
+      #text(weight: "bold", size: 13pt)[Current In-Progress]
+      #rect(fill: rgb("#fffaf0"), stroke: 1pt + rgb("#ff8c00"), radius: 4pt, inset: 8pt)[
+        #text(size: 12pt)[
+          *CUR (Current)*
+          *Handled separately:* Not in completedCourses
+          *Purpose:* Tracks in-progress enrollment separately
+        ]
+      ]
+    ]
+  )
+
+  #v(0.5em)
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1em,
+    [
+      #text(weight: "bold", size: 13pt)[Filtered Out (Do Not Count)]
+      #rect(fill: rgb("#fee2e2"), stroke: 1pt + rgb("#dc2626"), radius: 4pt, inset: 8pt)[
+        #text(size: 12pt)[
+          *F (Fail), X (Forfeited)*
+          *UNS (Unsatisfactory), NR (No Record)*
+          *Reason:* Failures do not satisfy prerequisites
+        ]
+      ]
+    ],
+    [
+      #text(weight: "bold", size: 13pt)[Course Flags Detected]
+      #rect(fill: rgb("#f5f5f5"), stroke: 1pt + rgb("#666666"), radius: 4pt, inset: 8pt)[
+        #text(size: 12pt)[
+          *RP (Repeated Course)*
+          *Not stored:* Grade tracking focuses on final value
+          *Handled:* Set-based deduplication handles repeats
+        ]
+      ]
+    ]
+  )
+
+  #v(0.5em)
+  #text(size: 13pt, fill: rgb("#bf112b"))[
+    *Engineering Decision:* Explicit filtering prevents the scheduler from assuming prerequisites are met when they aren't (e.g., a failed course must be retaken).
+  ]
+]
+
+// 9. Program Scope & Limitations
+#slide[
+  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Implementation Scope & Limitations]
+  #v(0.2em)
+  #text(size: 18pt, fill: rgb("#666666"))[Understanding system boundaries and constraints]
+  #v(0.5em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.5em,
+    [
+      #text(weight: "bold", size: 14pt)[Current Scope]
+      #rect(fill: rgb("#e6fffa"), stroke: 1pt + rgb("#00aa88"), radius: 4pt, inset: 10pt)[
+        #text(size: 13pt)[
+          *Programs:*
+          - Only "Bachelor of Engineering" audits
+          - Software Engineering specific
+          
+          *Format:*
+          - Carleton University uAchieve system
+          - PDF/HTML export format
+          
+          *Electives:*
+          - Engineering-specific categories
+          - SYSC, ELEC, CS, Science, Complementary Studies
+        ]
+      ]
+    ],
+    [
+      #text(weight: "bold", size: 14pt)[Not Currently Supported]
+      #rect(fill: rgb("#fee2e2"), stroke: 1pt + rgb("#dc2626"), radius: 4pt, inset: 10pt)[
+        #text(size: 13pt)[
+          *Programs:*
+          - Non-engineering programs (BSc, BA, BMath)
+          - Other universities' formats
+          
+          *Formats:*
+          - Scanned/image-based PDFs (no text encoding)
+          - Non-Carleton audit systems
+          
+          *Data:*
+          - Major-specific elective lists (dummy data used)
+        ]
+      ]
+    ]
+  )
+
+  #v(0.5em)
+  #text(size: 14pt, weight: "bold")[
+    Why These Boundaries?
+  ]
+  #text(size: 13pt)[
+    The regex patterns match Carleton's specific format (e.g., "22FA", department codes). Generic parsing would lose accuracy. Adding new formats requires re-engineering the extraction patterns.
+  ]
+]
+
+// 10. Regex Pattern Analysis
+#slide[
+  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Regex Pattern Deep Dive]
+  #v(0.2em)
+  #text(size: 18pt, fill: rgb("#666666"))[Type-safe extraction through pattern validation]
+  #v(0.5em)
+
+  #rect(fill: rgb("#2d2d2d"), radius: 6pt, inset: 12pt, width: 100%)[
+    #text(font: "DejaVu Sans Mono", fill: rgb("#f0f0f0"), size: 10pt)[
+      `/^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)/gm`
+    ]
+  ]
+
+  #v(0.5em)
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1em,
+    [
+      #text(weight: "bold", size: 13pt)[Pattern Breakdown]
+      #rect(fill: rgb("#f5f5f5"), radius: 4pt, inset: 10pt, width: 100%)[
+        #text(size: 12pt)[
+          *Term:* `(\d{2}(?:FA|WN|SU))`
+          - Validates: 22FA, 23WN, 21SU
+          - Rejects: Invalid season codes
+          
+          *Department:* `([A-Z]{3,4})`
+          - Validates: SYSC, ELEC, COMP
+          - Enforces 3-4 uppercase letters
+          
+          *Course Code:* `(\d{4})`
+          - Exactly 4 digits: 2804, 3005
+        ]
+      ]
+    ],
+    [
+      #text(weight: "bold", size: 13pt)[Continued]
+      #rect(fill: rgb("#f5f5f5"), radius: 4pt, inset: 10pt, width: 100%)[
+        #text(size: 12pt)[
+          *Credits:* `([\d.]+)`
+          - Handles: 0.50, 1.0, 0.25
+          - Flexible for different credit values
+          
+          *Grade:* `([A-Z+\-]+)`
+          - Supports: A+, A-, B+, SAT, TR
+          - Captures modifiers (+, -)
+        ]
+      ]
+    ]
+  )
+
+  #v(0.5em)
+  #text(size: 14pt, weight: "bold")[
+    Type Enforcement Through Regex
+  ]
+  #text(size: 13pt)[
+    The pattern acts as a validation layer. By requiring strict formats (e.g., 4-digit course codes), malformed lines are automatically filtered out. This is more efficient than capturing everything and validating later.
+  ]
+]
+
+// 11. Future: Elective Category Expansion
+#slide[
+  #text(size: 28pt, weight: "bold", fill: rgb("#bf112b"))[Future Capability: Elective Handling]
+  #v(0.2em)
+  #text(size: 18pt, fill: rgb("#666666"))[Infrastructure built for future enhancement]
+  #v(0.5em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.5em,
+    [
+      #text(weight: "bold", size: 14pt)[Currently Implemented]
+      #rect(fill: rgb("#e6fffa"), stroke: 1pt + rgb("#00aa88"), radius: 4pt, inset: 10pt)[
+        #text(size: 13pt)[
+          *Infrastructure:*
+          - Detects "Basic Science Electives"
+          - Detects "Computer Science Elective"
+          - Detects "Complementary Studies"
+          
+          *Expansion Logic:*
+          - Hardcoded dummy course lists
+          - `getRemainingCourses()` expands categories
+          - Returns specific course codes (e.g., BIOL1902)
+        ]
+      ]
+    ],
+    [
+      #text(weight: "bold", size: 14pt)[Current Limitations]
+      #rect(fill: rgb("#fffaf0"), stroke: 1pt + rgb("#ff8c00"), radius: 4pt, inset: 10pt)[
+        #text(size: 13pt)[
+          *Data Quality:*
+          - Elective lists are dummy data
+          - Not official Carleton calendars
+          
+          *Major-Specific:*
+          - No logic for Software vs. Systems
+          - Generic across all engineering majors
+          
+          *UI:*
+          - Frontend receives expanded courses
+          - Doesn't present as elective choice groups
+        ]
+      ]
+    ]
+  )
+
+  #v(0.5em)
+  #text(size: 14pt, weight: "bold")[
+    Future Work
+  ]
+  #text(size: 13pt)[
+    - Scrape official Carleton calendar elective lists per major
+    - Add major-specific category mapping logic
+    - UI to show "Science Elective: Choose from [list of 20 courses]"
+    - Filter electives by availability and prerequisites
   ]
 ]
