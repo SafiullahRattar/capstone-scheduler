@@ -10,14 +10,15 @@ interface ScheduleReviewPageProps {
   schedules: GeneratedSchedule[];
   onBack: () => void;
   electiveRequirements?: ElectiveRequirement[];
-  selectedElectives?: Record<string, string>;
-  onElectiveChange?: (category: string, courseCode: string, allSelectedCourses: string[]) => void;
+  selectedElectives?: Record<string, string[]>;
+  onElectiveChange?: (category: string, courseCodes: string[], allSelectedCourses: string[]) => void;
   completedCourses?: string[];
 }
 
 interface ElectiveCourseInfo {
   code: string;
   name: string;
+  credits: number;
   hasSections: boolean;
   prereqsMet: boolean;
   prerequisites: string[];
@@ -39,12 +40,15 @@ export function ScheduleReviewPage({
   const [swappingElective, setSwappingElective] = useState<string | null>(null);
   const currentSchedule = schedules[currentIndex];
 
-  // Set initial active tab
+  // Set initial active tab (only from selected elective categories)
   useEffect(() => {
-    if (electiveRequirements.length > 0 && !activeTab) {
-      setActiveTab(electiveRequirements[0].category);
+    const activeCategories = electiveRequirements.filter(er => 
+      selectedElectives[er.category] && selectedElectives[er.category].length > 0
+    );
+    if (activeCategories.length > 0 && !activeTab) {
+      setActiveTab(activeCategories[0].category);
     }
-  }, [electiveRequirements, activeTab]);
+  }, [electiveRequirements, selectedElectives, activeTab]);
 
   // Load elective course details when a tab is activated
   useEffect(() => {
@@ -76,6 +80,7 @@ export function ScheduleReviewPage({
           details.push({
             code,
             name: course.name || code,
+            credits: course.credits || 0.5,
             hasSections: course.hasSections !== false,
             prereqsMet,
             prerequisites: course.prerequisites,
@@ -84,6 +89,7 @@ export function ScheduleReviewPage({
           details.push({
             code,
             name: code,
+            credits: 0.5,
             hasSections: false,
             prereqsMet: true,
             prerequisites: [],
@@ -126,33 +132,59 @@ export function ScheduleReviewPage({
     copyToClipboard(crns, 'all-crns');
   };
 
-  const handleElectiveSwap = async (category: string, newCourseCode: string) => {
+  const handleElectiveToggle = async (category: string, courseCode: string, courseCredits: number) => {
     if (!onElectiveChange) return;
-    
-    const currentElective = selectedElectives[category];
-    if (newCourseCode === currentElective) return;
 
-    setSwappingElective(newCourseCode);
+    const requirement = electiveRequirements.find(er => er.category === category);
+    if (!requirement) return;
 
-    // Build the new course list: take current schedule's courses, 
-    // swap out the old elective for the new one
-    const currentCourses = new Set(
-      currentSchedule.selections.map(s => s.courseCode)
-    );
-    
-    // Remove old elective if present
-    if (currentElective) {
-      currentCourses.delete(currentElective);
+    const currentPicks = selectedElectives[category] || [];
+    const isSelected = currentPicks.includes(courseCode);
+
+    let newPicks: string[];
+    if (isSelected) {
+      // Deselect: remove this course
+      newPicks = currentPicks.filter(c => c !== courseCode);
+    } else {
+      // Select: add this course
+      newPicks = [...currentPicks, courseCode];
     }
-    
-    // Add new elective
-    currentCourses.add(newCourseCode);
-    
-    const allCourses = Array.from(currentCourses);
-    
-    onElectiveChange(category, newCourseCode, allCourses);
+
+    // If no courses selected, don't trigger regeneration
+    if (newPicks.length === 0) {
+      // Just update state locally — schedule stays as-is
+      return;
+    }
+
+    setSwappingElective(courseCode);
+
+    // Build the full course list for schedule generation:
+    // Take current non-elective courses + all elective picks across all categories
+    const nonElectiveCourses = currentSchedule.selections
+      .map(s => s.courseCode)
+      .filter(c => {
+        // Keep courses that aren't part of ANY elective category's options
+        for (const er of electiveRequirements) {
+          if (selectedElectives[er.category]?.includes(c)) return false;
+        }
+        return true;
+      });
+
+    // Collect all elective picks (using newPicks for the current category)
+    const allElectivePicks: string[] = [];
+    for (const er of electiveRequirements) {
+      if (er.category === category) {
+        allElectivePicks.push(...newPicks);
+      } else {
+        allElectivePicks.push(...(selectedElectives[er.category] || []));
+      }
+    }
+
+    const allCourses = [...new Set([...nonElectiveCourses, ...allElectivePicks])];
+
+    onElectiveChange(category, newPicks, allCourses);
     setCurrentIndex(0);
-    
+
     // Brief delay before clearing loading state
     setTimeout(() => setSwappingElective(null), 500);
   };
@@ -194,6 +226,11 @@ export function ScheduleReviewPage({
       electiveCourseSet.add(code);
     }
   }
+
+  // Only show elective categories that the user actually selected
+  const activeElectiveRequirements = electiveRequirements.filter(
+    er => selectedElectives[er.category] && selectedElectives[er.category].length > 0
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -262,6 +299,9 @@ export function ScheduleReviewPage({
                   const prereqInfo = currentSchedule.prerequisiteInfo?.[courseCode];
                   const colors = courseColorMap.get(courseCode) || COURSE_COLORS[0];
                   const isElective = electiveCourseSet.has(courseCode);
+                  const electiveCategory = isElective 
+                    ? activeElectiveRequirements.find(er => er.courseOptions.includes(courseCode))
+                    : null;
                   
                   return (
                     <div
@@ -275,6 +315,9 @@ export function ScheduleReviewPage({
                           <BookOpen className="w-3.5 h-3.5 opacity-60" />
                         )}
                       </div>
+                      {electiveCategory && (
+                        <p className="text-xs mt-0.5 opacity-60 italic">{electiveCategory.label}</p>
+                      )}
                       {sections.map((selection, idx) => (
                         <p key={idx} className="text-xs mt-1 opacity-70">
                           {selection.section.type} - {selection.section.sectionCode}
@@ -379,118 +422,183 @@ export function ScheduleReviewPage({
           </div>
         </div>
 
-        {/* Elective Swapping Tabs */}
-        {electiveRequirements.length > 0 && (
-          <div className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            {/* Tab Headers */}
-            <div className="flex border-b border-gray-200 bg-gray-50">
-              {electiveRequirements.map((er) => (
-                <button
-                  key={er.category}
-                  onClick={() => setActiveTab(er.category)}
-                  className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === er.category
-                      ? 'border-[#bf112b] text-[#bf112b] bg-white'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  {er.label}
-                  <span className={`px-1.5 py-0.5 text-xs rounded-full ${
-                    activeTab === er.category
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {er.creditsNeeded} cr
-                  </span>
-                </button>
-              ))}
-            </div>
+        {/* Elective Selection Section */}
+        {activeElectiveRequirements.length > 0 && (
+          <div className="mt-8">
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+              {/* Section Header (always shown) */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 bg-gray-50/80">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900">Elective Options</h3>
+                  <p className="text-sm text-gray-500">Select electives to fill your requirements. Click to toggle courses on/off.</p>
+                </div>
+              </div>
 
-            {/* Tab Content */}
-            {activeTab && (
-              <div className="p-5">
-                {loadingElectives[activeTab] ? (
-                  <div className="flex items-center gap-3 py-8 justify-center text-gray-500">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Loading elective options...</span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Select an elective to swap into your schedule. Courses with met prerequisites and available sections are shown first.
-                    </p>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {(electiveCourseDetails[activeTab] || []).map((elective) => {
-                        const isCurrentlySelected = selectedElectives[activeTab] === elective.code ||
-                          currentSchedule.selections.some(s => s.courseCode === elective.code);
-                        const isAvailable = elective.hasSections && elective.prereqsMet;
-                        const isSwapping = swappingElective === elective.code;
-                        
-                        return (
-                          <button
-                            key={elective.code}
-                            onClick={() => isAvailable && !isCurrentlySelected && handleElectiveSwap(activeTab, elective.code)}
-                            disabled={!isAvailable || isCurrentlySelected || isSwapping}
-                            className={`text-left p-3 rounded-lg border-2 transition-all ${
-                              isCurrentlySelected
-                                ? 'border-[#bf112b] bg-red-50 ring-1 ring-[#bf112b]/20'
-                                : isAvailable
-                                ? 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 cursor-pointer'
-                                : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className={`text-sm font-semibold truncate ${
-                                  isCurrentlySelected ? 'text-[#bf112b]' : 'text-gray-900'
-                                }`}>
-                                  {elective.code}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                                  {elective.name}
-                                </p>
-                              </div>
-                              {isCurrentlySelected && (
-                                <Check className="w-4 h-4 text-[#bf112b] flex-shrink-0 mt-0.5" />
-                              )}
-                              {isSwapping && (
-                                <Loader2 className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5 animate-spin" />
-                              )}
-                            </div>
-                            
-                            {/* Status indicators */}
-                            {!isAvailable && (
-                              <div className="mt-2 flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3 text-amber-500" />
-                                <span className="text-xs text-amber-600">
-                                  {!elective.hasSections ? 'No sections available' : 'Prerequisites not met'}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {isAvailable && !isCurrentlySelected && elective.prerequisites.length > 0 && (
-                              <div className="mt-2">
-                                <span className="text-xs text-gray-400">
-                                  Prereqs: {elective.prerequisites.join(', ')}
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    
-                    {(electiveCourseDetails[activeTab] || []).length === 0 && !loadingElectives[activeTab] && (
-                      <div className="py-8 text-center text-gray-500">
-                        <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>No elective options found for this category.</p>
+              {/* Category Tabs (only when multiple categories) */}
+              {activeElectiveRequirements.length > 1 && (
+                <div className="flex border-b border-gray-200">
+                  {activeElectiveRequirements.map((er) => {
+                    const currentPicks = selectedElectives[er.category] || [];
+                    const selectedCredits = (electiveCourseDetails[er.category] || [])
+                      .filter(e => currentPicks.includes(e.code))
+                      .reduce((sum, e) => sum + e.credits, 0);
+                    return (
+                      <button
+                        key={er.category}
+                        onClick={() => setActiveTab(er.category)}
+                        className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === er.category
+                            ? 'border-purple-600 text-purple-700 bg-white'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <span>{er.label}</span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                          selectedCredits >= er.creditsNeeded
+                            ? 'bg-green-100 text-green-700'
+                            : activeTab === er.category
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {selectedCredits}/{er.creditsNeeded} cr
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Credit Progress Bar + Category Info */}
+              {activeTab && (() => {
+                const er = electiveRequirements.find(e => e.category === activeTab);
+                if (!er) return null;
+                const currentPicks = selectedElectives[activeTab] || [];
+                const selectedCredits = (electiveCourseDetails[activeTab] || [])
+                  .filter(e => currentPicks.includes(e.code))
+                  .reduce((sum, e) => sum + e.credits, 0);
+                const progress = Math.min((selectedCredits / er.creditsNeeded) * 100, 100);
+                const isFulfilled = selectedCredits >= er.creditsNeeded;
+                return (
+                  <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/40">
+                    {/* Show category label inline when single category */}
+                    {activeElectiveRequirements.length === 1 && (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">{er.label}</span>
+                        {currentPicks.length > 0 && (
+                          <span className="text-xs text-gray-500">
+                            Selected: <span className="font-semibold text-purple-700">{currentPicks.join(', ')}</span>
+                          </span>
+                        )}
                       </div>
                     )}
-                  </>
-                )}
-              </div>
-            )}
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+                      <span>{selectedCredits} of {er.creditsNeeded} credits selected</span>
+                      {isFulfilled && <span className="text-green-600 font-medium">Requirement met</span>}
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          isFulfilled ? 'bg-green-500' : 'bg-purple-500'
+                        }`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Course Grid */}
+              {activeTab && (
+                <div className="p-5">
+                  {loadingElectives[activeTab] ? (
+                    <div className="flex items-center gap-3 py-10 justify-center text-gray-500">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Loading elective options...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-400 mb-4">
+                        Available courses with met prerequisites are shown first.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {(electiveCourseDetails[activeTab] || []).map((elective) => {
+                          const currentPicks = selectedElectives[activeTab] || [];
+                          const isCurrentlySelected = currentPicks.includes(elective.code);
+                          const isAvailable = elective.hasSections && elective.prereqsMet;
+                          const isSwapping = swappingElective === elective.code;
+                          
+                          return (
+                            <button
+                              key={elective.code}
+                              onClick={() => isAvailable && handleElectiveToggle(activeTab, elective.code, elective.credits)}
+                              disabled={!isAvailable || isSwapping}
+                              className={`text-left p-3.5 rounded-lg border-2 transition-all ${
+                                isCurrentlySelected
+                                  ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200 shadow-sm'
+                                  : isAvailable
+                                  ? 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 hover:shadow-sm cursor-pointer'
+                                  : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className={`text-sm font-semibold truncate ${
+                                    isCurrentlySelected ? 'text-purple-700' : 'text-gray-900'
+                                  }`}>
+                                    {elective.code}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                                    {elective.name}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    {elective.credits} cr
+                                  </p>
+                                </div>
+                                {isCurrentlySelected && (
+                                  <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
+                                {isSwapping && (
+                                  <Loader2 className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5 animate-spin" />
+                                )}
+                              </div>
+                              
+                              {!isAvailable && (
+                                <div className="mt-2 flex items-center gap-1.5">
+                                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                  <span className="text-xs text-amber-600">
+                                    {!elective.hasSections ? 'No sections' : 'Prerequisites not met'}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {isAvailable && !isCurrentlySelected && elective.prerequisites.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                  <span className="text-xs text-gray-400">
+                                    Prereqs: {elective.prerequisites.join(', ')}
+                                  </span>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      {(electiveCourseDetails[activeTab] || []).length === 0 && !loadingElectives[activeTab] && (
+                        <div className="py-10 text-center text-gray-500">
+                          <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                          <p className="text-sm">No elective options found for this category.</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

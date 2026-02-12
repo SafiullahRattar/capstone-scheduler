@@ -50,7 +50,7 @@ interface AppState {
   electiveRequirements: ElectiveRequirement[];
   studentInfo?: StudentInfo;
   generatedSchedules: GeneratedSchedule[];
-  selectedElectives: Record<string, string>; // category -> selected course code
+  selectedElectives: Record<string, string[]>; // category -> selected course codes
 }
 
 const STORAGE_KEY = 'scheduler-state';
@@ -126,7 +126,7 @@ export default function App() {
   const [electiveRequirements, setElectiveRequirements] = useState<ElectiveRequirement[]>(savedState?.electiveRequirements || []);
   const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>(savedState?.studentInfo);
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(savedState?.generatedSchedules || []);
-  const [selectedElectives, setSelectedElectives] = useState<Record<string, string>>(savedState?.selectedElectives || {});
+  const [selectedElectives, setSelectedElectives] = useState<Record<string, string[]>>(savedState?.selectedElectives || {});
 
   // Navigate to a page and update URL
   const navigateTo = useCallback((page: AppPage, replace = false) => {
@@ -242,7 +242,8 @@ export default function App() {
     try {
       // Resolve elective tokens to actual course codes
       const resolvedCourses: string[] = [];
-      const newSelectedElectives: Record<string, string> = { ...selectedElectives };
+      // Start fresh: only categories in this selection will be populated
+      const newSelectedElectives: Record<string, string[]> = {};
 
       for (const code of courses) {
         if (code.startsWith('ELECTIVE:')) {
@@ -250,41 +251,49 @@ export default function App() {
           const requirement = electiveRequirements.find(er => er.category === category);
           
           if (requirement) {
-            // If we already have a selected elective for this category, use it
-            if (newSelectedElectives[category]) {
-              resolvedCourses.push(newSelectedElectives[category]);
+            // If we already have selected electives for this category from a prior run, reuse them
+            const existingPicks = selectedElectives[category];
+            if (existingPicks && existingPicks.length > 0) {
+              resolvedCourses.push(...existingPicks);
+              newSelectedElectives[category] = existingPicks;
               continue;
             }
 
-            // Otherwise, pick the first course option that has sections and met prereqs
-            let picked: string | null = null;
+            // Pick courses until credit requirement is filled
+            const creditsNeeded = requirement.creditsNeeded;
+            let creditsFilled = 0;
+            const pickedCourses: string[] = [];
+
+            // First pass: courses with sections and met prereqs
             for (const option of requirement.courseOptions) {
+              if (creditsFilled >= creditsNeeded) break;
               const courseInfo = await getCourseByCode(option);
               if (courseInfo && courseInfo.hasSections) {
-                // Simple prereq check: all prereqs must be in completedCourses
                 const prereqsMet = courseInfo.prerequisites.length === 0 ||
                   courseInfo.prerequisites.every(p => completedCourses.includes(p));
                 if (prereqsMet) {
-                  picked = option;
-                  break;
+                  pickedCourses.push(option);
+                  creditsFilled += courseInfo.credits || 0.5;
                 }
               }
             }
 
-            // Fallback: pick first with sections even if prereqs not met
-            if (!picked) {
+            // Fallback pass: courses with sections even if prereqs not met
+            if (creditsFilled < creditsNeeded) {
               for (const option of requirement.courseOptions) {
+                if (creditsFilled >= creditsNeeded) break;
+                if (pickedCourses.includes(option)) continue;
                 const courseInfo = await getCourseByCode(option);
                 if (courseInfo && courseInfo.hasSections) {
-                  picked = option;
-                  break;
+                  pickedCourses.push(option);
+                  creditsFilled += courseInfo.credits || 0.5;
                 }
               }
             }
 
-            if (picked) {
-              resolvedCourses.push(picked);
-              newSelectedElectives[category] = picked;
+            if (pickedCourses.length > 0) {
+              resolvedCourses.push(...pickedCourses);
+              newSelectedElectives[category] = pickedCourses;
             }
           }
         } else {
@@ -383,9 +392,9 @@ export default function App() {
         onBack={handleBackToCourseSelection}
         electiveRequirements={electiveRequirements}
         selectedElectives={selectedElectives}
-        onElectiveChange={async (category: string, courseCode: string, allSelectedCourses: string[]) => {
-          setSelectedElectives(prev => ({ ...prev, [category]: courseCode }));
-          // Re-generate schedules with the new elective swapped in
+        onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
+          setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
+          // Re-generate schedules with the new electives swapped in
           try {
             const schedules = await generateSchedules(allSelectedCourses, completedCourses);
             if (schedules.length > 0) {

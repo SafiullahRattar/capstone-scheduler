@@ -112,7 +112,7 @@ router.get('/search', async (req: Request, res: Response) => {
       return {
         code: course.id,
         name: course.title || 'No title available',
-        credits: course.credits || 3,
+        credits: course.credits || 0.5,
         description: course.description || '',
         prerequisites,
         prerequisiteTree: course.prerequisiteNodes,
@@ -184,7 +184,7 @@ router.get('/:courseId', async (req: Request, res: Response) => {
     const transformedCourse = {
       code: course.id,
       name: course.title || 'No title available',
-      credits: course.credits || 3,
+      credits: course.credits || 0.5,
       description: course.description || '',
       prerequisites,
       prerequisiteTree: course.prerequisiteNodes,
@@ -334,7 +334,7 @@ router.post('/recommend-next', async (req: Request, res: Response) => {
         return {
           code: course.id,
           name: course.title || 'No title available',
-          credits: course.credits || 3,
+          credits: course.credits || 0.5,
           description: course.description || '',
           prerequisites,
           sectionCount: course._count.sections,
