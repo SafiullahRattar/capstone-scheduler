@@ -30,8 +30,9 @@ export interface StudentAuditData {
 
 /**
  * Calculate which courses the student still needs to take
- * Returns courses from unfulfilled requirements that haven't been completed or enrolled in
- * Expands elective categories into actual course lists
+ * Returns only core (non-elective) courses from unfulfilled requirements.
+ * Elective categories are NOT expanded here — they are handled separately
+ * via getElectiveRequirements().
  */
 export function getRemainingCourses(auditData: StudentAuditData): string[] {
   const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
@@ -43,14 +44,13 @@ export function getRemainingCourses(auditData: StudentAuditData): string[] {
     const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
     
     if (creditsNeeded > 0) {
-      // Expand elective categories to actual course codes
-      const expandedOptions = expandElectiveCategories(req.courseOptions)
-      
-      // This requirement needs more courses
-      for (const course of expandedOptions) {
-        // Add course if it's not completed and not currently enrolled
-        if (!completedSet.has(course) && !currentSet.has(course)) {
-          remainingCourses.add(course)
+      for (const option of req.courseOptions) {
+        // Skip elective category tokens — those are handled by getElectiveRequirements()
+        if (ELECTIVE_CATEGORIES[option]) continue
+
+        // Add core course if it's not completed and not currently enrolled
+        if (!completedSet.has(option) && !currentSet.has(option)) {
+          remainingCourses.add(option)
         }
       }
     }
@@ -77,6 +77,54 @@ export function getUnfulfilledRequirements(auditData: StudentAuditData): Array<R
         .filter(c => !completedSet.has(c) && !currentSet.has(c))
       return { ...req, expandedOptions }
     })
+}
+
+export interface ElectiveRequirement {
+  category: string            // e.g. 'CS_ELECTIVE', 'SCIENCE_ELECTIVE'
+  label: string               // Human-readable label, e.g. 'Computer Science Elective'
+  creditsNeeded: number       // Credits still needed for this category
+  courseOptions: string[]     // Expanded list of courses that satisfy this requirement
+}
+
+const ELECTIVE_CATEGORY_LABELS: Record<string, string> = {
+  'CS_ELECTIVE': 'Computer Science Elective',
+  'SCIENCE_ELECTIVE': 'Basic Science Elective',
+  'COMPLEMENTARY_STUDIES': 'Complementary Studies',
+  'SYSC_ELEC_ELECTIVE': 'SYSC/ELEC Technical Elective',
+  'ELECTIVE': 'Elective',
+}
+
+/**
+ * Extract structured elective requirements from audit data.
+ * Returns only unfulfilled elective-category requirements with their available course options
+ * (excluding courses already completed or in progress).
+ */
+export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRequirement[] {
+  const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
+  const currentSet = new Set(auditData.currentCourses.map(c => c.courseId))
+  const results: ElectiveRequirement[] = []
+
+  for (const req of auditData.requirements) {
+    const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
+    if (creditsNeeded <= 0) continue
+
+    // Check if any of the courseOptions is an elective category token
+    for (const option of req.courseOptions) {
+      if (ELECTIVE_CATEGORIES[option]) {
+        const expanded = ELECTIVE_CATEGORIES[option]
+          .filter(c => !completedSet.has(c) && !currentSet.has(c))
+
+        results.push({
+          category: option,
+          label: ELECTIVE_CATEGORY_LABELS[option] || option,
+          creditsNeeded,
+          courseOptions: expanded,
+        })
+      }
+    }
+  }
+
+  return results
 }
 
 // Extract requirements from HTML audit

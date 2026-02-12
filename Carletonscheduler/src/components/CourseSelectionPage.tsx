@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, X, Check, AlertCircle, Plus, RotateCcw } from 'lucide-react';
+import { Search, X, Check, AlertCircle, Plus, RotateCcw, BookOpen } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
+import type { ElectiveRequirement } from '../App';
 
 const DEBOUNCE_MS = 300;
 
@@ -11,6 +12,7 @@ interface CourseSelectionPageProps {
   completedCourses: string[];
   currentCourses: Array<{ courseId: string; term: string }>;
   remainingCourses?: string[];
+  electiveRequirements?: ElectiveRequirement[];
   studentInfo?: {
     name: string;
     studentId: string;
@@ -26,6 +28,7 @@ export function CourseSelectionPage({
   completedCourses,
   currentCourses,
   remainingCourses = [],
+  electiveRequirements = [],
   studentInfo,
   onGenerateSchedules,
   onGenerateSmartSchedule,
@@ -102,9 +105,12 @@ export function CourseSelectionPage({
   const addCourse = async (courseCode: string) => {
     if (!selectedCourses.includes(courseCode)) {
       setSelectedCourses([...selectedCourses, courseCode]);
-      const course = await getCourseByCode(courseCode);
-      if (course) {
-        setCourseDetails(new Map(courseDetails.set(courseCode, course)));
+      // Don't fetch details for elective category tokens
+      if (!courseCode.startsWith('ELECTIVE:')) {
+        const course = await getCourseByCode(courseCode);
+        if (course) {
+          setCourseDetails(new Map(courseDetails.set(courseCode, course)));
+        }
       }
     }
     setSearchQuery('');
@@ -118,14 +124,16 @@ export function CourseSelectionPage({
     
     setSelectedCourses(prev => [...prev, ...toAdd]);
     
-    const coursePromises = toAdd.map(code => getCourseByCode(code));
+    // Only fetch details for non-elective-token courses
+    const realCourses = toAdd.filter(c => !c.startsWith('ELECTIVE:'));
+    const coursePromises = realCourses.map(code => getCourseByCode(code));
     const courses = await Promise.all(coursePromises);
     
     setCourseDetails(prev => {
       const newMap = new Map(prev);
       courses.forEach((course, index) => {
         if (course) {
-          newMap.set(toAdd[index], course);
+          newMap.set(realCourses[index], course);
         }
       });
       return newMap;
@@ -198,25 +206,31 @@ export function CourseSelectionPage({
   };
 
   const handleGenerateSchedules = () => {
-    const coursesWithSections = selectedCourses.filter(code => {
+    // Separate elective tokens from regular courses
+    const electiveTokens = selectedCourses.filter(code => code.startsWith('ELECTIVE:'));
+    const regularCourses = selectedCourses.filter(code => !code.startsWith('ELECTIVE:'));
+    
+    const coursesWithSections = regularCourses.filter(code => {
       const course = courseDetails.get(code);
       return course && course.hasSections !== false;
     });
     
-    if (coursesWithSections.length === 0) {
+    if (coursesWithSections.length === 0 && electiveTokens.length === 0) {
       alert('None of the selected courses have sections available in the database.\n\nPlease select different courses or check back later.');
       return;
     }
     
-    if (coursesWithSections.length < selectedCourses.length) {
-      const skipped = selectedCourses.filter(code => !coursesWithSections.includes(code));
-      alert(`The following courses will be skipped (no sections available):\n${skipped.join(', ')}\n\nGenerating schedule with ${coursesWithSections.length} courses.`);
+    const skippedRegular = regularCourses.filter(code => !coursesWithSections.includes(code));
+    if (skippedRegular.length > 0) {
+      alert(`The following courses will be skipped (no sections available):\n${skippedRegular.join(', ')}\n\nGenerating schedule with ${coursesWithSections.length} courses${electiveTokens.length > 0 ? ` + ${electiveTokens.length} elective category(s)` : ''}.`);
     }
     
-    onGenerateSchedules(coursesWithSections);
+    // Pass both regular courses and elective tokens to App.tsx
+    onGenerateSchedules([...coursesWithSections, ...electiveTokens]);
   };
 
   const coursesWithSectionsCount = selectedCourses.filter(code => {
+    if (code.startsWith('ELECTIVE:')) return true; // Elective tokens always count
     const course = courseDetails.get(code);
     return course && course.hasSections !== false;
   }).length;
@@ -328,36 +342,133 @@ export function CourseSelectionPage({
                     </span>
                     Remaining requirements
                   </summary>
-                  <div className="mt-3 pl-7">
-                    {remainingCourses.some(c => !selectedCourses.includes(c)) && (
-                      <button
-                        onClick={() => addAllCourses(remainingCourses)}
-                        className="mb-3 text-xs font-medium text-[#bf112b] hover:underline flex items-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" />
-                        Add all remaining courses
-                      </button>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {remainingCourses.map((code) => {
-                        const isSelected = selectedCourses.includes(code);
-                        return (
+                   <div className="mt-3 pl-7">
+                    {/* "Add all remaining" button — adds core courses + elective category tokens */}
+                    {(() => {
+                      const electiveCourseSet = new Set(
+                        electiveRequirements.flatMap(er => er.courseOptions)
+                      );
+                      const coreCourses = remainingCourses.filter(c => !electiveCourseSet.has(c));
+                      const electiveTokens = electiveRequirements.map(er => `ELECTIVE:${er.category}`);
+                      const allItems = [...coreCourses, ...electiveTokens];
+                      const hasUnselected = allItems.some(c => !selectedCourses.includes(c));
+                      
+                      return hasUnselected ? (
+                        <button
+                          onClick={() => addAllCourses(allItems)}
+                          className="mb-4 text-xs font-medium text-[#bf112b] hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add all remaining
+                        </button>
+                      ) : null;
+                    })()}
+
+                    {/* Core required courses (not part of elective categories) */}
+                    {(() => {
+                      const electiveCourseSet = new Set(
+                        electiveRequirements.flatMap(er => er.courseOptions)
+                      );
+                      const coreCourses = remainingCourses.filter(c => !electiveCourseSet.has(c));
+                      
+                      return coreCourses.length > 0 ? (
+                        <div className="mb-4">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Core Courses</p>
+                          <div className="flex flex-wrap gap-2">
+                            {coreCourses.map((code) => {
+                              const isSelected = selectedCourses.includes(code);
+                              return (
+                                <button
+                                  key={code}
+                                  onClick={() => !isSelected && addCourse(code)}
+                                  disabled={isSelected}
+                                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                                    isSelected
+                                      ? 'bg-green-50 text-green-700 border border-green-200'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 inline mr-1" />}
+                                  {code}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+
+                    {/* Elective Categories — shown as single category cards */}
+                    {electiveRequirements.map((elective) => {
+                      const token = `ELECTIVE:${elective.category}`;
+                      const isSelected = selectedCourses.includes(token);
+                      return (
+                        <div key={elective.category} className="mb-3">
                           <button
-                            key={code}
-                            onClick={() => !isSelected && addCourse(code)}
+                            onClick={() => !isSelected && addCourse(token)}
                             disabled={isSelected}
-                            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                            className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
                               isSelected
-                                ? 'bg-green-50 text-green-700 border border-green-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
+                                ? 'bg-green-50 border-green-300 text-green-800'
+                                : 'bg-purple-50 border-purple-200 text-purple-800 hover:bg-purple-100 hover:border-purple-400 cursor-pointer'
                             }`}
                           >
-                            {isSelected && <Check className="w-3 h-3 inline mr-1" />}
-                            {code}
+                            <BookOpen className={`w-5 h-5 flex-shrink-0 ${isSelected ? 'text-green-600' : 'text-purple-600'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold">{elective.label}</p>
+                              <p className="text-xs opacity-70 mt-0.5">
+                                {elective.creditsNeeded} cr. needed &middot; {elective.courseOptions.length} options available
+                              </p>
+                            </div>
+                            {isSelected ? (
+                              <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <Plus className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                            )}
                           </button>
-                        );
-                      })}
-                    </div>
+                          {!isSelected && (
+                            <p className="text-xs text-gray-400 mt-1 ml-1">
+                              A course will be auto-picked when you generate. Swap on the schedule page.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Fallback: if no elective categories detected, show flat list */}
+                    {electiveRequirements.length === 0 && (
+                      <>
+                        {remainingCourses.some(c => !selectedCourses.includes(c)) && (
+                          <button
+                            onClick={() => addAllCourses(remainingCourses)}
+                            className="mb-3 text-xs font-medium text-[#bf112b] hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add all remaining courses
+                          </button>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {remainingCourses.map((code) => {
+                            const isSelected = selectedCourses.includes(code);
+                            return (
+                              <button
+                                key={code}
+                                onClick={() => !isSelected && addCourse(code)}
+                                disabled={isSelected}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                                  isSelected
+                                    ? 'bg-green-50 text-green-700 border border-green-200'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 inline mr-1" />}
+                                {code}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </details>
               )}
@@ -469,6 +580,43 @@ export function CourseSelectionPage({
               ) : (
                 <div className="space-y-3">
                   {selectedCourses.map((courseCode) => {
+                    // Handle elective category tokens
+                    if (courseCode.startsWith('ELECTIVE:')) {
+                      const category = courseCode.replace('ELECTIVE:', '');
+                      const requirement = electiveRequirements.find(er => er.category === category);
+                      const label = requirement?.label || category;
+                      const creditInfo = requirement ? `${requirement.creditsNeeded} cr.` : '';
+                      
+                      return (
+                        <div
+                          key={courseCode}
+                          className="border-2 border-purple-200 bg-purple-50 rounded-lg p-4 transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 flex items-center gap-2">
+                              <BookOpen className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                              <div>
+                                <span className="font-semibold text-purple-800">{label}</span>
+                                {creditInfo && (
+                                  <span className="text-xs text-purple-500 ml-2">({creditInfo})</span>
+                                )}
+                                <p className="text-xs text-purple-500 mt-0.5">
+                                  A course will be auto-selected when you generate the schedule
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removeCourse(courseCode)}
+                              className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500 transition-all"
+                              aria-label="Remove elective category"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     const course = courseDetails.get(courseCode);
                     if (!course) return null;
 

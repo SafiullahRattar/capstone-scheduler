@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { prisma } from '../index'
-import { parseAuditHTML, parseAuditPDF, saveStudentAuditData, getUnfulfilledRequirements, getRemainingCourses } from '../../cli/audit-parser'
+import { parseAuditHTML, parseAuditPDF, saveStudentAuditData, getUnfulfilledRequirements, getRemainingCourses, getElectiveRequirements } from '../../cli/audit-parser'
 import { expandElectiveCategories, ELECTIVE_CATEGORIES } from '../../cli/elective-mappings'
 import { exec } from 'child_process'
 import { promisify } from 'util'
@@ -172,8 +172,10 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
     }
 
     // Figure out which required courses the student still needs
-    const { getRemainingCourses } = require('../../cli/audit-parser')
     const remainingCourses = getRemainingCourses(auditData)
+    
+    // Extract structured elective requirements (categories with available options)
+    const electiveRequirements = getElectiveRequirements(auditData)
     
     res.json({
       studentId: auditData.studentId,
@@ -182,6 +184,7 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
       completedCourses: auditData.completedCourses,
       currentCourses: auditData.currentCourses,
       remainingCourses: remainingCourses,
+      electiveRequirements: electiveRequirements,
       requirements: auditData.requirements,
       completedCount: auditData.completedCourses.length,
       currentCount: auditData.currentCourses.length,

@@ -3,6 +3,7 @@ import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
+import { getCourseByCode } from './utils/courseData';
 import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
 
 type AppPage = 'import' | 'course-selection' | 'schedule-review';
@@ -18,10 +19,18 @@ interface CurrentCourse {
   term: string;
 }
 
+export interface ElectiveRequirement {
+  category: string;
+  label: string;
+  creditsNeeded: number;
+  courseOptions: string[];
+}
+
 interface ParsedAuditData {
   completedCourses: Array<{ courseId: string; grade?: string }>;
   currentCourses: CurrentCourse[];
   remainingCourses: string[];
+  electiveRequirements?: ElectiveRequirement[];
   studentName?: string;
   studentId?: string;
   program?: string;
@@ -38,8 +47,10 @@ interface AppState {
   completedCourses: string[];
   currentCourses: CurrentCourse[];
   remainingCourses: string[];
+  electiveRequirements: ElectiveRequirement[];
   studentInfo?: StudentInfo;
   generatedSchedules: GeneratedSchedule[];
+  selectedElectives: Record<string, string>; // category -> selected course code
 }
 
 const STORAGE_KEY = 'scheduler-state';
@@ -112,8 +123,10 @@ export default function App() {
   const [completedCourses, setCompletedCourses] = useState<string[]>(savedState?.completedCourses || []);
   const [currentCourses, setCurrentCourses] = useState<CurrentCourse[]>(savedState?.currentCourses || []);
   const [remainingCourses, setRemainingCourses] = useState<string[]>(savedState?.remainingCourses || []);
+  const [electiveRequirements, setElectiveRequirements] = useState<ElectiveRequirement[]>(savedState?.electiveRequirements || []);
   const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>(savedState?.studentInfo);
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(savedState?.generatedSchedules || []);
+  const [selectedElectives, setSelectedElectives] = useState<Record<string, string>>(savedState?.selectedElectives || {});
 
   // Navigate to a page and update URL
   const navigateTo = useCallback((page: AppPage, replace = false) => {
@@ -134,11 +147,13 @@ export default function App() {
       completedCourses,
       currentCourses,
       remainingCourses,
+      electiveRequirements,
       studentInfo,
-      generatedSchedules
+      generatedSchedules,
+      selectedElectives,
     };
     saveState(state);
-  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, studentInfo, generatedSchedules]);
+  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives]);
 
   // Sync URL with current page on mount
   useEffect(() => {
@@ -170,8 +185,10 @@ export default function App() {
     setCompletedCourses([]);
     setCurrentCourses([]);
     setRemainingCourses([]);
+    setElectiveRequirements([]);
     setStudentInfo(undefined);
     setGeneratedSchedules([]);
+    setSelectedElectives({});
     clearState();
     navigateTo('import');
   };
@@ -213,6 +230,7 @@ export default function App() {
       setCompletedCourses(completedCourseIds);
       setCurrentCourses(data.currentCourses || []);
       setRemainingCourses(data.remainingCourses || []);
+      setElectiveRequirements(data.electiveRequirements || []);
       navigateTo('course-selection');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -222,7 +240,66 @@ export default function App() {
 
   const handleGenerateSchedules = async (courses: string[]) => {
     try {
-      const schedules = await generateSchedules(courses, completedCourses);
+      // Resolve elective tokens to actual course codes
+      const resolvedCourses: string[] = [];
+      const newSelectedElectives: Record<string, string> = { ...selectedElectives };
+
+      for (const code of courses) {
+        if (code.startsWith('ELECTIVE:')) {
+          const category = code.replace('ELECTIVE:', '');
+          const requirement = electiveRequirements.find(er => er.category === category);
+          
+          if (requirement) {
+            // If we already have a selected elective for this category, use it
+            if (newSelectedElectives[category]) {
+              resolvedCourses.push(newSelectedElectives[category]);
+              continue;
+            }
+
+            // Otherwise, pick the first course option that has sections and met prereqs
+            let picked: string | null = null;
+            for (const option of requirement.courseOptions) {
+              const courseInfo = await getCourseByCode(option);
+              if (courseInfo && courseInfo.hasSections) {
+                // Simple prereq check: all prereqs must be in completedCourses
+                const prereqsMet = courseInfo.prerequisites.length === 0 ||
+                  courseInfo.prerequisites.every(p => completedCourses.includes(p));
+                if (prereqsMet) {
+                  picked = option;
+                  break;
+                }
+              }
+            }
+
+            // Fallback: pick first with sections even if prereqs not met
+            if (!picked) {
+              for (const option of requirement.courseOptions) {
+                const courseInfo = await getCourseByCode(option);
+                if (courseInfo && courseInfo.hasSections) {
+                  picked = option;
+                  break;
+                }
+              }
+            }
+
+            if (picked) {
+              resolvedCourses.push(picked);
+              newSelectedElectives[category] = picked;
+            }
+          }
+        } else {
+          resolvedCourses.push(code);
+        }
+      }
+
+      setSelectedElectives(newSelectedElectives);
+
+      if (resolvedCourses.length === 0) {
+        alert('No courses could be resolved for scheduling. Please try different selections.');
+        return;
+      }
+
+      const schedules = await generateSchedules(resolvedCourses, completedCourses);
 
       if (schedules.length === 0) {
         alert('No schedules could be generated. The selected courses may have time conflicts or no available sections.');
@@ -304,6 +381,21 @@ export default function App() {
       <ScheduleReviewPage
         schedules={generatedSchedules}
         onBack={handleBackToCourseSelection}
+        electiveRequirements={electiveRequirements}
+        selectedElectives={selectedElectives}
+        onElectiveChange={async (category: string, courseCode: string, allSelectedCourses: string[]) => {
+          setSelectedElectives(prev => ({ ...prev, [category]: courseCode }));
+          // Re-generate schedules with the new elective swapped in
+          try {
+            const schedules = await generateSchedules(allSelectedCourses, completedCourses);
+            if (schedules.length > 0) {
+              setGeneratedSchedules(schedules);
+            }
+          } catch {
+            // Keep existing schedules if regeneration fails
+          }
+        }}
+        completedCourses={completedCourses}
       />
     );
   }
@@ -315,6 +407,7 @@ export default function App() {
         completedCourses={completedCourses}
         currentCourses={currentCourses}
         remainingCourses={remainingCourses}
+        electiveRequirements={electiveRequirements}
         studentInfo={studentInfo}
         onGenerateSchedules={handleGenerateSchedules}
         onGenerateSmartSchedule={handleGenerateSmartSchedule}
