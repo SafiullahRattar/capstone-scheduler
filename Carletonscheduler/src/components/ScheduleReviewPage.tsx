@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight, Download, Info, Copy, Check, BookOpen, AlertTriangle, Loader2 } from 'lucide-react';
-import { type GeneratedSchedule, type PrerequisiteInfo } from '../utils/scheduleGenerator';
+import { ChevronLeft, ChevronRight, Copy, Check, Loader2, Search, ChevronDown } from 'lucide-react';
+import { type GeneratedSchedule } from '../utils/scheduleGenerator';
 import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
-import { getCourseByCode, type Course } from '../utils/courseData';
+import { getCourseByCode } from '../utils/courseData';
 import type { ElectiveRequirement } from '../App';
 
 interface ScheduleReviewPageProps {
@@ -24,6 +23,76 @@ interface ElectiveCourseInfo {
   prerequisites: string[];
 }
 
+function ElectiveCourseCard({
+  elective,
+  category,
+  isSelected,
+  isSwapping,
+  onToggle,
+}: {
+  elective: ElectiveCourseInfo;
+  category: string;
+  isSelected: boolean;
+  isSwapping: boolean;
+  onToggle: (category: string, code: string, credits: number) => void;
+}) {
+  const isAvailable = elective.hasSections && elective.prereqsMet;
+
+  return (
+    <button
+      onClick={() => isAvailable && onToggle(category, elective.code, elective.credits)}
+      disabled={!isAvailable || isSwapping}
+      style={{
+        textAlign: 'left',
+        padding: '10px 12px',
+        borderRadius: '8px',
+        border: isSelected ? '2px solid #374151' : isAvailable ? '1px solid #e5e7eb' : '1px solid #f3f4f6',
+        background: isSelected ? '#f3f4f6' : isAvailable ? '#fff' : '#f9fafb',
+        opacity: isAvailable ? 1 : 0.5,
+        cursor: isAvailable ? 'pointer' : 'not-allowed',
+        width: '100%',
+        transition: 'all 0.15s',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '6px' }}>
+        <div style={{ minWidth: 0 }}>
+          <p style={{
+            fontSize: '13px',
+            fontWeight: 700,
+            color: '#111827',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.3,
+            margin: 0,
+          }}>
+            {elective.code}
+          </p>
+          <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {elective.name}
+          </p>
+          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+            {elective.credits} cr
+          </p>
+        </div>
+        {isSelected && (
+          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Check style={{ width: '12px', height: '12px', color: '#fff' }} />
+          </div>
+        )}
+        {isSwapping && (
+          <Loader2 style={{ width: '16px', height: '16px', color: '#6b7280', flexShrink: 0 }} className="animate-spin" />
+        )}
+      </div>
+      {!isAvailable && (
+        <p style={{ marginTop: '4px', fontSize: '11px', color: '#9ca3af', margin: '4px 0 0 0' }}>
+          {!elective.hasSections ? 'No sections' : 'Prereqs not met'}
+        </p>
+      )}
+    </button>
+  );
+}
+
 export function ScheduleReviewPage({
   schedules,
   onBack,
@@ -34,90 +103,73 @@ export function ScheduleReviewPage({
 }: ScheduleReviewPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [electiveCourseDetails, setElectiveCourseDetails] = useState<Record<string, ElectiveCourseInfo[]>>({});
   const [loadingElectives, setLoadingElectives] = useState<Record<string, boolean>>({});
   const [swappingElective, setSwappingElective] = useState<string | null>(null);
+  const [electiveSearchTerms, setElectiveSearchTerms] = useState<Record<string, string>>({});
+  const [showUnavailable, setShowUnavailable] = useState<Record<string, boolean>>({});
   const currentSchedule = schedules[currentIndex];
 
-  // Set initial active tab (only from selected elective categories)
+  // Only show elective categories that the user selected on the previous page
+  const activeElectiveRequirements = electiveRequirements.filter(
+    er => er.category in selectedElectives && er.courseOptions && er.courseOptions.length > 0
+  );
+  const [activeElectiveCategory, setActiveElectiveCategory] = useState<string>(
+    activeElectiveRequirements.length > 0 ? activeElectiveRequirements[0].category : ''
+  );
+
   useEffect(() => {
-    const activeCategories = electiveRequirements.filter(er => 
-      selectedElectives[er.category] && selectedElectives[er.category].length > 0
-    );
-    if (activeCategories.length > 0 && !activeTab) {
-      setActiveTab(activeCategories[0].category);
-    }
-  }, [electiveRequirements, selectedElectives, activeTab]);
+    for (const er of activeElectiveRequirements) {
+      const category = er.category;
+      if (electiveCourseDetails[category]) continue;
+      if (loadingElectives[category]) continue;
 
-  // Load elective course details when a tab is activated
-  useEffect(() => {
-    if (!activeTab) return;
-    if (electiveCourseDetails[activeTab]) return; // Already loaded
+      const loadDetails = async () => {
+        setLoadingElectives(prev => ({ ...prev, [category]: true }));
+        const details: ElectiveCourseInfo[] = [];
+        const coursesToLoad = er.courseOptions.slice(0, 100);
 
-    const requirement = electiveRequirements.find(er => er.category === activeTab);
-    if (!requirement) return;
+        for (let batchStart = 0; batchStart < coursesToLoad.length; batchStart += 20) {
+          const batch = coursesToLoad.slice(batchStart, batchStart + 20);
+          const courses = await Promise.all(batch.map(code => getCourseByCode(code)));
 
-    const loadDetails = async () => {
-      setLoadingElectives(prev => ({ ...prev, [activeTab]: true }));
-      
-      const details: ElectiveCourseInfo[] = [];
-      // Load first 20 elective options to keep it manageable
-      const coursesToLoad = requirement.courseOptions.slice(0, 20);
-      
-      const coursePromises = coursesToLoad.map(code => getCourseByCode(code));
-      const courses = await Promise.all(coursePromises);
-      
-      for (let i = 0; i < coursesToLoad.length; i++) {
-        const course = courses[i];
-        const code = coursesToLoad[i];
-        
-        if (course) {
-          // Simple prerequisite check against completed courses
-          const prereqsMet = course.prerequisites.length === 0 || 
-            course.prerequisites.every(p => completedCourses.includes(p));
-          
-          details.push({
-            code,
-            name: course.name || code,
-            credits: course.credits || 0.5,
-            hasSections: course.hasSections !== false,
-            prereqsMet,
-            prerequisites: course.prerequisites,
-          });
-        } else {
-          details.push({
-            code,
-            name: code,
-            credits: 0.5,
-            hasSections: false,
-            prereqsMet: true,
-            prerequisites: [],
-          });
+          for (let i = 0; i < batch.length; i++) {
+            const course = courses[i];
+            const code = batch[i];
+            if (course) {
+              const prereqsMet = course.prerequisites.length === 0 ||
+                course.prerequisites.every(p => completedCourses.includes(p));
+              details.push({
+                code,
+                name: course.name || code,
+                credits: course.credits || 0.5,
+                hasSections: course.hasSections !== false,
+                prereqsMet,
+                prerequisites: course.prerequisites,
+              });
+            } else {
+              details.push({ code, name: code, credits: 0.5, hasSections: false, prereqsMet: true, prerequisites: [] });
+            }
+          }
         }
-      }
 
-      // Sort: available first, then by code
-      details.sort((a, b) => {
-        if (a.hasSections && a.prereqsMet && (!b.hasSections || !b.prereqsMet)) return -1;
-        if (b.hasSections && b.prereqsMet && (!a.hasSections || !a.prereqsMet)) return 1;
-        return a.code.localeCompare(b.code);
-      });
+        details.sort((a, b) => {
+          const aOk = a.hasSections && a.prereqsMet;
+          const bOk = b.hasSections && b.prereqsMet;
+          if (aOk && !bOk) return -1;
+          if (bOk && !aOk) return 1;
+          return a.code.localeCompare(b.code);
+        });
 
-      setElectiveCourseDetails(prev => ({ ...prev, [activeTab]: details }));
-      setLoadingElectives(prev => ({ ...prev, [activeTab]: false }));
-    };
+        setElectiveCourseDetails(prev => ({ ...prev, [category]: details }));
+        setLoadingElectives(prev => ({ ...prev, [category]: false }));
+      };
+      loadDetails();
+    }
+  }, [activeElectiveRequirements, completedCourses]);
 
-    loadDetails();
-  }, [activeTab, electiveRequirements, completedCourses, electiveCourseDetails]);
-
-  const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : schedules.length - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev < schedules.length - 1 ? prev + 1 : 0));
-  };
+  const handlePrevious = () => setCurrentIndex(prev => (prev > 0 ? prev - 1 : schedules.length - 1));
+  const handleNext = () => setCurrentIndex(prev => (prev < schedules.length - 1 ? prev + 1 : 0));
 
   const copyToClipboard = async (text: string, itemId: string) => {
     await navigator.clipboard.writeText(text);
@@ -125,16 +177,8 @@ export function ScheduleReviewPage({
     setTimeout(() => setCopiedItem(null), 2000);
   };
 
-  const copyAllCRNs = () => {
-    const crns = currentSchedule.selections
-      .map(s => s.section.crn)
-      .join(', ');
-    copyToClipboard(crns, 'all-crns');
-  };
-
   const handleElectiveToggle = async (category: string, courseCode: string, courseCredits: number) => {
     if (!onElectiveChange) return;
-
     const requirement = electiveRequirements.find(er => er.category === category);
     if (!requirement) return;
 
@@ -143,50 +187,68 @@ export function ScheduleReviewPage({
 
     let newPicks: string[];
     if (isSelected) {
-      // Deselect: remove this course
       newPicks = currentPicks.filter(c => c !== courseCode);
+    } else if (courseCredits >= requirement.creditsNeeded) {
+      newPicks = [courseCode];
     } else {
-      // Select: add this course
-      newPicks = [...currentPicks, courseCode];
+      const currentCredits = currentPicks.reduce((sum, code) => {
+        const info = (electiveCourseDetails[category] || []).find(e => e.code === code);
+        return sum + (info?.credits || 0.5);
+      }, 0);
+      if (currentCredits + courseCredits > requirement.creditsNeeded) {
+        newPicks = [...currentPicks.slice(0, -1), courseCode];
+      } else {
+        newPicks = [...currentPicks, courseCode];
+      }
     }
 
-    // If no courses selected, don't trigger regeneration
-    if (newPicks.length === 0) {
-      // Just update state locally — schedule stays as-is
-      return;
-    }
+    if (newPicks.length === 0) return;
 
     setSwappingElective(courseCode);
-
-    // Build the full course list for schedule generation:
-    // Take current non-elective courses + all elective picks across all categories
     const nonElectiveCourses = currentSchedule.selections
       .map(s => s.courseCode)
       .filter(c => {
-        // Keep courses that aren't part of ANY elective category's options
         for (const er of electiveRequirements) {
           if (selectedElectives[er.category]?.includes(c)) return false;
         }
         return true;
       });
 
-    // Collect all elective picks (using newPicks for the current category)
     const allElectivePicks: string[] = [];
     for (const er of electiveRequirements) {
-      if (er.category === category) {
-        allElectivePicks.push(...newPicks);
-      } else {
-        allElectivePicks.push(...(selectedElectives[er.category] || []));
-      }
+      if (er.category === category) allElectivePicks.push(...newPicks);
+      else allElectivePicks.push(...(selectedElectives[er.category] || []));
+    }
+
+    onElectiveChange(category, newPicks, [...new Set([...nonElectiveCourses, ...allElectivePicks])]);
+    setCurrentIndex(0);
+    setTimeout(() => setSwappingElective(null), 500);
+  };
+
+  const handleElectiveRemove = (category: string, courseCode: string) => {
+    if (!onElectiveChange) return;
+    const currentPicks = selectedElectives[category] || [];
+    const newPicks = currentPicks.filter(c => c !== courseCode);
+
+    // Build the updated course list
+    const nonElectiveCourses = currentSchedule.selections
+      .map(s => s.courseCode)
+      .filter(c => {
+        for (const er of electiveRequirements) {
+          if (selectedElectives[er.category]?.includes(c)) return false;
+        }
+        return true;
+      });
+
+    const allElectivePicks: string[] = [];
+    for (const er of electiveRequirements) {
+      if (er.category === category) allElectivePicks.push(...newPicks);
+      else allElectivePicks.push(...(selectedElectives[er.category] || []));
     }
 
     const allCourses = [...new Set([...nonElectiveCourses, ...allElectivePicks])];
-
     onElectiveChange(category, newPicks, allCourses);
     setCurrentIndex(0);
-
-    // Brief delay before clearing loading state
-    setTimeout(() => setSwappingElective(null), 500);
   };
 
   const parseTime = (time: string): number => {
@@ -194,23 +256,10 @@ export function ScheduleReviewPage({
     return hours * 60 + minutes;
   };
 
-  const getTimeSlotPosition = (startTime: string, endTime: string) => {
-    const start = parseTime(startTime);
-    const end = parseTime(endTime);
-    const dayStart = parseTime(TIMETABLE_CONFIG.TIME_SLOTS[0]);
-    
-    const top = ((start - dayStart) / 60) * TIMETABLE_CONFIG.HOUR_HEIGHT_PX;
-    const height = ((end - start) / 60) * TIMETABLE_CONFIG.HOUR_HEIGHT_PX;
-    
-    return { top, height };
-  };
-
   // Group selections by course code
   const groupedCourses = new Map<string, typeof currentSchedule.selections>();
   currentSchedule.selections.forEach(selection => {
-    if (!groupedCourses.has(selection.courseCode)) {
-      groupedCourses.set(selection.courseCode, []);
-    }
+    if (!groupedCourses.has(selection.courseCode)) groupedCourses.set(selection.courseCode, []);
     groupedCourses.get(selection.courseCode)!.push(selection);
   });
 
@@ -219,482 +268,376 @@ export function ScheduleReviewPage({
     courseColorMap.set(code, COURSE_COLORS[idx % COURSE_COLORS.length]);
   });
 
-  // Identify which courses in the current schedule are electives
-  const electiveCourseSet = new Set<string>();
-  for (const er of electiveRequirements) {
-    for (const code of er.courseOptions) {
-      electiveCourseSet.add(code);
-    }
+  // Compute visible time range
+  const allTimeSlots = currentSchedule.selections.flatMap(s => s.section.timeSlots);
+  const allStartMins = allTimeSlots.map(s => parseTime(s.startTime));
+  const allEndMins = allTimeSlots.map(s => parseTime(s.endTime));
+  const earliestHour = allStartMins.length > 0 ? Math.floor(Math.min(...allStartMins) / 60) : 8;
+  const latestHour = allEndMins.length > 0 ? Math.ceil(Math.max(...allEndMins) / 60) : 18;
+  const visibleStartHour = Math.max(TIMETABLE_CONFIG.START_HOUR, earliestHour - 1);
+  const visibleEndHour = Math.min(22, Math.max(TIMETABLE_CONFIG.END_HOUR, latestHour + 1));
+  const visibleTimeSlots: string[] = [];
+  for (let h = visibleStartHour; h < visibleEndHour; h++) {
+    visibleTimeSlots.push(`${h.toString().padStart(2, '0')}:00`);
   }
 
-  // Only show elective categories that the user actually selected
-  const activeElectiveRequirements = electiveRequirements.filter(
-    er => selectedElectives[er.category] && selectedElectives[er.category].length > 0
-  );
+  const HOUR_PX = 56;
+
+  const getPos = (startTime: string, endTime: string) => {
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
+    const dayStart = visibleStartHour * 60;
+    return {
+      top: ((start - dayStart) / 60) * HOUR_PX,
+      height: ((end - start) / 60) * HOUR_PX,
+    };
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Header Bar */}
-      <header className="bg-[#bf112b] shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-white text-lg font-semibold tracking-tight">Carleton Course Scheduler</h1>
-          <button
-            onClick={onBack}
-            className="text-white/80 hover:text-white text-sm flex items-center gap-1 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to selection
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
+      {/* Main content */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 400px' }}>
+
+        {/* LEFT: Calendar + nav */}
+        <div style={{ overflow: 'auto', padding: '20px' }}>
+          {/* Back link */}
+          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px', padding: 0 }}>
+            <ChevronLeft style={{ width: '16px', height: '16px' }} /> Back to selection
           </button>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 pb-32">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Schedule Options</h2>
-            <p className="text-gray-600">
-              {schedules.length} conflict-free schedule{schedules.length !== 1 ? 's' : ''} generated
-            </p>
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ minWidth: '480px' }}>
+              {/* Day headers */}
+              <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(5, 1fr)', gap: '2px', marginBottom: '2px' }}>
+                <div />
+                {TIMETABLE_CONFIG.DAYS.map(day => (
+                  <div key={day} style={{ fontSize: '13px', fontWeight: 600, color: '#374151', padding: '8px 0', textAlign: 'center', background: '#f9fafb', borderRadius: '4px' }}>
+                    {day.slice(0, 3)}
+                  </div>
+                ))}
+              </div>
+
+              {/* Time grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '50px repeat(5, 1fr)', gap: '2px' }}>
+                <div>
+                  {visibleTimeSlots.map(time => (
+                    <div key={time} style={{ height: `${HOUR_PX}px`, fontSize: '12px', color: '#9ca3af', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingTop: '2px', paddingRight: '8px' }}>
+                      {time}
+                    </div>
+                  ))}
+                </div>
+
+                {TIMETABLE_CONFIG.DAYS.map(day => (
+                  <div key={day} style={{ position: 'relative', background: '#fafafa', borderRadius: '4px', height: `${visibleTimeSlots.length * HOUR_PX}px` }}>
+                    {visibleTimeSlots.map((_, idx) => (
+                      <div key={idx} style={{ position: 'absolute', left: 0, right: 0, top: `${idx * HOUR_PX}px`, borderTop: '1px solid #f3f4f6' }} />
+                    ))}
+
+                    {currentSchedule.selections.map(selection => {
+                      const colors = courseColorMap.get(selection.courseCode) || COURSE_COLORS[0];
+                      return selection.section.timeSlots
+                        .filter(slot => slot.day === day)
+                        .map((slot, slotIdx) => {
+                          const { top, height } = getPos(slot.startTime, slot.endTime);
+                          return (
+                            <div
+                              key={`${selection.courseCode}-${selection.section.sectionCode}-${slotIdx}`}
+                              style={{
+                                position: 'absolute',
+                                left: '2px',
+                                right: '2px',
+                                top: `${top}px`,
+                                height: `${height}px`,
+                                background: colors.bg,
+                                border: `1px solid ${colors.border}`,
+                                color: colors.text,
+                                borderRadius: '4px',
+                                padding: '3px 6px',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                                {selection.courseCode}
+                              </p>
+                              <p style={{ fontSize: '11px', opacity: 0.7, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                                {selection.section.sectionCode} · {slot.startTime}-{slot.endTime}
+                              </p>
+                            </div>
+                          );
+                        });
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
-            <Button variant="ghost" size="sm" onClick={handlePrevious} className="rounded-lg">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium text-gray-700 min-w-[80px] text-center">
-              {currentIndex + 1} of {schedules.length}
+
+          {/* Schedule navigation — under the calendar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
+            <button onClick={handlePrevious} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center' }}>
+              <ChevronLeft style={{ width: '18px', height: '18px', color: '#374151' }} />
+            </button>
+            <span style={{ fontSize: '15px', fontWeight: 500, color: '#374151', minWidth: '120px', textAlign: 'center' }}>
+              Schedule {currentIndex + 1} of {schedules.length}
             </span>
-            <Button variant="ghost" size="sm" onClick={handleNext} className="rounded-lg">
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            <button onClick={handleNext} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center' }}>
+              <ChevronRight style={{ width: '18px', height: '18px', color: '#374151' }} />
+            </button>
           </div>
         </div>
 
-        {/* Prerequisites Notice */}
-        {currentSchedule.prerequisiteInfo && 
-         Object.values(currentSchedule.prerequisiteInfo).some((info: PrerequisiteInfo) => 
-           info.expressionEvaluated && info.expressionEvaluated !== 'None'
-         ) && (
-          <div className="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl text-sm">
-            <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <span className="text-amber-800">
-              Some courses have prerequisites. Verify you meet requirements before registering.
-            </span>
-          </div>
-        )}
+        {/* RIGHT: Sidebar */}
+        <div style={{ borderLeft: '1px solid #e5e7eb', background: '#fff', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Course List */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Courses
-                <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">
-                  {groupedCourses.size}
-                </span>
-              </h3>
-              <div className="space-y-3">
-                {Array.from(groupedCourses.entries()).map(([courseCode, sections]) => {
-                  const prereqInfo = currentSchedule.prerequisiteInfo?.[courseCode];
-                  const colors = courseColorMap.get(courseCode) || COURSE_COLORS[0];
-                  const isElective = electiveCourseSet.has(courseCode);
-                  const electiveCategory = isElective 
-                    ? activeElectiveRequirements.find(er => er.courseOptions.includes(courseCode))
-                    : null;
-                  
+          {/* Course list with CRNs */}
+          <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ marginBottom: '12px' }}>
+              <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                Courses ({groupedCourses.size})
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {Array.from(groupedCourses.entries()).map(([courseCode, sections]) => {
+                const colors = courseColorMap.get(courseCode) || COURSE_COLORS[0];
+
+                return sections.map((selection) => {
+                  const itemId = `${courseCode}-${selection.section.sectionCode}`;
+                  const days = selection.section.timeSlots
+                    .map(s => s.day.slice(0, 3))
+                    .filter((v, i, a) => a.indexOf(v) === i)
+                    .join(', ');
+                  const times = selection.section.timeSlots.length > 0
+                    ? `${selection.section.timeSlots[0].startTime}-${selection.section.timeSlots[0].endTime}`
+                    : 'TBA';
+
                   return (
-                    <div
-                      key={courseCode}
-                      className="p-3 rounded-lg border-l-4"
-                      style={{ backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-semibold">{courseCode}</p>
-                        {isElective && (
-                          <BookOpen className="w-3.5 h-3.5 opacity-60" />
-                        )}
+                    <div key={itemId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '6px', cursor: 'default' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: colors.border, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{courseCode}</span>
+                          <span style={{ fontSize: '11px', color: '#9ca3af' }}>{selection.section.type}</span>
+                        </div>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', margin: 0 }}>{days} {times}</p>
                       </div>
-                      {electiveCategory && (
-                        <p className="text-xs mt-0.5 opacity-60 italic">{electiveCategory.label}</p>
-                      )}
-                      {sections.map((selection, idx) => (
-                        <p key={idx} className="text-xs mt-1 opacity-70">
-                          {selection.section.type} - {selection.section.sectionCode}
-                        </p>
-                      ))}
-                      {prereqInfo?.expressionEvaluated && prereqInfo.expressionEvaluated !== 'None' && (
-                        <p className="text-xs mt-2 pt-2 border-t border-current/10 opacity-70">
-                          Prereq: {prereqInfo.expressionEvaluated}
-                        </p>
-                      )}
+                      <button
+                        onClick={() => copyToClipboard(selection.section.crn, `crn-${itemId}`)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          fontSize: '12px', fontFamily: 'monospace', color: '#6b7280',
+                          background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >
+                        {copiedItem === `crn-${itemId}` ? (
+                          <Check style={{ width: '12px', height: '12px', color: '#16a34a' }} />
+                        ) : (
+                          <Copy style={{ width: '10px', height: '10px', opacity: 0.4 }} />
+                        )}
+                        <span>{selection.section.crn}</span>
+                      </button>
                     </div>
                   );
-                })}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-              <Button variant="outline" className="w-full h-10">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
+                });
+              })}
             </div>
           </div>
 
-          {/* Timetable */}
-          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-            <div className="overflow-x-auto">
-              <div style={{ minWidth: '600px' }}>
-                {/* Header Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(5, 1fr)', gap: '4px', marginBottom: '4px' }}>
-                  <div></div>
-                  {TIMETABLE_CONFIG.DAYS.map(day => (
-                    <div key={day} className="text-sm font-semibold text-gray-900 p-2 text-center bg-gray-50 rounded">
-                      {day.slice(0, 3)}
-                    </div>
-                  ))}
+          {/* Elective options */}
+          {activeElectiveRequirements.length > 0 && (() => {
+            const activeEr = activeElectiveRequirements.find(er => er.category === activeElectiveCategory) || activeElectiveRequirements[0];
+            const category = activeEr.category;
+            const currentPicks = selectedElectives[category] || [];
+            const allDetails = electiveCourseDetails[category] || [];
+            const isLoading = loadingElectives[category];
+            const searchTerm = electiveSearchTerms[category] || '';
+
+            const available = allDetails.filter(e => e.hasSections && e.prereqsMet);
+            const unavailable = allDetails.filter(e => !e.hasSections || !e.prereqsMet);
+
+            const filterFn = (e: ElectiveCourseInfo) => {
+              if (!searchTerm) return true;
+              const t = searchTerm.toLowerCase();
+              return e.code.toLowerCase().includes(t) || e.name.toLowerCase().includes(t);
+            };
+            const filteredAvail = available.filter(filterFn);
+            const filteredUnavail = unavailable.filter(filterFn);
+
+            const selectedCredits = allDetails.filter(e => currentPicks.includes(e.code)).reduce((s, e) => s + e.credits, 0);
+            const progress = Math.min((selectedCredits / activeEr.creditsNeeded) * 100, 100);
+            const isFulfilled = selectedCredits >= activeEr.creditsNeeded;
+
+            return (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* Header */}
+                <div style={{ padding: '16px 16px 0 16px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>Electives</span>
                 </div>
 
-                {/* Time Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(5, 1fr)', gap: '4px' }}>
-                  {/* Time labels */}
-                  <div>
-                    {TIMETABLE_CONFIG.TIME_SLOTS.map(time => (
-                      <div key={time} style={{ height: `${TIMETABLE_CONFIG.HOUR_HEIGHT_PX}px` }} className="text-xs text-gray-500 flex items-start pt-1 pr-2 justify-end">
-                        {time}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Day columns */}
-                  {TIMETABLE_CONFIG.DAYS.map(day => (
-                    <div key={day} className="relative bg-gray-50 rounded" style={{ height: `${TIMETABLE_CONFIG.TIME_SLOTS.length * TIMETABLE_CONFIG.HOUR_HEIGHT_PX}px` }}>
-                      {/* Hour grid lines */}
-                      {TIMETABLE_CONFIG.TIME_SLOTS.map((_, idx) => (
-                        <div
-                          key={idx}
-                          className="absolute left-0 right-0 border-t border-gray-200"
-                          style={{ top: `${idx * TIMETABLE_CONFIG.HOUR_HEIGHT_PX}px` }}
-                        />
-                      ))}
-
-                      {/* Course blocks */}
-                      {currentSchedule.selections.map((selection) => {
-                        const colors = courseColorMap.get(selection.courseCode) || COURSE_COLORS[0];
-                        return selection.section.timeSlots
-                          .filter(slot => slot.day === day)
-                          .map((slot, slotIdx) => {
-                            const { top, height } = getTimeSlotPosition(slot.startTime, slot.endTime);
-                            return (
-                              <div
-                                key={`${selection.courseCode}-${selection.section.sectionCode}-${slotIdx}`}
-                                className="absolute left-1 right-1 rounded border p-1.5 overflow-hidden"
-                                style={{ 
-                                  top: `${top}px`, 
-                                  height: `${height}px`,
-                                  backgroundColor: colors.bg,
-                                  borderColor: colors.border,
-                                  color: colors.text
-                                }}
-                              >
-                                <p className="text-xs font-semibold leading-tight truncate">
-                                  {selection.courseCode}
-                                </p>
-                                <p className="text-xs opacity-70 truncate">
-                                  {selection.section.sectionCode}
-                                </p>
-                                {height > 50 && (
-                                  <p className="text-xs opacity-60 mt-0.5">
-                                    {slot.startTime}-{slot.endTime}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          });
+                {/* Category selector — dropdown for full names */}
+                {activeElectiveRequirements.length > 1 ? (
+                  <div style={{ padding: '10px 16px 0 16px' }}>
+                    <select
+                      value={activeElectiveCategory || activeElectiveRequirements[0].category}
+                      onChange={e => setActiveElectiveCategory(e.target.value)}
+                      style={{
+                        width: '100%', padding: '8px 10px', fontSize: '13px',
+                        border: '1px solid #e5e7eb', borderRadius: '6px', outline: 'none',
+                        background: '#f9fafb', color: '#111827', cursor: 'pointer',
+                      }}
+                    >
+                      {activeElectiveRequirements.map(er => {
+                        const picks = selectedElectives[er.category] || [];
+                        const catDetails = electiveCourseDetails[er.category] || [];
+                        const credits = catDetails.filter(e => picks.includes(e.code)).reduce((s, e) => s + e.credits, 0);
+                        return (
+                          <option key={er.category} value={er.category}>
+                            {er.label} ({credits}/{er.creditsNeeded} cr)
+                          </option>
+                        );
                       })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Elective Selection Section */}
-        {activeElectiveRequirements.length > 0 && (
-          <div className="mt-8">
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              {/* Section Header (always shown) */}
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 bg-gray-50/80">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <BookOpen className="w-4 h-4 text-purple-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900">Elective Options</h3>
-                  <p className="text-sm text-gray-500">Select electives to fill your requirements. Click to toggle courses on/off.</p>
-                </div>
-              </div>
-
-              {/* Category Tabs (only when multiple categories) */}
-              {activeElectiveRequirements.length > 1 && (
-                <div className="flex border-b border-gray-200">
-                  {activeElectiveRequirements.map((er) => {
-                    const currentPicks = selectedElectives[er.category] || [];
-                    const selectedCredits = (electiveCourseDetails[er.category] || [])
-                      .filter(e => currentPicks.includes(e.code))
-                      .reduce((sum, e) => sum + e.credits, 0);
-                    return (
-                      <button
-                        key={er.category}
-                        onClick={() => setActiveTab(er.category)}
-                        className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                          activeTab === er.category
-                            ? 'border-purple-600 text-purple-700 bg-white'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <span>{er.label}</span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                          selectedCredits >= er.creditsNeeded
-                            ? 'bg-green-100 text-green-700'
-                            : activeTab === er.category
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-gray-200 text-gray-600'
-                        }`}>
-                          {selectedCredits}/{er.creditsNeeded} cr
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Credit Progress Bar + Category Info */}
-              {activeTab && (() => {
-                const er = electiveRequirements.find(e => e.category === activeTab);
-                if (!er) return null;
-                const currentPicks = selectedElectives[activeTab] || [];
-                const selectedCredits = (electiveCourseDetails[activeTab] || [])
-                  .filter(e => currentPicks.includes(e.code))
-                  .reduce((sum, e) => sum + e.credits, 0);
-                const progress = Math.min((selectedCredits / er.creditsNeeded) * 100, 100);
-                const isFulfilled = selectedCredits >= er.creditsNeeded;
-                return (
-                  <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/40">
-                    {/* Show category label inline when single category */}
-                    {activeElectiveRequirements.length === 1 && (
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">{er.label}</span>
-                        {currentPicks.length > 0 && (
-                          <span className="text-xs text-gray-500">
-                            Selected: <span className="font-semibold text-purple-700">{currentPicks.join(', ')}</span>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-                      <span>{selectedCredits} of {er.creditsNeeded} credits selected</span>
-                      {isFulfilled && <span className="text-green-600 font-medium">Requirement met</span>}
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          isFulfilled ? 'bg-green-500' : 'bg-purple-500'
-                        }`}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
+                    </select>
                   </div>
-                );
-              })()}
+                ) : (
+                  <div style={{ padding: '6px 16px 0 16px' }}>
+                    <p style={{ fontSize: '13px', color: '#4b5563', margin: 0 }}>{activeEr.label}</p>
+                  </div>
+                )}
 
-              {/* Course Grid */}
-              {activeTab && (
-                <div className="p-5">
-                  {loadingElectives[activeTab] ? (
-                    <div className="flex items-center gap-3 py-10 justify-center text-gray-500">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Loading elective options...</span>
+                {/* Progress */}
+                <div style={{ padding: '10px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <div style={{ flex: 1, background: '#e5e7eb', borderRadius: '9999px', height: '6px' }}>
+                      <div style={{ width: `${progress}%`, height: '6px', borderRadius: '9999px', background: isFulfilled ? '#374151' : '#9ca3af', transition: 'width 0.3s' }} />
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: isFulfilled ? '#374151' : '#6b7280' }}>
+                      {selectedCredits}/{activeEr.creditsNeeded} cr
+                    </span>
+                  </div>
+                  {currentPicks.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                      {currentPicks.map(code => (
+                        <span
+                          key={code}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '3px',
+                            padding: '2px 8px 2px 10px', fontSize: '12px', fontWeight: 600,
+                            background: '#f3f4f6', color: '#374151', borderRadius: '9999px',
+                          }}
+                        >
+                          {code}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleElectiveRemove(category, code); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '16px', height: '16px', borderRadius: '50%',
+                              background: '#e5e7eb', border: 'none', cursor: 'pointer',
+                              color: '#374151', fontSize: '10px', lineHeight: 1, padding: 0,
+                            }}
+                            title={`Remove ${code}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Search */}
+                <div style={{ padding: '0 16px 8px 16px', position: 'relative' }}>
+                  <Search style={{ position: 'absolute', left: '26px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#9ca3af' }} />
+                  <input
+                    placeholder="Filter by code or name..."
+                    value={searchTerm}
+                    onChange={e => setElectiveSearchTerms(prev => ({ ...prev, [category]: e.target.value }))}
+                    style={{
+                      width: '100%', padding: '8px 12px 8px 34px', fontSize: '13px',
+                      border: '1px solid #e5e7eb', borderRadius: '6px', outline: 'none',
+                      background: '#f9fafb', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                {/* Course grid */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px 16px' }}>
+                  {isLoading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '32px 0', color: '#9ca3af' }}>
+                      <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" />
+                      <span style={{ fontSize: '12px' }}>Loading...</span>
                     </div>
                   ) : (
                     <>
-                      <p className="text-xs text-gray-400 mb-4">
-                        Available courses with met prerequisites are shown first.
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {(electiveCourseDetails[activeTab] || []).map((elective) => {
-                          const currentPicks = selectedElectives[activeTab] || [];
-                          const isCurrentlySelected = currentPicks.includes(elective.code);
-                          const isAvailable = elective.hasSections && elective.prereqsMet;
-                          const isSwapping = swappingElective === elective.code;
-                          
-                          return (
-                            <button
-                              key={elective.code}
-                              onClick={() => isAvailable && handleElectiveToggle(activeTab, elective.code, elective.credits)}
-                              disabled={!isAvailable || isSwapping}
-                              className={`text-left p-3.5 rounded-lg border-2 transition-all ${
-                                isCurrentlySelected
-                                  ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200 shadow-sm'
-                                  : isAvailable
-                                  ? 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 hover:shadow-sm cursor-pointer'
-                                  : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className={`text-sm font-semibold truncate ${
-                                    isCurrentlySelected ? 'text-purple-700' : 'text-gray-900'
-                                  }`}>
-                                    {elective.code}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                                    {elective.name}
-                                  </p>
-                                  <p className="text-xs text-gray-400 mt-0.5">
-                                    {elective.credits} cr
-                                  </p>
-                                </div>
-                                {isCurrentlySelected && (
-                                  <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-                                    <Check className="w-3 h-3 text-white" />
-                                  </div>
-                                )}
-                                {isSwapping && (
-                                  <Loader2 className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5 animate-spin" />
-                                )}
-                              </div>
-                              
-                              {!isAvailable && (
-                                <div className="mt-2 flex items-center gap-1.5">
-                                  <AlertTriangle className="w-3 h-3 text-amber-500" />
-                                  <span className="text-xs text-amber-600">
-                                    {!elective.hasSections ? 'No sections' : 'Prerequisites not met'}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {isAvailable && !isCurrentlySelected && elective.prerequisites.length > 0 && (
-                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                  <span className="text-xs text-gray-400">
-                                    Prereqs: {elective.prerequisites.join(', ')}
-                                  </span>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      
-                      {(electiveCourseDetails[activeTab] || []).length === 0 && !loadingElectives[activeTab] && (
-                        <div className="py-10 text-center text-gray-500">
-                          <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                          <p className="text-sm">No elective options found for this category.</p>
+                      {filteredAvail.length > 0 && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <p style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                            Available ({filteredAvail.length})
+                          </p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                            {filteredAvail.map(elective => (
+                              <ElectiveCourseCard
+                                key={elective.code}
+                                elective={elective}
+                                category={category}
+                                isSelected={currentPicks.includes(elective.code)}
+                                isSwapping={swappingElective === elective.code}
+                                onToggle={handleElectiveToggle}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {filteredUnavail.length > 0 && (
+                        <div>
+                          <button
+                            onClick={() => setShowUnavailable(prev => ({ ...prev, [category]: !prev[category] }))}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '4px',
+                              fontSize: '12px', fontWeight: 600, color: '#9ca3af', background: 'none',
+                              border: 'none', cursor: 'pointer', marginBottom: '6px', padding: 0,
+                            }}
+                          >
+                            <ChevronDown style={{
+                              width: '12px', height: '12px',
+                              transform: showUnavailable[category] ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s',
+                            }} />
+                            Unavailable ({filteredUnavail.length})
+                          </button>
+                          {showUnavailable[category] && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                              {filteredUnavail.map(elective => (
+                                <ElectiveCourseCard
+                                  key={elective.code}
+                                  elective={elective}
+                                  category={category}
+                                  isSelected={false}
+                                  isSwapping={false}
+                                  onToggle={handleElectiveToggle}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {filteredAvail.length === 0 && filteredUnavail.length === 0 && (
+                        <div style={{ padding: '24px 0', textAlign: 'center', color: '#9ca3af' }}>
+                          <p style={{ fontSize: '12px' }}>{searchTerm ? 'No matches.' : 'No options found.'}</p>
                         </div>
                       )}
                     </>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Quick Copy Section */}
-        <div className="mt-8 bg-white border-2 border-gray-300 rounded-xl shadow-md overflow-hidden" style={{ marginBottom: '150px' }}>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
-            <div>
-              <h3 className="font-semibold text-gray-900">Quick Copy for Registration</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Click any code to copy to clipboard</p>
-            </div>
-            <button
-              onClick={copyAllCRNs}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[#bf112b] text-[#ffffff] hover:bg-[#a00f25] rounded-lg transition-colors shadow-sm"
-            >
-              {copiedItem === 'all-crns' ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copy All CRNs
-                </>
-              )}
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Course</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">CRN</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Time</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentSchedule.selections.map((selection, idx) => {
-                  const colors = courseColorMap.get(selection.courseCode) || COURSE_COLORS[0];
-                  const itemId = `${selection.courseCode}-${selection.section.sectionCode}`;
-                  const days = selection.section.timeSlots.map(s => s.day.slice(0, 3)).filter((v, i, a) => a.indexOf(v) === i).join(', ');
-                  const times = selection.section.timeSlots.length > 0 
-                    ? `${selection.section.timeSlots[0].startTime} - ${selection.section.timeSlots[0].endTime}`
-                    : 'TBA';
-                  
-                  return (
-                    <tr key={idx} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => copyToClipboard(selection.courseCode, `course-${itemId}`)}
-                          className="flex items-center gap-2 font-medium hover:text-[#bf112b] transition-colors"
-                          style={{ color: colors.text }}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: colors.border }}
-                          />
-                          {selection.courseCode}
-                          {copiedItem === `course-${itemId}` && (
-                            <Check className="w-3 h-3 text-green-600" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {selection.section.type}
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => copyToClipboard(selection.section.crn, `crn-${itemId}`)}
-                          className="font-mono text-gray-900 hover:text-[#bf112b] transition-colors flex items-center gap-1"
-                        >
-                          {selection.section.crn}
-                          {copiedItem === `crn-${itemId}` ? (
-                            <Check className="w-3 h-3 text-green-600" />
-                          ) : (
-                            <Copy className="w-3 h-3 opacity-30 hover:opacity-100" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600 font-mono text-xs">
-                        {times}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {days}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            );
+          })()}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
