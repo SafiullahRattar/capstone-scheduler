@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, X, Check, AlertCircle, Plus, RotateCcw, BookOpen } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import type { ElectiveRequirement } from '../App';
 
@@ -236,47 +236,46 @@ export function CourseSelectionPage({
   }).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen" style={{ background: '#f9fafb' }}>
       {/* Header Bar */}
-      <header className="bg-[#bf112b] shadow-sm">
+      <header style={{ borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-white text-lg font-semibold tracking-tight">Carleton Course Scheduler</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Carleton Course Scheduler</h1>
           <button
             onClick={onStartOver}
-            className="text-white/80 hover:text-white text-sm flex items-center gap-1 transition-colors"
+            className="text-sm text-gray-500 hover:text-gray-900"
           >
-            <RotateCcw className="w-4 h-4" />
             Start Over
           </button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6" style={{ paddingTop: '32px', paddingBottom: '32px' }}>
         {/* Page Header */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Course Selection</h2>
-          <p className="text-gray-600">Select courses to generate conflict-free schedules</p>
+        <div style={{ marginBottom: '32px' }}>
+          <h2 className="text-2xl font-semibold text-gray-900" style={{ marginBottom: '4px' }}>Course Selection</h2>
+          <p className="text-gray-500">Select courses to generate conflict-free schedules</p>
         </div>
 
         {/* Student Info Banner */}
         {hasAuditData && studentInfo && (
-          <div className="mb-8 bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="bg-white border border-gray-200" style={{ marginBottom: '32px', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+            <div className="flex items-start justify-between gap-4" style={{ marginBottom: '16px' }}>
               <div>
                 <p className="font-semibold text-gray-900 text-lg">{studentInfo.name}</p>
-                <p className="text-sm text-gray-600">{studentInfo.program} | {studentInfo.studentId}</p>
+                <p className="text-sm text-gray-500">{studentInfo.program} | {studentInfo.studentId}</p>
                 <div className="flex gap-6 mt-3">
                   <div className="text-center">
                     <div className="text-2xl font-semibold text-gray-900">{completedCourses.length}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">Completed</div>
+                    <div className="text-xs text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Completed</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-semibold text-gray-900">{currentCourses.length}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">In Progress</div>
+                    <div className="text-xs text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>In Progress</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-semibold text-[#bf112b]">{remainingCourses.length}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">Remaining</div>
+                    <div className="text-2xl font-semibold" style={{ color: '#111827' }}>{remainingCourses.length}</div>
+                    <div className="text-xs text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Remaining</div>
                   </div>
                 </div>
               </div>
@@ -291,25 +290,22 @@ export function CourseSelectionPage({
                     }
                   }}
                   disabled={isGenerating}
-                  className="shadow-sm"
                 >
                   {isGenerating ? 'Generating...' : 'Auto-Generate Schedule'}
                 </Button>
               )}
             </div>
-            
+
             {/* Collapsible Sections */}
             <div className="space-y-3 text-sm border-t border-gray-100 pt-4">
               <details className="group">
                 <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
-                  <span className="w-5 h-5 rounded bg-gray-100 flex items-center justify-center text-xs group-open:bg-gray-200 transition-colors">
-                    {completedCourses.length}
-                  </span>
+                  <span className="text-xs text-gray-500">({completedCourses.length})</span>
                   Completed courses
                 </summary>
-                <div className="mt-3 flex flex-wrap gap-2 pl-7">
+                <div className="mt-3 flex flex-wrap gap-2" style={{ paddingLeft: '28px' }}>
                   {completedCourses.map((code) => (
-                    <span key={code} className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md text-xs font-medium">
+                    <span key={code} className="px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-md text-xs font-medium">
                       {code}
                     </span>
                   ))}
@@ -319,14 +315,12 @@ export function CourseSelectionPage({
               {currentCourses.length > 0 && (
                 <details className="group">
                   <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-blue-100 flex items-center justify-center text-xs text-blue-700">
-                      {currentCourses.length}
-                    </span>
+                    <span className="text-xs text-gray-500">({currentCourses.length})</span>
                     Currently enrolled
                   </summary>
-                  <div className="mt-3 flex flex-wrap gap-2 pl-7">
+                  <div className="mt-3 flex flex-wrap gap-2" style={{ paddingLeft: '28px' }}>
                     {currentCourses.map((course) => (
-                      <span key={course.courseId} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-xs font-medium">
+                      <span key={course.courseId} className="px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-md text-xs font-medium">
                         {course.courseId}
                       </span>
                     ))}
@@ -337,13 +331,11 @@ export function CourseSelectionPage({
               {remainingCourses.length > 0 && (
                 <details open className="group">
                   <summary className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-amber-100 flex items-center justify-center text-xs text-amber-700">
-                      {remainingCourses.length}
-                    </span>
+                    <span className="text-xs text-gray-500">({remainingCourses.length})</span>
                     Remaining requirements
                   </summary>
-                   <div className="mt-3 pl-7">
-                    {/* "Add all remaining" button — adds core courses + elective category tokens */}
+                  <div className="mt-3" style={{ paddingLeft: '28px' }}>
+                    {/* "Add all remaining" button */}
                     {(() => {
                       const electiveCourseSet = new Set(
                         electiveRequirements.flatMap(er => er.courseOptions)
@@ -352,28 +344,28 @@ export function CourseSelectionPage({
                       const electiveTokens = electiveRequirements.map(er => `ELECTIVE:${er.category}`);
                       const allItems = [...coreCourses, ...electiveTokens];
                       const hasUnselected = allItems.some(c => !selectedCourses.includes(c));
-                      
+
                       return hasUnselected ? (
                         <button
                           onClick={() => addAllCourses(allItems)}
-                          className="mb-4 text-xs font-medium text-[#bf112b] hover:underline flex items-center gap-1"
+                          className="text-xs font-medium hover:underline"
+                          style={{ marginBottom: '16px', color: '#374151' }}
                         >
-                          <Plus className="w-3 h-3" />
-                          Add all remaining
+                          + Add all remaining
                         </button>
                       ) : null;
                     })()}
 
-                    {/* Core required courses (not part of elective categories) */}
+                    {/* Core required courses */}
                     {(() => {
                       const electiveCourseSet = new Set(
                         electiveRequirements.flatMap(er => er.courseOptions)
                       );
                       const coreCourses = remainingCourses.filter(c => !electiveCourseSet.has(c));
-                      
+
                       return coreCourses.length > 0 ? (
-                        <div className="mb-4">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Core Courses</p>
+                        <div style={{ marginBottom: '16px' }}>
+                          <p className="text-xs font-medium text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Core Courses</p>
                           <div className="flex flex-wrap gap-2">
                             {coreCourses.map((code) => {
                               const isSelected = selectedCourses.includes(code);
@@ -382,13 +374,15 @@ export function CourseSelectionPage({
                                   key={code}
                                   onClick={() => !isSelected && addCourse(code)}
                                   disabled={isSelected}
-                                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                                    isSelected
-                                      ? 'bg-green-50 text-green-700 border border-green-200'
-                                      : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
-                                  }`}
+                                  className="px-2 py-1 rounded-md text-xs font-medium border"
+                                  style={{
+                                    background: isSelected ? '#f3f4f6' : '#fff',
+                                    color: isSelected ? '#6b7280' : '#374151',
+                                    borderColor: isSelected ? '#d1d5db' : '#e5e7eb',
+                                    cursor: isSelected ? 'default' : 'pointer',
+                                    opacity: isSelected ? 0.7 : 1,
+                                  }}
                                 >
-                                  {isSelected && <Check className="w-3 h-3 inline mr-1" />}
                                   {code}
                                 </button>
                               );
@@ -398,36 +392,34 @@ export function CourseSelectionPage({
                       ) : null;
                     })()}
 
-                    {/* Elective Categories — shown as single category cards */}
+                    {/* Elective Categories */}
                     {electiveRequirements.map((elective) => {
                       const token = `ELECTIVE:${elective.category}`;
                       const isSelected = selectedCourses.includes(token);
                       return (
-                        <div key={elective.category} className="mb-3">
+                        <div key={elective.category} style={{ marginBottom: '10px' }}>
                           <button
                             onClick={() => !isSelected && addCourse(token)}
                             disabled={isSelected}
-                            className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
-                              isSelected
-                                ? 'bg-green-50 border-green-300 text-green-800'
-                                : 'bg-purple-50 border-purple-200 text-purple-800 hover:bg-purple-100 hover:border-purple-400 cursor-pointer'
-                            }`}
+                            className="w-full text-left rounded-lg border flex items-center gap-2"
+                            style={{
+                              padding: '10px 14px',
+                              background: isSelected ? '#f3f4f6' : '#fff',
+                              borderColor: isSelected ? '#d1d5db' : '#e5e7eb',
+                              cursor: isSelected ? 'default' : 'pointer',
+                              opacity: isSelected ? 0.7 : 1,
+                            }}
                           >
-                            <BookOpen className={`w-5 h-5 flex-shrink-0 ${isSelected ? 'text-green-600' : 'text-purple-600'}`} />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold">{elective.label}</p>
-                              <p className="text-xs opacity-70 mt-0.5">
-                                {elective.creditsNeeded} cr. needed &middot; {elective.courseOptions.length} options available
+                              <p className="text-sm font-medium text-gray-900">{elective.label}</p>
+                              <p className="text-xs text-gray-500" style={{ marginTop: '2px' }}>
+                                {elective.creditsNeeded} cr. needed · {elective.courseOptions.length} options
                               </p>
                             </div>
-                            {isSelected ? (
-                              <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
-                            ) : (
-                              <Plus className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                            )}
+                            {isSelected && <span className="text-xs text-gray-400">Added</span>}
                           </button>
                           {!isSelected && (
-                            <p className="text-xs text-gray-400 mt-1 ml-1">
+                            <p className="text-xs text-gray-400" style={{ marginTop: '4px', marginLeft: '4px' }}>
                               A course will be auto-picked when you generate. Swap on the schedule page.
                             </p>
                           )}
@@ -441,10 +433,10 @@ export function CourseSelectionPage({
                         {remainingCourses.some(c => !selectedCourses.includes(c)) && (
                           <button
                             onClick={() => addAllCourses(remainingCourses)}
-                            className="mb-3 text-xs font-medium text-[#bf112b] hover:underline flex items-center gap-1"
+                            className="text-xs font-medium hover:underline"
+                            style={{ marginBottom: '12px', color: '#374151' }}
                           >
-                            <Plus className="w-3 h-3" />
-                            Add all remaining courses
+                            + Add all remaining courses
                           </button>
                         )}
                         <div className="flex flex-wrap gap-2">
@@ -455,13 +447,15 @@ export function CourseSelectionPage({
                                 key={code}
                                 onClick={() => !isSelected && addCourse(code)}
                                 disabled={isSelected}
-                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                                  isSelected
-                                    ? 'bg-green-50 text-green-700 border border-green-200'
-                                    : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 cursor-pointer'
-                                }`}
+                                className="px-2 py-1 rounded-md text-xs font-medium border"
+                                style={{
+                                  background: isSelected ? '#f3f4f6' : '#fff',
+                                  color: isSelected ? '#6b7280' : '#374151',
+                                  borderColor: isSelected ? '#d1d5db' : '#e5e7eb',
+                                  cursor: isSelected ? 'default' : 'pointer',
+                                  opacity: isSelected ? 0.7 : 1,
+                                }}
                               >
-                                {isSelected && <Check className="w-3 h-3 inline mr-1" />}
                                 {code}
                               </button>
                             );
@@ -474,53 +468,54 @@ export function CourseSelectionPage({
               )}
 
               {remainingCourses.length === 0 && hasAuditData && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <Check className="w-5 h-5 text-green-600" />
-                  <span className="text-green-800 font-medium">All degree requirements completed or in progress</span>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="text-gray-700 font-medium text-sm">All degree requirements completed or in progress</span>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             {/* Search */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <div className="bg-white border border-gray-200 p-6" style={{ borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
               <h3 className="font-semibold text-gray-900 mb-4">Search Courses</h3>
               <div ref={searchRef} className="relative">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute w-4 h-4 text-gray-400" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                   <Input
                     type="text"
                     placeholder="Search by course code or name (min 2 chars)..."
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowResults(true)}
-                    className="pl-10 h-11"
+                    className="pl-10"
+                    style={{ height: '44px' }}
                   />
                   {isSearching && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <div 
+                    <div className="absolute" style={{ right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                      <div
                         className="w-4 h-4 border-2 border-gray-300 rounded-full"
-                        style={{ 
-                          borderTopColor: '#bf112b',
+                        style={{
+                          borderTopColor: '#374151',
                           animation: 'spin 1s linear infinite'
-                        }} 
+                        }}
                       />
                     </div>
                   )}
                 </div>
 
                 {showResults && searchResults.length > 0 && (
-                  <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto">
+                  <div className="absolute w-full mt-2 bg-white border border-gray-200 shadow-lg overflow-y-auto" style={{ zIndex: 20, borderRadius: '12px', maxHeight: '320px' }}>
                     {searchResults.map((course) => (
                       <button
                         key={course.code}
                         onClick={() => addCourse(course.code)}
                         disabled={selectedCourses.includes(course.code)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100"
+                        style={{ opacity: selectedCourses.includes(course.code) ? 0.5 : 1, cursor: selectedCourses.includes(course.code) ? 'not-allowed' : 'pointer' }}
                       >
                         <div className="flex items-center justify-between">
                           <div>
@@ -533,14 +528,8 @@ export function CourseSelectionPage({
                               )}
                             </div>
                           </div>
-                          {selectedCourses.includes(course.code) ? (
-                            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                              <Check className="w-4 h-4 text-green-600" />
-                            </div>
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-[#bf112b] group-hover:text-white transition-colors">
-                              <Plus className="w-4 h-4 text-gray-400" />
-                            </div>
+                          {selectedCourses.includes(course.code) && (
+                            <span className="text-xs text-gray-400">Added</span>
                           )}
                         </div>
                       </button>
@@ -549,7 +538,7 @@ export function CourseSelectionPage({
                 )}
 
                 {showResults && searchQuery && searchResults.length === 0 && (
-                  <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500 shadow-lg">
+                  <div className="absolute w-full mt-2 bg-white border border-gray-200 p-6 text-center text-gray-500 shadow-lg" style={{ zIndex: 20, borderRadius: '12px' }}>
                     No courses found matching "{searchQuery}"
                   </div>
                 )}
@@ -557,25 +546,22 @@ export function CourseSelectionPage({
             </div>
 
             {/* Selected Courses */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <div className="bg-white border border-gray-200 p-6" style={{ borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
               <h3 className="font-semibold text-gray-900 mb-4">
-                Selected Courses 
+                Selected Courses
                 {selectedCourses.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 bg-[#bf112b] text-white text-sm rounded-full">
+                  <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">
                     {selectedCourses.length}
                   </span>
                 )}
               </h3>
 
               {selectedCourses.length === 0 ? (
-                <div className="py-12 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Search className="w-8 h-8 text-gray-400" />
-                  </div>
+                <div style={{ padding: '48px 0', textAlign: 'center' }}>
                   <p className="text-gray-500">
-                    No courses selected yet.<br />
-                    <span className="text-sm">Search above or add from remaining requirements.</span>
+                    No courses selected yet.
                   </p>
+                  <p className="text-sm text-gray-400 mt-1">Search above or add from remaining requirements.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -586,28 +572,26 @@ export function CourseSelectionPage({
                       const requirement = electiveRequirements.find(er => er.category === category);
                       const label = requirement?.label || category;
                       const creditInfo = requirement ? `${requirement.creditsNeeded} cr.` : '';
-                      
+
                       return (
                         <div
                           key={courseCode}
-                          className="border-2 border-purple-200 bg-purple-50 rounded-lg p-4 transition-all"
+                          className="border border-gray-200 rounded-lg p-4"
+                          style={{ background: '#f9fafb' }}
                         >
                           <div className="flex items-start justify-between">
-                            <div className="flex-1 flex items-center gap-2">
-                              <BookOpen className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                              <div>
-                                <span className="font-semibold text-purple-800">{label}</span>
-                                {creditInfo && (
-                                  <span className="text-xs text-purple-500 ml-2">({creditInfo})</span>
-                                )}
-                                <p className="text-xs text-purple-500 mt-0.5">
-                                  A course will be auto-selected when you generate the schedule
-                                </p>
-                              </div>
+                            <div className="flex-1">
+                              <span className="font-semibold text-gray-900">{label}</span>
+                              {creditInfo && (
+                                <span className="text-xs text-gray-500 ml-2">({creditInfo})</span>
+                              )}
+                              <p className="text-xs text-gray-400" style={{ marginTop: '4px' }}>
+                                A course will be auto-selected when you generate the schedule
+                              </p>
                             </div>
                             <button
                               onClick={() => removeCourse(courseCode)}
-                              className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500 transition-all"
+                              className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200"
                               aria-label="Remove elective category"
                             >
                               <X className="w-4 h-4" />
@@ -629,34 +613,28 @@ export function CourseSelectionPage({
                     return (
                       <div
                         key={courseCode}
-                        className={`border rounded-lg p-4 transition-all ${
-                          noSections
-                            ? 'border-red-200 bg-red-50'
-                            : isCompleted
-                            ? 'border-green-200 bg-green-50'
-                            : hasUnmetPrereqs && hasAuditData
-                            ? 'border-amber-200 bg-amber-50'
-                            : 'border-gray-200 hover:border-gray-300 bg-white'
-                        }`}
+                        className="border rounded-lg p-4"
+                        style={{
+                          borderColor: noSections ? '#fca5a5' : isCompleted ? '#d1d5db' : hasUnmetPrereqs && hasAuditData ? '#fcd34d' : '#e5e7eb',
+                          background: '#fff',
+                        }}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-gray-900">{course.code}</span>
                               {isCompleted && (
-                                <span className="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full font-medium flex items-center gap-1">
-                                  <Check className="w-3 h-3" />
+                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
                                   Already completed
                                 </span>
                               )}
                               {noSections && !isCompleted && (
-                                <span className="text-xs px-2 py-0.5 bg-red-200 text-red-800 rounded-full font-medium">
+                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
                                   No sections available
                                 </span>
                               )}
                               {hasUnmetPrereqs && hasAuditData && !noSections && !isCompleted && (
-                                <span className="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full font-medium flex items-center gap-1">
-                                  <AlertCircle className="w-3 h-3" />
+                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
                                   Prerequisites not met
                                 </span>
                               )}
@@ -664,8 +642,8 @@ export function CourseSelectionPage({
                             <p className="text-sm text-gray-600 mt-1">{course.name}</p>
 
                             {!isCompleted && course.prerequisites.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Prerequisites: </span>
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <span className="text-xs font-medium text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prerequisites: </span>
                                 <span className="text-xs">
                                   {course.prerequisites.map((prereq, i) => {
                                     const status = checkPrerequisiteStatus(prereq);
@@ -688,7 +666,7 @@ export function CourseSelectionPage({
                           </div>
                           <button
                             onClick={() => removeCourse(courseCode)}
-                            className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500 transition-all"
+                            className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200"
                             aria-label="Remove course"
                           >
                             <X className="w-4 h-4" />
@@ -704,10 +682,10 @@ export function CourseSelectionPage({
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sticky top-6">
+            <div className="bg-white border border-gray-200 p-6" style={{ borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', position: 'sticky', top: '24px' }}>
               <h3 className="font-semibold text-gray-900 mb-3">Generate Schedule</h3>
-              <p className="text-sm text-gray-600 mb-5">
-                {selectedCourses.length === 0 
+              <p className="text-sm text-gray-500" style={{ marginBottom: '20px' }}>
+                {selectedCourses.length === 0
                   ? 'Select courses to generate schedules'
                   : coursesWithSectionsCount === selectedCourses.length
                   ? `${selectedCourses.length} courses ready to schedule`
@@ -717,14 +695,15 @@ export function CourseSelectionPage({
               <Button
                 onClick={handleGenerateSchedules}
                 disabled={selectedCourses.length === 0}
-                className="w-full h-11 text-base shadow-sm"
+                className="w-full text-base"
+                style={{ height: '44px' }}
               >
                 Generate Schedules
               </Button>
             </div>
 
             {!hasAuditData && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-800">
+              <div className="bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600" style={{ borderRadius: '12px' }}>
                 <p className="font-medium mb-1">Tip</p>
                 <p>Upload your Academic Audit on the previous page to see prerequisite validation.</p>
               </div>
