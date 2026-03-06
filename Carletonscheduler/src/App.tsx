@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
+import { LoginPage } from './components/LoginPage';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
 import { getCourseByCode } from './utils/courseData';
 import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
@@ -101,6 +102,9 @@ function clearState() {
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('auth_token'));
+  const [user, setUser] = useState<any>(null);
+
   const initialPage = getInitialPage();
   
   // If URL is explicitly '/', clear state and start fresh
@@ -385,50 +389,75 @@ export default function App() {
     }
   };
 
-  if (currentPage === 'schedule-review') {
-    return (
-      <ScheduleReviewPage
-        schedules={generatedSchedules}
-        onBack={handleBackToCourseSelection}
-        electiveRequirements={electiveRequirements}
-        selectedElectives={selectedElectives}
-        onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
-          setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
-          // Re-generate schedules with the new electives swapped in
-          try {
-            const schedules = await generateSchedules(allSelectedCourses, completedCourses);
-            if (schedules.length > 0) {
-              setGeneratedSchedules(schedules);
-            }
-          } catch {
-            // Keep existing schedules if regeneration fails
-          }
-        }}
-        completedCourses={completedCourses}
-      />
-    );
-  }
+  const handleLoginSuccess = (token: string, userData: any) => {
+    setIsAuthenticated(true);
+    setUser(userData);
+  };
 
-  if (currentPage === 'course-selection') {
-    return (
-      <CourseSelectionPage
-        hasAuditData={hasAuditData}
-        completedCourses={completedCourses}
-        currentCourses={currentCourses}
-        remainingCourses={remainingCourses}
-        electiveRequirements={electiveRequirements}
-        studentInfo={studentInfo}
-        onGenerateSchedules={handleGenerateSchedules}
-        onGenerateSmartSchedule={handleGenerateSmartSchedule}
-        onStartOver={handleStartOver}
-      />
-    );
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    setIsAuthenticated(false);
+    setUser(null);
+    handleStartOver();
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <AcademicHistoryImport
-      onManualEntry={handleManualEntry}
-      onUploadComplete={handleUploadComplete}
-    />
+    <div className="relative min-h-screen">
+      <div className="absolute top-4 right-4 z-50">
+        <button 
+          onClick={handleLogout}
+          className="text-sm font-medium text-gray-500 hover:text-[#E5173F] transition-colors bg-white/80 px-3 py-1 rounded-full border border-gray-200 shadow-sm"
+        >
+          Sign Out
+        </button>
+      </div>
+
+      {currentPage === 'schedule-review' && (
+        <ScheduleReviewPage
+          schedules={generatedSchedules}
+          onBack={handleBackToCourseSelection}
+          electiveRequirements={electiveRequirements}
+          selectedElectives={selectedElectives}
+          onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
+            setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
+            // Re-generate schedules with the new electives swapped in
+            try {
+              const schedules = await generateSchedules(allSelectedCourses, completedCourses);
+              if (schedules.length > 0) {
+                setGeneratedSchedules(schedules);
+              }
+            } catch {
+              // Keep existing schedules if regeneration fails
+            }
+          }}
+          completedCourses={completedCourses}
+        />
+      )}
+
+      {currentPage === 'course-selection' && (
+        <CourseSelectionPage
+          hasAuditData={hasAuditData}
+          completedCourses={completedCourses}
+          currentCourses={currentCourses}
+          remainingCourses={remainingCourses}
+          electiveRequirements={electiveRequirements}
+          studentInfo={studentInfo}
+          onGenerateSchedules={handleGenerateSchedules}
+          onGenerateSmartSchedule={handleGenerateSmartSchedule}
+          onStartOver={handleStartOver}
+        />
+      )}
+
+      {currentPage === 'import' && (
+        <AcademicHistoryImport
+          onManualEntry={handleManualEntry}
+          onUploadComplete={handleUploadComplete}
+        />
+      )}
+    </div>
   );
 }

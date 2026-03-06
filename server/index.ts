@@ -27,6 +27,7 @@ import courseRoutes from './routes/courses'
 import studentRoutes from './routes/students'
 import scheduleRoutes from './routes/schedules'
 import auditRoutes from './routes/audit'
+import authRoutes from './routes/auth'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -68,6 +69,7 @@ app.use('/api/courses', courseRoutes)
 app.use('/api/students', studentRoutes)
 app.use('/api/schedules', scheduleRoutes)
 app.use('/api/audit', auditRoutes)
+app.use('/api/auth', authRoutes)
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
@@ -107,9 +109,11 @@ process.on('SIGTERM', async () => {
 })
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 Smart Scheduler API running on port ${PORT}`)
-  console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`)
-})
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Smart Scheduler API running on port ${PORT}`)
+    console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`)
+  })
+}
 
 export default app
