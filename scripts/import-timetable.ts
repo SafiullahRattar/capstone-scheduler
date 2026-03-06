@@ -106,7 +106,7 @@ async function main() {
       // Create the section
       await prisma.section.create({
         data: {
-          sectionId: record.sectionId,
+          crn: record.sectionId,
           courseId: courseId,
           sectionCode: record.sectionCode,
           sectionType: record.sectionType,

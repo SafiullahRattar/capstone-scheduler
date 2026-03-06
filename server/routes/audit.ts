@@ -13,6 +13,7 @@ import { promisify } from 'util'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import crypto from 'crypto'
 
 const execAsync = promisify(exec)
 
@@ -99,11 +100,41 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
     }
 
-    // Save to database
+    // Generate hash for deduplication
+    const fileHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex')
+
+    // Save student data
     await saveStudentAuditData({
       ...auditData,
       completedCourses: validCourses
     })
+
+    // Store the raw audit file for the team if not a duplicate for this student
+    const dbStudent = await prisma.student.findUnique({
+      where: { studentId: auditData.studentId }
+    })
+
+    if (dbStudent) {
+      const existingAudit = await prisma.savedAudit.findUnique({
+        where: {
+          studentId_fileHash: {
+            studentId: dbStudent.id,
+            fileHash: fileHash
+          }
+        }
+      })
+
+      if (!existingAudit) {
+        await prisma.savedAudit.create({
+          data: {
+            studentId: dbStudent.id,
+            fileName: req.file.originalname,
+            fileHash: fileHash,
+            content: req.file.mimetype === 'application/pdf' ? 'PDF_CONTENT_STORED_IN_FILESYSTEM_OR_BLOB' : req.file.buffer.toString('utf-8')
+          }
+        })
+      }
+    }
 
     res.json({
       success: true,
