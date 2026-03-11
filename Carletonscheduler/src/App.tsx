@@ -6,6 +6,7 @@ import { LoginPage } from './components/LoginPage';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
 import { getCourseByCode } from './utils/courseData';
 import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
+import { getDefaultActiveTerm } from './utils/termUtils';
 
 type AppPage = 'import' | 'course-selection' | 'schedule-review';
 
@@ -52,6 +53,7 @@ interface AppState {
   studentInfo?: StudentInfo;
   generatedSchedules: GeneratedSchedule[];
   selectedElectives: Record<string, string[]>; // category -> selected course codes
+  activeTerm: string;
 }
 
 const STORAGE_KEY = 'scheduler-state';
@@ -131,6 +133,7 @@ export default function App() {
   const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>(savedState?.studentInfo);
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(savedState?.generatedSchedules || []);
   const [selectedElectives, setSelectedElectives] = useState<Record<string, string[]>>(savedState?.selectedElectives || {});
+  const [activeTerm, setActiveTerm] = useState<string>(savedState?.activeTerm || getDefaultActiveTerm());
 
   // Navigate to a page and update URL
   const navigateTo = useCallback((page: AppPage, replace = false) => {
@@ -155,9 +158,10 @@ export default function App() {
       studentInfo,
       generatedSchedules,
       selectedElectives,
+      activeTerm,
     };
     saveState(state);
-  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives]);
+  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, activeTerm]);
 
   // Sync URL with current page on mount
   useEffect(() => {
@@ -193,6 +197,7 @@ export default function App() {
     setStudentInfo(undefined);
     setGeneratedSchedules([]);
     setSelectedElectives({});
+    setActiveTerm(getDefaultActiveTerm());
     clearState();
     navigateTo('import');
   };
@@ -242,7 +247,8 @@ export default function App() {
     }
   };
 
-  const handleGenerateSchedules = async (courses: string[]) => {
+  const handleGenerateSchedules = async (courses: string[], termOverride?: string) => {
+    const termToUse = termOverride || activeTerm;
     try {
       // Resolve elective tokens to actual course codes
       const resolvedCourses: string[] = [];
@@ -312,7 +318,7 @@ export default function App() {
         return;
       }
 
-      const schedules = await generateSchedules(resolvedCourses, completedCourses);
+      const schedules = await generateSchedules(resolvedCourses, completedCourses, termToUse);
 
       if (schedules.length === 0) {
         alert('No schedules could be generated. The selected courses may have time conflicts or no available sections.');
@@ -426,7 +432,7 @@ export default function App() {
             setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
             // Re-generate schedules with the new electives swapped in
             try {
-              const schedules = await generateSchedules(allSelectedCourses, completedCourses);
+              const schedules = await generateSchedules(allSelectedCourses, completedCourses, activeTerm);
               if (schedules.length > 0) {
                 setGeneratedSchedules(schedules);
               }
@@ -449,6 +455,8 @@ export default function App() {
           onGenerateSchedules={handleGenerateSchedules}
           onGenerateSmartSchedule={handleGenerateSmartSchedule}
           onStartOver={handleStartOver}
+          activeTerm={activeTerm}
+          onTermChange={setActiveTerm}
         />
       )}
 

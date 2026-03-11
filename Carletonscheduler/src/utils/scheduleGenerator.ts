@@ -65,10 +65,14 @@ interface ApiSchedule {
 /**
  * Generate all possible schedules using the backend API
  * Falls back to error message if API fails
+ *
+ * @param activeTerm - Carleton term code (e.g. "202630") so the backend
+ *                     only returns sections for the requested semester.
  */
 export async function generateSchedules(
   courseCodes: string[],
-  completedCourses: string[]
+  completedCourses: string[],
+  activeTerm?: string
 ): Promise<GeneratedSchedule[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/schedules/generate`, {
@@ -79,7 +83,8 @@ export async function generateSchedules(
       body: JSON.stringify({
         courseIds: courseCodes,
         completedCourses: completedCourses,
-        maxSchedules: SCHEDULE_CONFIG.MAX_SCHEDULES
+        maxSchedules: SCHEDULE_CONFIG.MAX_SCHEDULES,
+        ...(activeTerm && { term: activeTerm })
       })
     });
 

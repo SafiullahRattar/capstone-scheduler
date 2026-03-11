@@ -87,24 +87,25 @@ router.get('/search', async (req: Request, res: Response) => {
       }
     })
 
-    // Get section type information for each course
+    // Get section type and term information for each course
     const coursesWithSectionInfo = await Promise.all(
       courses.map(async (course) => {
         const sections = await prisma.section.findMany({
           where: { courseId: course.id },
-          select: { sectionType: true },
-          distinct: ['sectionType']
+          select: { sectionType: true, term: true },
+          distinct: ['sectionType', 'term']
         })
         
         return {
           course,
-          sectionTypes: sections.map(s => s.sectionType).sort()
+          sectionTypes: Array.from(new Set(sections.map(s => s.sectionType))).sort(),
+          terms: Array.from(new Set(sections.map(s => s.term).filter(Boolean) as string[])).sort()
         }
       })
     )
     
     // Transform database results to match frontend Course interface
-    const transformedCourses = coursesWithSectionInfo.map(({ course, sectionTypes }) => {
+    const transformedCourses = coursesWithSectionInfo.map(({ course, sectionTypes, terms }) => {
       const prerequisites = course.prerequisiteNodes
         .filter(node => node.requiredCourseId)
         .map(node => node.requiredCourseId as string);
@@ -117,7 +118,8 @@ router.get('/search', async (req: Request, res: Response) => {
         prerequisites,
         prerequisiteTree: course.prerequisiteNodes,
         type: 'core' as const,
-        sectionTypes: sectionTypes
+        sectionTypes: sectionTypes,
+        terms: terms
       };
     })
 
@@ -181,6 +183,13 @@ router.get('/:courseId', async (req: Request, res: Response) => {
       .filter(node => node.requiredCourseId)
       .map(node => node.requiredCourseId as string)
 
+    // Get available terms for this course
+    const terms = await prisma.section.findMany({
+      where: { courseId: course.id },
+      select: { term: true },
+      distinct: ['term']
+    })
+
     const transformedCourse = {
       code: course.id,
       name: course.title || 'No title available',
@@ -189,7 +198,8 @@ router.get('/:courseId', async (req: Request, res: Response) => {
       prerequisites,
       prerequisiteTree: course.prerequisiteNodes,
       prerequisiteExpression: course.prerequisiteExpression?.expression,
-      sectionCount: course._count.sections
+      sectionCount: course._count.sections,
+      terms: terms.map(t => t.term).filter(Boolean) as string[]
     }
 
     res.json(transformedCourse)

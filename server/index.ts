@@ -35,9 +35,19 @@ const PORT = process.env.PORT || 3001
 // Initialize Prisma Client (Singleton Pattern)
 // Rationale: Single database connection pool shared across all requests
 // This improves performance and resource management
-export const prisma = new PrismaClient({
-  log: ['error', 'warn'], // Log only errors and warnings in production
-})
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    log: ['error', 'warn'],
+  })
+}
+
+declare global {
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>
+}
+
+export const prisma = globalThis.prisma ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma
 
 // Middleware Configuration
 // CORS: Allow frontend (React) to make requests from different origin

@@ -20,6 +20,7 @@ export interface Course {
   sectionTypes?: string[];
   sectionCount?: number;
   hasSections?: boolean;
+  terms?: string[];
 }
 
 // Cache for search results - stores results for 5 minutes
@@ -98,7 +99,8 @@ export async function searchCourses(query: string): Promise<Course[]> {
       prerequisiteTree: course.prerequisiteTree || [],
       description: course.description || '',
       type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
-      sectionTypes: course.sectionTypes || []
+      sectionTypes: course.sectionTypes || [],
+      terms: course.terms || []
     })).slice(0, SCHEDULE_CONFIG.MAX_SEARCH_RESULTS);
     
     // Cache the results
@@ -155,7 +157,8 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
       description: data.description || '',
       type: data.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionCount: data.sectionCount || 0,
-      hasSections: (data.sectionCount || 0) > 0
+      hasSections: (data.sectionCount || 0) > 0,
+      terms: data.terms || []
     };
     
     // Cache the result

@@ -131,16 +131,30 @@ export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRe
 function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
   const requirements: RequirementInfo[] = []
   
-  // Match subrequirements with their full context to extract credit info
-  // Pattern: div.subrequirement with rqdHours, status span, title, and subrequirementTotals table
-  const subreqPattern = /<div[^>]*class="subrequirement"[^>]*rqdHours="([\d.]+)"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*(?=<div class="subrequirement"|<\/div>\s*<hr)/g
-  
-  for (const match of Array.from(htmlContent.matchAll(subreqPattern))) {
-    const rqdHours = parseFloat(match[1]) || 0
-    const subreqContent = match[2]
+  // Split by subrequirement div start
+  const parts = htmlContent.split('<div class="subrequirement"')
+  // First part is before any subrequirement
+  for (let i = 1; i < parts.length; i++) {
+    const subreqFull = '<div class="subrequirement"' + parts[i]
+    
+    // Extract attributes from the opening tag
+    const openTagMatch = subreqFull.match(/<div[^>]*rqd[hH]ours="([\d.]+)"[^>]*>/)
+    if (!openTagMatch) continue
+    
+    const rqdHours = parseFloat(openTagMatch[1]) || 0
+    
+    // Find the end of this subrequirement block
+    // We want the content from the end of the opening tag to either the next subreq start or the divider
+    let subreqContent = parts[i];
+    const splitIndex = subreqContent.search(/<div class="subrequirement"|<\/div>\s*<hr/);
+    if (splitIndex !== -1) {
+      subreqContent = subreqContent.substring(0, splitIndex);
+    }
     
     // Skip zero-credit and very high credit requirements (300 is used for "excess" tracking)
-    if (rqdHours === 0 || rqdHours >= 100) continue
+    if (rqdHours === 0 || rqdHours >= 100) {
+      continue
+    }
     
     // Extract status
     const statusMatch = subreqContent.match(/class="status\s+(Status_\w+)"/)
@@ -156,6 +170,13 @@ function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
       .replace(/<[^>]+>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
+
+    // Skip generic progress requirements
+    if (title.toLowerCase().includes('year standing') || 
+        title.toLowerCase().includes('residency') ||
+        title.toLowerCase().includes('cgpa required')) {
+      continue
+    }
     
     // Extract actual credits completed from subrequirementTotals
     let creditsCompleted = 0
@@ -178,19 +199,21 @@ function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
     else if (statusClass.includes('NONE')) status = 'NONE'
     
     // Extract course codes from title (e.g., "SYSC 4907", "COMP 3005")
-    const coursePattern = /[A-Z]{3,4}\s*\d{4}/g
+    // Include 2XXX style for transfer credits
+    const coursePattern = /[A-Z]{3,4}\s*(?:\d{4}|\d{1}XXX)/g
     const courseCodes = (title.match(coursePattern) || [])
       .map(code => code.replace(/\s+/g, ''))
     
     // Detect elective categories
     let electiveCategory: string | null = null
-    if (title.toLowerCase().includes('complementary studies')) {
+    const lowerTitle = title.toLowerCase()
+    if (lowerTitle.includes('complementary studies')) {
       electiveCategory = 'COMPLEMENTARY_STUDIES'
-    } else if (title.toLowerCase().includes('computer science elective')) {
+    } else if (lowerTitle.includes('computer science elective')) {
       electiveCategory = 'CS_ELECTIVE'
-    } else if (title.toLowerCase().includes('basic science')) {
+    } else if (lowerTitle.includes('basic science')) {
       electiveCategory = 'SCIENCE_ELECTIVE'
-    } else if (title.match(/sysc or elec.*3000/i) || title.match(/elec or sysc.*3000/i)) {
+    } else if (lowerTitle.match(/sysc or elec.*3000/i) || lowerTitle.match(/elec or sysc.*3000/i) || lowerTitle.includes('sysc or elec courses')) {
       electiveCategory = 'SYSC_ELEC_ELECTIVE'
     }
     
@@ -210,6 +233,14 @@ function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
   return requirements
 }
 
+function cleanProgramName(program: string): string {
+  return program
+    .replace(/\bEmail\b.*$/i, '')
+    .replace(/\b\d{9}\b.*$/, '')
+    .replace(/[a-zA-Z0-9.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+.*$/, '')
+    .trim()
+}
+
 export function parseAuditHTML(htmlContent: string): StudentAuditData {
   // Extract student ID - look in header info area
   const studentIdMatch = htmlContent.match(/(\d{9})/)
@@ -221,7 +252,7 @@ export function parseAuditHTML(htmlContent: string): StudentAuditData {
 
   // Extract program
   const programMatch = htmlContent.match(/Bachelor of Engineering - ([^<]+)/)
-  const program = programMatch ? programMatch[1].trim() : ''
+  const program = programMatch ? cleanProgramName(programMatch[1]) : ''
 
   // Extract courses (both completed and current)
   const courseMatches = Array.from(htmlContent.matchAll(
@@ -263,61 +294,79 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
   const requirements: RequirementInfo[] = []
   
   // Match lines like "4) 4.0 credits in NET 4001, NET 4005, NET 4007..."
-  const reqPattern = /\d+\)\s+([\d.]+)\s+credits?\s+in\s+([A-Z]{3,4}[^]+?)(?=\d+\.\d+\s+(?:cr\.|Credits)|NEEDS:|$)/gi
+  // This pattern matches the number, the credit amount, and the text following it
+  const reqPattern = /(?:^|[\r\n]) *(\d+)\) +([\d.]+) +credits? (?:in|from) ([\s\S]*?)(?=[\r\n] *\d+\) |[\r\n] *NEEDS:|[\r\n] *Term| {5,}\d+\.\d+ +cr\.|[\r\n] *\*+|$)/gm
   
-  for (const match of Array.from(pdfText.matchAll(reqPattern))) {
-    const creditsText = match[1]
-    let courseListText = match[2]
-    
-    courseListText = courseListText.split(/\n(?=\d+\.\d+\s+cr\.|\nNEEDS:|\nTerm)/)[0]
-    
+  const matches = Array.from(pdfText.matchAll(reqPattern));
+  // console.log(`DEBUG: Found ${matches.length} potential requirements in PDF`);
+  
+  for (const match of matches) {
+    const creditsRequired = parseFloat(match[2]) || 0
+    let title = match[3]
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Skip generic requirements
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('year standing') || 
+        lowerTitle.includes('residency') ||
+        lowerTitle.includes('cgpa required')) {
+      continue
+    }
+
     // Pull out all course codes like "NET 4001", "SYSC 3000"
-    const courseCodes = courseListText.match(/[A-Z]{3,4}\s+\d{4}/g) || []
+    const courseCodes = title.match(/[A-Z]{3,4}\s+\d{4}/g) || []
     const courseOptions = courseCodes.map(code => code.replace(/\s+/g, ''))
     
-    if (courseOptions.length === 0) continue
-    
-    const title = courseOptions[0]
-    const creditsRequired = parseFloat(creditsText) || 0
+    // Detect elective categories in PDF title
+    let electiveCategory: string | null = null
+    if (lowerTitle.includes('complementary studies')) {
+      electiveCategory = 'COMPLEMENTARY_STUDIES'
+    } else if (lowerTitle.includes('computer science elective')) {
+      electiveCategory = 'CS_ELECTIVE'
+    } else if (lowerTitle.includes('basic science')) {
+      electiveCategory = 'SCIENCE_ELECTIVE'
+    } else if (lowerTitle.match(/sysc or elec.*3000/i) || lowerTitle.match(/elec or sysc.*3000/i) || lowerTitle.includes('sysc or elec courses')) {
+      electiveCategory = 'SYSC_ELEC_ELECTIVE'
+    }
+
+    if (courseOptions.length === 0 && !electiveCategory) continue
     
     // Check if requirement is satisfied by looking at the next few lines
     const textAfterReq = pdfText.substring(pdfText.indexOf(match[0]))
-    const nextLines = textAfterReq.substring(0, 300)
+    const nextLines = textAfterReq.substring(0, 500)
     
     let status: 'OK' | 'NO' | 'IP' | 'NONE' = 'NO'
     let creditsCompleted = 0
     let creditsInProgress = 0
     
     // Check how many credits completed
-    if (nextLines.includes('cr. Complete')) {
-      const completeMatch = nextLines.match(/([\d.]+)\s+cr\.\s+Complete/)
-      if (completeMatch) {
-        creditsCompleted = parseFloat(completeMatch[1]) || 0
-      }
+    const completeMatch = nextLines.match(/([\d.]+)\s+cr\.\s+Complete/)
+    if (completeMatch) {
+      creditsCompleted = parseFloat(completeMatch[1]) || 0
     }
     
     // Check for in-progress courses (format: "IP    3.00 Credits")
     const ipMatch = nextLines.match(/IP\s+([\d.]+)\s+Credits/)
     if (ipMatch) {
-      status = 'IP'
       creditsInProgress = parseFloat(ipMatch[1]) || 0
     }
     
-    if (nextLines.includes('NEEDS:')) {
-      status = 'NO'
+    if (nextLines.match(/\n *NEEDS:/)) {
+      status = creditsInProgress > 0 ? 'IP' : 'NO'
     } else if (creditsCompleted >= creditsRequired) {
       status = 'OK'
     } else if (creditsCompleted + creditsInProgress >= creditsRequired) {
-      status = 'IP'  // In progress and will meet requirement
+      status = 'IP'
     }
     
     requirements.push({
-      title,
+      title: title.substring(0, 100),
       status,
       creditsRequired,
       creditsCompleted,
       creditsInProgress,
-      courseOptions
+      courseOptions: courseOptions.length > 0 ? courseOptions : [electiveCategory || 'ELECTIVE']
     })
   }
   
@@ -333,8 +382,8 @@ export function parseAuditPDF(pdfText: string): StudentAuditData {
   const nameMatch = pdfText.match(/([A-Z][a-z]+),\s+([A-Z][a-z]+)/)
   const name = nameMatch ? `${nameMatch[2]} ${nameMatch[1]}` : ''
 
-  const programMatch = pdfText.match(/Bachelor of Engineering\s*-\s*([A-Z a-z\s]+)/i)
-  const program = programMatch ? programMatch[1].trim() : ''
+  const programMatch = pdfText.match(/Bachelor of Engineering\s*-\s*([A-Za-z\s\-&]+)/i)
+  const program = programMatch ? cleanProgramName(programMatch[1]) : ''
 
   // Extract all courses from the audit
   const completedCourses: Array<{ courseId: string; grade: string }> = []
