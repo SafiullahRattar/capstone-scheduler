@@ -6,7 +6,8 @@
 import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { prisma } from '../index'
-import { parseAuditHTML, parseAuditPDF, saveStudentAuditData, getUnfulfilledRequirements, getRemainingCourses, getElectiveRequirements } from '../../cli/audit-parser'
+import { ingestAudit } from '../../cli/audit'
+import { saveStudentAuditData, getUnfulfilledRequirements, getRemainingCourses, getElectiveRequirements } from '../../cli/audit-parser'
 import { expandElectiveCategories, ELECTIVE_CATEGORIES } from '../../cli/elective-mappings'
 import { exec } from 'child_process'
 import { promisify } from 'util'
@@ -46,11 +47,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       })
     }
 
-    let auditData
+    let fileContent: string
 
-    // Check if file is PDF
+    // If PDF, convert to text first via pdftotext -layout
     if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
-      // Convert PDF to text (using -layout flag to preserve column alignment)
       const tmpDir = os.tmpdir()
       const tmpPdfPath = path.join(tmpDir, `audit-${Date.now()}.pdf`)
       const tmpTxtPath = tmpPdfPath.replace('.pdf', '.txt')
@@ -58,24 +58,20 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       try {
         fs.writeFileSync(tmpPdfPath, req.file.buffer)
         await execAsync(`pdftotext -layout "${tmpPdfPath}" "${tmpTxtPath}"`)
-        const pdfText = fs.readFileSync(tmpTxtPath, 'utf-8')
+        fileContent = fs.readFileSync(tmpTxtPath, 'utf-8')
         
-        // Delete temp files
         fs.unlinkSync(tmpPdfPath)
         fs.unlinkSync(tmpTxtPath)
-        
-        auditData = parseAuditPDF(pdfText)
       } catch (error) {
-        // Delete temp files even if parsing fails
         if (fs.existsSync(tmpPdfPath)) fs.unlinkSync(tmpPdfPath)
         if (fs.existsSync(tmpTxtPath)) fs.unlinkSync(tmpTxtPath)
         throw error
       }
     } else {
-      // HTML format
-      const fileContent = req.file.buffer.toString('utf-8')
-      auditData = parseAuditHTML(fileContent)
+      fileContent = req.file.buffer.toString('utf-8')
     }
+
+    const auditData = ingestAudit(fileContent, { filePath: req.file.originalname })
     
     if (!auditData.studentId) {
       return res.status(400).json({
@@ -171,11 +167,9 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
       })
     }
 
-    let auditData
+    let fileContent: string
 
-    // Check if file is PDF
     if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
-      // Convert PDF to text (using -layout flag to preserve column alignment)
       const tmpDir = os.tmpdir()
       const tmpPdfPath = path.join(tmpDir, `audit-${Date.now()}.pdf`)
       const tmpTxtPath = tmpPdfPath.replace('.pdf', '.txt')
@@ -183,24 +177,20 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
       try {
         fs.writeFileSync(tmpPdfPath, req.file.buffer)
         await execAsync(`pdftotext -layout "${tmpPdfPath}" "${tmpTxtPath}"`)
-        const pdfText = fs.readFileSync(tmpTxtPath, 'utf-8')
+        fileContent = fs.readFileSync(tmpTxtPath, 'utf-8')
         
-        // Delete temp files
         fs.unlinkSync(tmpPdfPath)
         fs.unlinkSync(tmpTxtPath)
-        
-        auditData = parseAuditPDF(pdfText)
       } catch (error) {
-        // Delete temp files even if parsing fails
         if (fs.existsSync(tmpPdfPath)) fs.unlinkSync(tmpPdfPath)
         if (fs.existsSync(tmpTxtPath)) fs.unlinkSync(tmpTxtPath)
         throw error
       }
     } else {
-      // HTML format
-      const fileContent = req.file.buffer.toString('utf-8')
-      auditData = parseAuditHTML(fileContent)
+      fileContent = req.file.buffer.toString('utf-8')
     }
+
+    const auditData = ingestAudit(fileContent, { filePath: req.file.originalname })
 
     // Figure out which required courses the student still needs
     const remainingCourses = getRemainingCourses(auditData)

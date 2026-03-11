@@ -307,6 +307,44 @@ async function main() {
   if (errorCount > 0) {
     console.log(`   Parsing errors: ${errorCount} courses`)
   }
+
+  // PASS 3: Backfill titles from course_titles.json for any course still
+  // using its code as the title (e.g. courses created by import-timetable
+  // that weren't in course_prerequisites_simple.json).
+  console.log('[TITLES] Pass 3: Backfilling titles from course_titles.json...')
+  const titlesPath = path.join(process.cwd(), 'course_titles.json')
+  let titlesBackfilled = 0
+  try {
+    const titlesFile: { courses: Record<string, { title: string; credits: number; description: string }> } =
+      JSON.parse(await fs.readFile(titlesPath, 'utf-8'))
+
+    // Find all courses whose title still equals their id (the placeholder)
+    const coursesNeedingTitles = await prisma.course.findMany({
+      select: { id: true, title: true }
+    })
+
+    for (const course of coursesNeedingTitles) {
+      // Only update if the title is the course code (placeholder) or null
+      if (course.title && course.title !== course.id) continue
+
+      const titleEntry = titlesFile.courses[course.id]
+      if (!titleEntry) continue
+
+      await prisma.course.update({
+        where: { id: course.id },
+        data: {
+          title: titleEntry.title,
+          description: titleEntry.description || null,
+          credits: titleEntry.credits || null
+        }
+      })
+      titlesBackfilled++
+    }
+
+    console.log(`[TITLES] Backfilled ${titlesBackfilled} course titles from course_titles.json`)
+  } catch (err) {
+    console.log(`[WARNING] Could not backfill titles from course_titles.json: ${err}`)
+  }
   
   // Show statistics about course titles
   const coursesWithTitles = await prisma.course.count({
