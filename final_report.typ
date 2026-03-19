@@ -215,7 +215,7 @@ We did not build an authentication system because the application runs locally, 
 
 == Engineering Professionalism
 
-We tried to be honest throughout the project, both with our supervisor and with ourselves. When we fell behind on features, we told Prof. Talim in our meetings rather than pretending things were on track. When two features (preference-based ranking and schedule export) turned out to be more work than we could do well in the remaining time, we chose to cut them rather than ship something half-baked. That felt like the right call, even though it meant the final product does not match the full scope of the proposal.
+We tried to be honest throughout the project, both with our supervisor and with ourselves. When we fell behind on features, we told Prof. Talim in our meetings rather than pretending things were on track. When preference-based ranking turned out to be more work than we could do well in the remaining time, we chose to cut it rather than ship something half-baked. That felt like the right call, even though it meant the final product does not match the full scope of the proposal.
 
 On the code side, we followed consistent TypeScript conventions, used descriptive names, and added comments where the logic was not obvious. The Prisma schema is the single source of truth for the data model, and the API follows RESTful conventions.
 
@@ -247,20 +247,20 @@ All four team members are in the Software Engineering program, and this project 
 
 === Project Contributions
 
-*Anas Ayoubi* handled the backend and database work. He designed the PostgreSQL schema in Prisma, including the prerequisite tree structure (the `PrerequisiteNode` model with self-referential relations). He wrote the course and student API routes, built the scripts for importing course and timetable data into the database, and implemented the server-side prerequisite validation logic that evaluates the tree against a student's transcript.
+*Anas Ayoubi* focused on the scheduling algorithm. He implemented the backtracking schedule generator, including support for multi-section courses and time-conflict checking.
 
-*Hakeem Khan* led the frontend and UI work. He designed and implemented the three main pages (Academic History Import, Course Selection, Schedule Review) in React and TypeScript with the Radix UI/shadcn component library. He built the timetable grid, the course search with debouncing, the elective category display, and the CRN copy feature. He also set up the Vite and TailwindCSS configuration.
+*Hakeem Khan* handled data acquisition. He worked on scraping the source data and converting it into JSON so it could be loaded and used by the rest of the system.
 
-*Pietro Adamvoski* worked on full-stack integration. He set up the Express server and middleware, built API endpoints, and wired up the frontend API calls to the backend. He also worked on the audit upload and parsing flow, the schedule generation route, and the data flow for audit upload and course suggestions.
+*Pietro Adamvoski* handled the database schema and prerequisite logic. He worked on the Prisma models, including the database structure used for prerequisites, and contributed to the logic for checking whether a student meets course requirements.
 
-*Safiullah Rattar* focused on the scheduling algorithm and data sourcing. He wrote the backtracking schedule generator with multi-section support (LEC+LAB+TUT combinations) and conflict detection. He also developed the scraping scripts that extracted prerequisite data from the Carleton undergraduate calendar and contributed to the parsing logic that converts raw prerequisite text into the tree structure stored in the database.
+*Safiullah Rattar* handled PDF parsing and search optimization. He worked on extracting course information from audit PDFs and on improving the search process so schedule generation could run more efficiently.
 
 === Report Contributions
 
 - *Chapter 1 (Introduction)*: Pietro Adamvoski
 - *Chapter 2 (The Engineering Project)*: All members (collaborative)
-- *Chapter 3 (Requirements and Design)*: Anas Ayoubi, Safiullah Rattar
-- *Chapter 4 (Implementation)*: Anas Ayoubi (database, prerequisites), Safiullah Rattar (scheduling algorithm), Pietro Adamvoski (audit parsing, API), Hakeem Khan (frontend)
+- *Chapter 3 (Requirements and Design)*: Pietro Adamvoski, Anas Ayoubi
+- *Chapter 4 (Implementation)*: Pietro Adamvoski (database, prerequisites), Anas Ayoubi (scheduling algorithm), Safiullah Rattar (PDF parsing, search optimization), Hakeem Khan (data acquisition)
 - *Chapter 5 (Testing and Evaluation)*: All members
 - *Chapter 6 (Reflections)*: All members (collaborative)
 
@@ -275,7 +275,7 @@ This chapter covers what we set out to build and how we decided to build it. The
 
 == Original Requirements
 
-The proposal (October 2025) listed nine functional requirements (FR1--FR9) and six non-functional requirements (NFR1--NFR6). Tables 3.1 and 3.2 show each requirement and how it ended up.
+The proposal (October 2025) listed nine functional requirements (FR1--FR9) and six non-functional requirements (NFR1--NFR6). Tables 3.1 and 3.2 summarize the requirement categories discussed in the final system and how they ended up.
 
 #pagebreak()
 
@@ -291,10 +291,9 @@ The proposal (October 2025) listed nine functional requirements (FR1--FR9) and s
     [FR5], [Schedule Generation], [Implemented], [Backtracking CSP solver with multi-section support],
     [FR6], [Preference-based Ranking], [Not Implemented], [Descoped; all valid schedules returned unranked],
     [FR7], [Interactive Timetable View], [Implemented], [Visual weekly grid with color-coded courses],
-    [FR8], [Schedule Export (PDF/iCal)], [Not Implemented], [Export button exists in UI but is non-functional],
-    [FR9], [Error and Conflict Feedback], [Implemented], [Prerequisite warnings, missing-section alerts, conflict detection],
+    [FR8], [Error and Conflict Feedback], [Implemented], [Prerequisite warnings, missing-section alerts, conflict detection],
   )],
-  caption: [Original Functional Requirements and Final Status],
+  caption: [Functional Requirements and Final Status],
 )
 
 #figure(
@@ -312,7 +311,7 @@ The proposal (October 2025) listed nine functional requirements (FR1--FR9) and s
   caption: [Non-Functional Requirements and Final Status],
 )
 
-Seven of the nine functional requirements were fully or partially implemented. We deliberately cut two (FR6: Preference-based Ranking and FR8: Schedule Export) during the Winter term. Section 3.4 explains why.
+Most of the functional requirements were fully or partially implemented. The main feature we deliberately cut during the Winter term was FR6, preference-based ranking. Section 3.4 explains why.
 
 == System Architecture
 
@@ -401,11 +400,7 @@ Appendix C gives a compact summary of the final database statistics.
 
 == Descoped Features and Rationale
 
-Two features from the proposal did not make it into the final system:
-
 *FR6: Preference-based ranking.* The proposal described a scoring system that would rank schedules based on preferences like avoiding morning classes or keeping a day free. We cut this for two reasons. First, we underestimated how much work the core scheduling engine (FR5) and prerequisite validation (FR2) would need, particularly handling multi-section courses and evaluating the prerequisite trees. Those took up most of the Winter term. Second, the system already returns up to 50 valid schedules that you can flip through visually, which gets you most of the way there even without automated ranking. Building a proper preference UI, a scoring algorithm, and testing it all was more than we could do well in the time we had left.
-
-*FR8: Schedule export.* The proposal called for PDF export. We added an export button to the UI, but never wrote the backend logic. Instead, we built the CRN copy-to-clipboard feature, which solves the same underlying problem (getting schedule info into Carleton Central) with a lot less work. Each section's CRN is shown in the sidebar and can be copied with one click.
 
 
 // =============================================================================
@@ -688,8 +683,7 @@ This was one of the better decisions we made. Having immediate feedback on algor
     [FR5: Schedule Generation], [Tested with 1--8 course combinations], [Pass --- all valid schedules generated, no false conflicts],
     [FR6: Preference Ranking], [N/A], [Not implemented],
     [FR7: Timetable View], [Visual inspection of generated schedules in browser], [Pass --- correct time placement and color coding],
-    [FR8: Schedule Export], [N/A], [Not implemented],
-    [FR9: Error Feedback], [Tested with invalid inputs, missing sections, unmet prereqs], [Pass --- appropriate error messages and warnings displayed],
+    [FR8: Error Feedback], [Tested with invalid inputs, missing sections, unmet prereqs], [Pass --- appropriate error messages and warnings displayed],
   )],
   caption: [Functional Requirements Verification Matrix],
 )
@@ -737,15 +731,15 @@ Quite a bit changed between the proposal and the final system:
 
 *Audit parsing approach*: The proposal said Cheerio for HTML and a JavaScript library for PDF. We ended up using regex for HTML and `pdftotext` for PDF. Neither was the plan, but both were driven by what actually worked when we tried parsing real audit files. The JS PDF libraries produced garbled output. The HTML was regular enough that regex worked fine, so that is what we used.
 
-*UI library*: The proposal mentioned Material-UI or Ant Design. Hakeem ended up using Radix UI/shadcn instead. That was mostly a preference call and it did not change the core functionality.
+*UI library*: The proposal mentioned Material-UI or Ant Design. The final version used Radix UI/shadcn instead. That was mostly a preference call and it did not change the core functionality.
 
 *Deployment*: The proposal said we would deploy to Vercel. We never did. Partly because the frontend/backend split made Vercel less convenient (it is optimized for Next.js), and partly because deployment was not a priority given everything else that still needed doing. This means NFR6 (HTTPS) was not met.
 
-*Descoped features*: FR6 (ranking) and FR8 (export) got cut. We underestimated how much time the core features would take, especially multi-section schedule generation and the prerequisite tree system.
+*Descoped features*: FR6 (ranking) got cut. We underestimated how much time the core features would take, especially multi-section schedule generation and the prerequisite tree system.
 
 == Team Dynamics
 
-For the most part, the team worked well together. Splitting responsibilities by strength (Hakeem on frontend, Anas on backend/database, Safi on algorithms/data, Pietro on integration) kept us out of each other's way and let people focus on the parts they were strongest at. Weekly meetings were enough to keep everyone lined up.
+For the most part, the team worked well together. Splitting responsibilities by strength (Hakeem on data acquisition, Pietro on database schema and prerequisite logic, Anas on the scheduling algorithm, Safi on PDF parsing and search optimization) kept us out of each other's way and let people focus on the parts they were strongest at. Weekly meetings were enough to keep everyone lined up.
 
 That said, things got shakier during the Winter term, especially around integrating the frontend with the backend API. Without a proper task tracker (we never set up GitHub Issues or anything like it), it was sometimes unclear who owned what. A few tasks fell through the cracks because everyone assumed someone else was handling them. In the last few weeks, when multiple features were being finished simultaneously, better tracking would have helped.
 
@@ -757,7 +751,7 @@ If we started over knowing what we know now:
 
 *Use a task tracker.* GitHub Issues with a project board would have been easy to set up and would have made ownership clearer. Our shared-list approach worked until it didn't.
 
-*Cut features earlier.* By the end of the Fall term, we already had a pretty good sense that ranking and export were slipping. We still waited too long to say that out loud and cut them. Making that decision earlier would have given us more time to polish the parts we actually finished.
+*Cut features earlier.* By the end of the Fall term, we already had a pretty good sense that ranking was slipping. We still waited too long to say that out loud and cut it. Making that decision earlier would have given us more time to polish the parts we actually finished.
 
 *Do user testing.* The proposal described UAT with student volunteers. We never did it. Even asking a few classmates to try the app and watching where they got confused would have been useful.
 
