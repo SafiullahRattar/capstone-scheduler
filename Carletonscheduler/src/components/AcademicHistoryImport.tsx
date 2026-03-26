@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Upload, FileText, Edit3, Info } from 'lucide-react';
 
 interface AcademicHistoryImportProps {
   onManualEntry: () => void;
@@ -49,7 +48,7 @@ export function AcademicHistoryImport({ onManualEntry, onUploadComplete }: Acade
       setSelectedFile(file);
       setUploadError(null);
     } else {
-      alert('Please upload a valid HTML or PDF file.');
+      setUploadError('Please upload a valid HTML or PDF file.');
     }
   };
 
@@ -67,36 +66,46 @@ export function AcademicHistoryImport({ onManualEntry, onUploadComplete }: Acade
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Header Bar */}
-      <header className="bg-[#bf112b] shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <h1 className="text-white text-lg font-semibold tracking-tight">Carleton Course Scheduler</h1>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        {/* Page Title */}
-        <div className="mb-10 text-center">
-          <h2 className="text-3xl font-semibold text-gray-900 mb-3">Import Academic History</h2>
-          <p className="text-gray-600 text-lg max-w-xl mx-auto">
-            Upload your Academic Audit to receive personalized course recommendations and prerequisite validation.
+    <div className="min-h-screen" style={{ background: '#f8fafc' }}>
+      <main style={{ maxWidth: '480px', margin: '0 auto', padding: '80px 24px' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '48px', textAlign: 'center' }}>
+          <h1 style={{ 
+            fontSize: '32px', 
+            fontWeight: 600, 
+            color: '#111', 
+            letterSpacing: '-0.02em',
+            marginBottom: '12px'
+          }}>
+            Carleton Scheduler
+          </h1>
+          <p style={{ fontSize: '16px', color: '#64748b', lineHeight: 1.6 }}>
+            Upload your Academic Audit to get personalized course recommendations
           </p>
         </div>
 
-        {/* Main Upload Card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Upload Audit File</h3>
-          
-          {/* Upload Area */}
+        {/* Upload Card */}
+        <div 
+          style={{ 
+            background: '#fff', 
+            borderRadius: '16px', 
+            border: '1px solid #e2e8f0',
+            padding: '32px',
+            marginBottom: '16px'
+          }}
+        >
+          {/* Drop Zone */}
           <div
-            className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ${
-              dragActive
-                ? 'border-[#bf112b] bg-red-50 scale-[1.01]'
-                : selectedFile
-                ? 'border-green-300 bg-green-50'
-                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-            }`}
+            style={{
+              position: 'relative',
+              border: '2px dashed',
+              borderColor: dragActive ? '#bf112b' : selectedFile ? '#10b981' : '#e2e8f0',
+              borderRadius: '12px',
+              padding: selectedFile ? '24px' : '48px 24px',
+              textAlign: 'center',
+              transition: 'all 150ms ease',
+              background: dragActive ? '#fef2f2' : selectedFile ? '#f0fdf4' : '#fafafa',
+            }}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -106,93 +115,141 @@ export function AcademicHistoryImport({ onManualEntry, onUploadComplete }: Acade
               <input
                 type="file"
                 id="file-upload"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer',
+                  zIndex: 10
+                }}
                 onChange={handleChange}
                 accept=".html,.htm,.pdf"
               />
             )}
             
-            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-              selectedFile ? 'bg-green-100' : dragActive ? 'bg-red-100' : 'bg-gray-100'
-            }`}>
-              <Upload className={`w-8 h-8 ${
-                selectedFile ? 'text-green-600' : dragActive ? 'text-[#bf112b]' : 'text-gray-400'
-              }`} />
-            </div>
-            
             {selectedFile ? (
-              <div className="space-y-4 relative z-10">
-                <div className="inline-flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg">
-                  <FileText className="w-5 h-5 text-[#bf112b]" />
-                  <span className="text-gray-900 font-medium">{selectedFile.name}</span>
-                  <span className="text-gray-500 text-sm">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
-                </div>
+              <div>
+                <p style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 500, 
+                  color: '#111',
+                  marginBottom: '4px'
+                }}>
+                  {selectedFile.name}
+                </p>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+                
                 {uploadError && (
-                  <p className="text-sm text-red-600">{uploadError}</p>
+                  <p style={{ 
+                    fontSize: '13px', 
+                    color: '#dc2626', 
+                    marginBottom: '16px',
+                    padding: '8px 12px',
+                    background: '#fef2f2',
+                    borderRadius: '6px'
+                  }}>
+                    {uploadError}
+                  </p>
                 )}
-                <div className="flex items-center justify-center gap-4 pt-2">
+                
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
                   <Button onClick={handleUpload} disabled={isUploading}>
-                    {isUploading ? 'Processing...' : 'Upload and Continue'}
+                    {isUploading ? 'Processing...' : 'Continue'}
                   </Button>
                   <button
-                    onClick={() => setSelectedFile(null)}
-                    className="text-sm text-gray-500 hover:text-[#bf112b] transition-colors"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setUploadError(null);
+                    }}
+                    style={{
+                      fontSize: '14px',
+                      color: '#64748b',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    className="hover:underline"
                   >
-                    Choose different file
+                    Change file
                   </button>
                 </div>
               </div>
             ) : (
               <>
-                <p className="text-gray-700 font-medium mb-1">
-                  Drag and drop your Academic Audit file here
+                <p style={{ 
+                  fontSize: '15px', 
+                  fontWeight: 500, 
+                  color: '#111',
+                  marginBottom: '6px'
+                }}>
+                  Drop your audit file here
                 </p>
-                <p className="text-sm text-gray-500">
-                  or click to browse (HTML or PDF, max 10MB)
+                <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                  or click to browse
+                </p>
+                <p style={{ 
+                  fontSize: '12px', 
+                  color: '#cbd5e1', 
+                  marginTop: '16px' 
+                }}>
+                  HTML or PDF
                 </p>
               </>
             )}
           </div>
 
-          {/* Info Note */}
-          <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-blue-800">HTML files provide the most accurate parsing. Save your audit webpage as HTML from Carleton Central.</span>
-          </div>
+          {/* Tip */}
+          <p style={{ 
+            fontSize: '13px', 
+            color: '#94a3b8', 
+            marginTop: '16px',
+            lineHeight: 1.5
+          }}>
+            For best results, save your audit as HTML from{' '}
+            <a 
+              href="https://central.carleton.ca" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#64748b', textDecoration: 'underline' }}
+            >
+              Carleton Central
+            </a>
+          </p>
         </div>
 
-        {/* Alternative Options */}
-        <div className="mb-10">
-          <button
-            onClick={onManualEntry}
-            className="group w-full bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-[#bf112b] hover:shadow-md transition-all duration-200"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-red-50 flex items-center justify-center transition-colors">
-                <Edit3 className="w-5 h-5 text-gray-600 group-hover:text-[#bf112b] transition-colors" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-1">Manual Entry</h4>
-                <p className="text-sm text-gray-600">
-                  Enter completed courses manually
-                </p>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        {/* Help Link */}
-        <p className="text-center text-sm text-gray-500">
-          Need help finding your Academic Audit?{' '}
-          <a 
-            href="https://central.carleton.ca" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-[#bf112b] hover:underline font-medium"
-          >
-            Go to Carleton Central
-          </a>
-        </p>
+        {/* Manual Entry Option */}
+        <button
+          onClick={onManualEntry}
+          style={{
+            width: '100%',
+            padding: '16px 20px',
+            background: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'all 150ms ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#cbd5e1';
+            e.currentTarget.style.background = '#fafafa';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#e2e8f0';
+            e.currentTarget.style.background = '#fff';
+          }}
+        >
+          <p style={{ fontSize: '14px', fontWeight: 500, color: '#111', marginBottom: '2px' }}>
+            Skip this step
+          </p>
+          <p style={{ fontSize: '13px', color: '#94a3b8' }}>
+            Continue without uploading an audit
+          </p>
+        </button>
       </main>
     </div>
   );
