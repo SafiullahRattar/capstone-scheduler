@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Calendar, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import type { ElectiveRequirement } from '../types/electives';
 import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termUtils';
-import {
-  getElectiveTokenCategory,
-} from '../utils/electiveUtils';
 import {
   AuditSummaryCard,
   CourseSelectionHeader,
@@ -325,8 +322,8 @@ export function CourseSelectionPage({
   }).length;
 
   return (
-    <div className="min-h-screen" style={{ background: '#f9fafb' }}>
-      <main className="max-w-6xl mx-auto px-6" style={{ paddingTop: '32px', paddingBottom: '32px' }}>
+    <div className="min-h-screen" style={{ background: '#f8fafc' }}>
+      <main className="max-w-5xl mx-auto" style={{ padding: '40px 24px 64px' }}>
         <CourseSelectionHeader onStartOver={onStartOver} />
         <TermSelectionTabs
           visibleTerms={visibleTerms}
@@ -370,8 +367,8 @@ export function CourseSelectionPage({
           getTermShortLabel={getSemesterShortName}
         />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
-          <div className="space-y-6">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px' }}>
+          <div className="space-y-4">
             <SearchPanel
               searchRef={searchRef}
               searchQuery={searchQuery}
@@ -408,23 +405,26 @@ export function CourseSelectionPage({
         </div>
       </main>
 
-      {/* Toast notification for auto-switch guard */}
+      {/* Toast notification */}
       {toastMessage && (
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3"
           style={{
-            background: '#1e293b',
-            color: '#f8fafc',
-            animation: 'fadeInUp 200ms ease-out',
+            padding: '14px 20px',
+            background: '#111',
+            color: '#fff',
+            borderRadius: '10px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+            fontSize: '14px',
+            fontWeight: 500,
           }}
         >
-          <Calendar className="w-4 h-4 shrink-0" />
           {toastMessage}
           <button
             onClick={() => setToastMessage(null)}
-            className="ml-2 text-gray-400 hover:text-white"
+            className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}

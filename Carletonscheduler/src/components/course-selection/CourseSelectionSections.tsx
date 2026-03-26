@@ -1,16 +1,5 @@
 import { type RefObject } from 'react';
-import {
-  AlertCircle,
-  Calendar,
-  CheckCircle2,
-  ChevronRight,
-  Info,
-  RotateCcw,
-  Search,
-  Sparkles,
-  X,
-  XCircle,
-} from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card';
@@ -47,29 +36,29 @@ interface CourseSelectionHeaderProps {
 
 export function CourseSelectionHeader({ onStartOver }: CourseSelectionHeaderProps) {
   return (
-    <>
-      <header style={{ borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900">Carleton Course Scheduler</h1>
-        </div>
-      </header>
-
-      <div style={{ marginBottom: '16px' }} className="flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900" style={{ marginBottom: '4px' }}>Course Selection</h2>
-          <p className="text-gray-500">Select courses to generate conflict-free schedules</p>
-        </div>
-        <Button
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-1">
+        <h1 style={{ 
+          fontSize: '28px', 
+          fontWeight: 600, 
+          color: '#111', 
+          letterSpacing: '-0.02em',
+          lineHeight: 1.2 
+        }}>
+          Course Selection
+        </h1>
+        <button
           onClick={onStartOver}
-          size="lg"
-          variant="ghost"
-          className="flex items-center gap-2 text-zinc-900 hover:text-black hover:bg-zinc-100 transition-all px-4"
+          className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          style={{ fontWeight: 500 }}
         >
-          <RotateCcw className="w-5 h-5" />
-          Start Over
-        </Button>
+          Start over
+        </button>
       </div>
-    </>
+      <p style={{ fontSize: '15px', color: '#64748b', lineHeight: 1.5 }}>
+        Choose courses for your upcoming term
+      </p>
+    </div>
   );
 }
 
@@ -87,46 +76,25 @@ export function TermSelectionTabs({
   getTermLabel,
 }: TermSelectionTabsProps) {
   return (
-    <div className="flex items-center gap-2 mb-6">
+    <div 
+      className="flex items-center gap-1 mb-8 p-1 rounded-lg"
+      style={{ background: '#f1f5f9', width: 'fit-content' }}
+    >
       {visibleTerms.map((vt) => {
         const isActive = vt.code === currentTerm;
-        let bgColor = '#f3f4f6';
-        let textColor = '#6b7280';
-        let borderColor = '#e5e7eb';
-        let roleLabel = '';
-
-        if (vt.role === 'current') {
-          bgColor = isActive ? '#fffbeb' : '#f3f4f6';
-          textColor = isActive ? '#92400e' : '#6b7280';
-          borderColor = isActive ? '#f59e0b' : '#e5e7eb';
-          roleLabel = 'Current';
-        } else if (vt.role === 'upcoming') {
-          bgColor = isActive ? '#eff6ff' : '#f3f4f6';
-          textColor = isActive ? '#1e40af' : '#6b7280';
-          borderColor = isActive ? '#3b82f6' : '#e5e7eb';
-          roleLabel = 'Upcoming';
-        } else {
-          bgColor = isActive ? '#f3f4f6' : '#f9fafb';
-          textColor = isActive ? '#374151' : '#9ca3af';
-          borderColor = isActive ? '#9ca3af' : '#e5e7eb';
-          roleLabel = 'Previous';
-        }
-
         return (
           <button
             key={vt.code}
             onClick={() => onTermChange(vt.code)}
-            className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
+            className="px-4 py-2 rounded-md text-sm transition-all"
             style={{
-              background: bgColor,
-              color: textColor,
-              borderColor,
-              boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              opacity: isActive ? 1 : 0.8,
+              fontWeight: 500,
+              background: isActive ? '#fff' : 'transparent',
+              color: isActive ? '#111' : '#64748b',
+              boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             }}
           >
-            <span>{getTermLabel(vt.code)}</span>
-            <span className="ml-1.5 text-[10px] font-medium opacity-70">({roleLabel})</span>
+            {getTermLabel(vt.code)}
           </button>
         );
       })}
@@ -221,83 +189,149 @@ export function AuditSummaryCard({
 
   return (
     <div
-      className="bg-white border border-gray-200"
-      style={{ marginBottom: '32px', borderRadius: '16px', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+      style={{ 
+        marginBottom: '32px', 
+        padding: '24px',
+        background: '#fff',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0'
+      }}
     >
-      <div className="flex items-start justify-between gap-4" style={{ marginBottom: '16px' }}>
+      {/* Student Info Header */}
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="font-semibold text-gray-900 text-lg">{studentInfo.name}</p>
-          <p className="text-sm text-gray-500">{studentInfo.program} | {studentInfo.studentId}</p>
-          <div className="flex gap-6 mt-3">
-            <SummaryStat label="Completed" value={completedCourses.length} />
-            <SummaryStat label="In Progress" value={currentCourses.length} />
-            <SummaryStat label="Remaining" value={remainingCourses.length} />
-          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111', marginBottom: '4px' }}>
+            {studentInfo.name}
+          </h2>
+          <p style={{ fontSize: '14px', color: '#64748b' }}>
+            {studentInfo.program}
+          </p>
         </div>
         {remainingCourses.length > 0 && (
           <Button
             onClick={onGenerateSmartSchedule}
             disabled={isGenerating}
-            className="flex items-center gap-2"
+            size="sm"
           >
-            <Sparkles className="w-4 h-4" fill="currentColor" />
-            {isGenerating ? 'Generating...' : 'Auto-Generate Schedule'}
+            {isGenerating ? 'Generating...' : 'Auto-fill courses'}
           </Button>
         )}
       </div>
 
-      <div className="space-y-3 text-sm border-t border-gray-100 pt-4">
-        <CollapsibleCourseList
-          title="Completed courses"
+      {/* Progress Stats */}
+      <div 
+        className="flex gap-8 mb-6 pb-6"
+        style={{ borderBottom: '1px solid #f1f5f9' }}
+      >
+        <ProgressStat label="Completed" value={completedCourses.length} />
+        <ProgressStat label="In Progress" value={currentCourses.length} />
+        <ProgressStat label="Remaining" value={remainingCourses.length} />
+      </div>
+
+      {/* Collapsible Sections */}
+      <div className="space-y-4">
+        <CollapsibleSection
+          title="Completed"
           count={completedCourses.length}
           open={completedOpen}
           onToggle={onToggleCompleted}
-          items={completedCourses}
-        />
+        >
+          <div className="flex flex-wrap gap-2">
+            {completedCourses.map((code) => (
+              <span 
+                key={code} 
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '13px',
+                  color: '#64748b',
+                  background: '#f8fafc',
+                  borderRadius: '4px'
+                }}
+              >
+                {code}
+              </span>
+            ))}
+          </div>
+        </CollapsibleSection>
 
         {currentCourses.length > 0 && (
-          <CollapsibleCourseList
-            title="Currently enrolled"
+          <CollapsibleSection
+            title="Currently Enrolled"
             count={currentCourses.length}
             open={enrolledOpen}
             onToggle={onToggleEnrolled}
-            items={currentCourses.map(course => course.courseId)}
-          />
+          >
+            <div className="flex flex-wrap gap-2">
+              {currentCourses.map((course) => (
+                <span 
+                  key={course.courseId} 
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '13px',
+                    color: '#64748b',
+                    background: '#f8fafc',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {course.courseId}
+                </span>
+              ))}
+            </div>
+          </CollapsibleSection>
         )}
 
         {remainingCourses.length > 0 && (
-          <div>
-            <button
-              onClick={onToggleRemaining}
-              className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 w-full text-left"
-            >
-              <ChevronRight className="w-4 h-4 text-gray-400" style={{ transform: remainingOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 200ms' }} />
-              Remaining requirements
-              <span className="text-xs text-gray-500">({remainingCourses.length})</span>
-              {isLoadingDetails && <span className="text-xs text-gray-400 italic animate-pulse">Loading...</span>}
-            </button>
-
-            {remainingOpen && (
-              <div className="mt-3" style={{ paddingLeft: '28px' }}>
+          <CollapsibleSection
+            title="Remaining Requirements"
+            count={remainingCourses.length}
+            open={remainingOpen}
+            onToggle={onToggleRemaining}
+            loading={isLoadingDetails}
+          >
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <div className="flex gap-4">
                 {hasUnselected && (
                   <button
                     onClick={() => onAddAllCourses(allItems)}
-                    className="text-xs font-semibold text-gray-900 hover:text-black hover:underline mb-4 flex items-center gap-1"
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#bf112b',
+                    }}
+                    className="hover:underline"
                   >
-                    <span className="text-sm">+</span> Add all available courses ({addableCourses.length} courses)
+                    Add all available ({addableCourses.length})
                   </button>
                 )}
-
                 {selectedCourses.length > 0 && (
                   <button
                     onClick={onClearSelected}
-                    className="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline mb-4 flex items-center gap-1"
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#64748b',
+                    }}
+                    className="hover:underline"
                   >
-                    <X className="w-3 h-3" /> Remove all added courses
+                    Clear selection
                   </button>
                 )}
+              </div>
 
-                {coreCourses.length > 0 && (
+              {/* Core Courses */}
+              {coreCourses.length > 0 && (
+                <div>
+                  <h4 style={{ 
+                    fontSize: '12px', 
+                    fontWeight: 600, 
+                    color: '#94a3b8', 
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '12px'
+                  }}>
+                    Core Courses
+                  </h4>
                   <RemainingCoreCourseList
                     coreCourses={coreCourses}
                     selectedCourses={selectedCourses}
@@ -310,32 +344,51 @@ export function AuditSummaryCard({
                     getTermLabel={getTermLabel}
                     getTermShortLabel={getTermShortLabel}
                   />
-                )}
+                </div>
+              )}
 
-                {electiveRequirements.length > 0 && (
+              {/* Electives */}
+              {electiveRequirements.length > 0 && (
+                <div>
+                  <h4 style={{ 
+                    fontSize: '12px', 
+                    fontWeight: 600, 
+                    color: '#94a3b8', 
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '12px'
+                  }}>
+                    Electives
+                  </h4>
                   <ElectiveRequirementList
                     electiveRequirements={electiveRequirements}
                     selectedCourses={selectedCourses}
                     onAddCourse={onAddCourse}
                   />
-                )}
+                </div>
+              )}
 
-                {electiveRequirements.length === 0 && coreCourses.length === 0 && (
-                  <FallbackRemainingCourseList
-                    remainingCourses={remainingCourses}
-                    selectedCourses={selectedCourses}
-                    onAddAllCourses={onAddAllCourses}
-                    onAddCourse={onAddCourse}
-                  />
-                )}
-              </div>
-            )}
-          </div>
+              {electiveRequirements.length === 0 && coreCourses.length === 0 && (
+                <FallbackRemainingCourseList
+                  remainingCourses={remainingCourses}
+                  selectedCourses={selectedCourses}
+                  onAddAllCourses={onAddAllCourses}
+                  onAddCourse={onAddCourse}
+                />
+              )}
+            </div>
+          </CollapsibleSection>
         )}
 
         {remainingCourses.length === 0 && (
-          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <span className="text-gray-700 font-medium text-sm">All degree requirements completed or in progress</span>
+          <div style={{ 
+            padding: '16px',
+            background: '#f0fdf4',
+            borderRadius: '8px',
+            fontSize: '14px',
+            color: '#166534'
+          }}>
+            All degree requirements completed or in progress
           </div>
         )}
       </div>
@@ -343,45 +396,59 @@ export function AuditSummaryCard({
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: number }) {
+function ProgressStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="text-center">
-      <div className="text-2xl font-semibold text-gray-900">{value}</div>
-      <div className="text-xs text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+    <div>
+      <div style={{ fontSize: '24px', fontWeight: 600, color: '#111', lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+        {label}
+      </div>
     </div>
   );
 }
 
-function CollapsibleCourseList({
+function CollapsibleSection({
   title,
   count,
   open,
   onToggle,
-  items,
+  loading,
+  children,
 }: {
   title: string;
   count: number;
   open: boolean;
   onToggle: () => void;
-  items: string[];
+  loading?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <div>
       <button
         onClick={onToggle}
-        className="cursor-pointer text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 w-full text-left"
+        className="w-full flex items-center justify-between py-2 text-left"
       >
-        <ChevronRight className="w-4 h-4 text-gray-400" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 200ms' }} />
-        {title}
-        <span className="text-xs text-gray-500">({count})</span>
+        <span style={{ fontSize: '14px', fontWeight: 500, color: '#334155' }}>
+          {title}
+          <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '8px' }}>
+            {count}
+          </span>
+          {loading && (
+            <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '8px', fontStyle: 'italic' }}>
+              Loading...
+            </span>
+          )}
+        </span>
+        <ChevronDown 
+          className="w-4 h-4 text-slate-400 transition-transform"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
       </button>
       {open && (
-        <div className="mt-3 flex flex-wrap gap-2" style={{ paddingLeft: '28px' }}>
-          {items.map((item) => (
-            <span key={item} className="px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-md text-xs font-medium">
-              {item}
-            </span>
-          ))}
+        <div style={{ paddingTop: '12px', paddingBottom: '8px' }}>
+          {children}
         </div>
       )}
     </div>
@@ -419,7 +486,7 @@ function RemainingCoreCourseList({
   getTermShortLabel,
 }: RemainingCoreCourseListProps) {
   return (
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div className="flex flex-wrap gap-2">
       {coreCourses.map((code) => {
         const details = courseDetails.get(code);
         const hasTermData = details?.terms && details.terms.length > 0;
@@ -430,141 +497,75 @@ function RemainingCoreCourseList({
         const canAdd = eligible && !isSelected;
         const isClickable = canAdd || isSelected;
 
-        const courseButton = (
+        const courseChip = (
           <button
             onClick={() => {
               if (isSelected) onRemoveCourse(code);
               else if (canAdd) onAddCourse(code);
             }}
             disabled={!isClickable}
-            className="px-3 py-1.5 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5"
             style={{
-              minWidth: '120px',
-              minHeight: '32px',
-              background: isSelected ? '#f4f4f5' : canAdd ? '#fff' : '#fafafa',
-              color: isSelected ? '#a1a1aa' : canAdd ? '#18181b' : '#a1a1aa',
-              borderColor: isSelected ? '#e4e4e7' : canAdd ? '#27272a' : '#e4e4e7',
+              padding: '6px 12px',
+              fontSize: '13px',
+              fontWeight: 500,
+              borderRadius: '6px',
+              border: '1px solid',
+              transition: 'all 150ms',
               cursor: isClickable ? 'pointer' : 'default',
-              opacity: isSelected ? 0.5 : (!canAdd ? 0.6 : 1),
+              background: isSelected ? '#fef2f2' : canAdd ? '#fff' : '#fafafa',
+              color: isSelected ? '#991b1b' : canAdd ? '#111' : '#94a3b8',
+              borderColor: isSelected ? '#fecaca' : canAdd ? '#e2e8f0' : '#f1f5f9',
+              opacity: !isClickable ? 0.7 : 1,
             }}
           >
             {code}
-            {hasTermData && details!.terms!.map(term => (
-              <span
-                key={term}
-                className="text-[9px] font-bold"
-                style={{ color: term === currentTerm ? '#18181b' : '#a1a1aa' }}
-              >
-                {getTermShortLabel(term)}
-              </span>
-            ))}
-            {isSelected && <span className="text-[9px] text-gray-400 font-medium">Added</span>}
+            {isSelected && (
+              <X className="w-3 h-3 inline ml-1.5" style={{ marginTop: '-1px' }} />
+            )}
           </button>
         );
 
         if (isClickable) {
-          return <span key={code}>{courseButton}</span>;
+          return <span key={code}>{courseChip}</span>;
         }
 
+        // Non-clickable courses get a hover card explaining why
         const prereqBreakdown = getPrerequisiteBreakdown(details?.prerequisiteTree);
         const missingPrereqs = prereqBreakdown.filter(prereq => !prereq.met);
 
-        let reasonType: 'no-data' | 'not-offered' | 'missing-prereqs' = 'no-data';
-        if (!hasTermData) {
-          reasonType = 'no-data';
-        } else if (!isOfferedNow) {
-          reasonType = 'not-offered';
-        } else {
-          reasonType = 'missing-prereqs';
+        let reason = 'No schedule data available';
+        if (hasTermData && !isOfferedNow) {
+          reason = `Not offered in ${getTermLabel(currentTerm)}`;
+        } else if (!prereqsMet && missingPrereqs.length > 0) {
+          reason = `Missing: ${missingPrereqs.map(p => p.code).join(', ')}`;
         }
 
         return (
-          <HoverCard key={code} openDelay={150} closeDelay={100}>
-            <HoverCardTrigger asChild>{courseButton}</HoverCardTrigger>
+          <HoverCard key={code} openDelay={200} closeDelay={100}>
+            <HoverCardTrigger asChild>{courseChip}</HoverCardTrigger>
             <HoverCardContent
               side="top"
               align="center"
-              className="w-72 p-0 rounded-lg border border-gray-200 shadow-lg bg-white"
+              style={{
+                width: '240px',
+                padding: '12px',
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+              }}
             >
-              <div className="px-4 pt-3 pb-2 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">{code}</span>
-                  <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
-                    {details?.credits ? `${details.credits} cr.` : ''}
-                  </span>
-                </div>
-                {details?.name && details.name !== code && (
-                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">{details.name}</p>
-                )}
-              </div>
-
-              <div className="px-4 py-2.5">
-                {reasonType === 'no-data' && (
-                  <div className="flex items-start gap-2">
-                    <Info className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      No schedule data available yet. Check back when the timetable is published.
-                    </p>
-                  </div>
-                )}
-
-                {reasonType === 'not-offered' && (
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        Not offered in {getTermLabel(currentTerm)}.{' '}
-                        {hasTermData && details!.terms!.length > 0 && (
-                          <span className="font-medium text-gray-600">
-                            Next available: {getTermLabel(details!.terms![0])}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    {hasTermData && (
-                      <div className="flex items-center gap-1.5 flex-wrap ml-5">
-                        <span className="text-[10px] text-gray-400">All terms:</span>
-                        {details!.terms!.map(term => (
-                          <span
-                            key={term}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium"
-                          >
-                            {getTermLabel(term)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {reasonType === 'missing-prereqs' && (
-                  <div className="space-y-2.5">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        You need to complete {missingPrereqs.length === 1 ? '1 prerequisite' : `${missingPrereqs.length} prerequisites`} before registering.
-                      </p>
-                    </div>
-                    {prereqBreakdown.length > 0 && (
-                      <div className="space-y-1 ml-1">
-                        {prereqBreakdown.map(prereq => (
-                          <div key={prereq.code} className="flex items-center gap-2">
-                            {prereq.met ? (
-                              <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
-                            ) : (
-                              <XCircle className="w-3 h-3 text-gray-300 shrink-0" />
-                            )}
-                            <span className={`text-xs font-medium ${prereq.met ? 'text-gray-900' : 'text-gray-400'}`}>
-                              {prereq.code}
-                            </span>
-                            {prereq.met && <span className="text-[10px] text-green-600">Completed</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <p style={{ fontSize: '13px', fontWeight: 500, color: '#111', marginBottom: '4px' }}>
+                {code}
+              </p>
+              <p style={{ fontSize: '12px', color: '#64748b' }}>
+                {reason}
+              </p>
+              {hasTermData && !isOfferedNow && details!.terms!.length > 0 && (
+                <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+                  Available: {details!.terms!.map(t => getTermShortLabel(t)).join(', ')}
+                </p>
+              )}
             </HoverCardContent>
           </HoverCard>
         );
@@ -583,8 +584,7 @@ function ElectiveRequirementList({
   onAddCourse: (courseCode: string) => void | Promise<void>;
 }) {
   return (
-    <div className="space-y-2 mt-4 pt-4 border-t border-gray-100">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Elective Requirements</p>
+    <div className="space-y-2">
       {electiveRequirements.map((elective) => {
         const selectedCount = getSelectedElectiveTokenCount(selectedCourses, elective.category);
         const slotCount = getElectiveSlotCount(elective);
@@ -593,33 +593,40 @@ function ElectiveRequirementList({
         const isFullySelected = selectedCount >= slotCount;
 
         return (
-          <div key={elective.category}>
-            <button
-              onClick={() => !isFullySelected && onAddCourse(nextToken)}
-              disabled={isFullySelected}
-              className="w-full text-left rounded-lg border flex items-center gap-2"
-              style={{
-                padding: '10px 14px',
-                background: isFullySelected ? '#f3f4f6' : '#fff',
-                borderColor: isFullySelected ? '#d1d5db' : '#e5e7eb',
-                cursor: isFullySelected ? 'default' : 'pointer',
-                opacity: isFullySelected ? 0.7 : 1,
-              }}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{elective.label}</p>
-                <p className="text-xs text-gray-500" style={{ marginTop: '2px' }}>
-                  {selectedCount}/{slotCount} selected · {elective.creditsNeeded} cr. total · {elective.courseOptions.length} options
+          <button
+            key={elective.category}
+            onClick={() => !isFullySelected && onAddCourse(nextToken)}
+            disabled={isFullySelected}
+            className="w-full text-left"
+            style={{
+              padding: '12px 16px',
+              background: isFullySelected ? '#f8fafc' : '#fff',
+              border: '1px solid',
+              borderColor: isFullySelected ? '#f1f5f9' : '#e2e8f0',
+              borderRadius: '8px',
+              cursor: isFullySelected ? 'default' : 'pointer',
+              opacity: isFullySelected ? 0.7 : 1,
+              transition: 'all 150ms',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                  {elective.label}
+                </p>
+                <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  {elective.creditsNeeded} credits needed
                 </p>
               </div>
-              {isFullySelected && <span className="text-xs text-gray-400">Added</span>}
-            </button>
-            {!isFullySelected && (
-              <p className="text-xs text-gray-400" style={{ marginTop: '4px', marginLeft: '4px' }}>
-                A course will be auto-picked when you generate. Swap on the schedule page.
-              </p>
-            )}
-          </div>
+              <span style={{ 
+                fontSize: '13px', 
+                color: isFullySelected ? '#10b981' : '#64748b',
+                fontWeight: 500
+              }}>
+                {selectedCount}/{slotCount}
+              </span>
+            </div>
+          </button>
         );
       })}
     </div>
@@ -638,14 +645,19 @@ function FallbackRemainingCourseList({
   onAddCourse: (courseCode: string) => void | Promise<void>;
 }) {
   return (
-    <>
+    <div>
       {remainingCourses.some(code => !selectedCourses.includes(code)) && (
         <button
           onClick={() => onAddAllCourses(remainingCourses)}
-          className="text-xs font-medium hover:underline"
-          style={{ marginBottom: '12px', color: '#374151' }}
+          style={{
+            fontSize: '13px',
+            fontWeight: 500,
+            color: '#bf112b',
+            marginBottom: '12px',
+          }}
+          className="hover:underline"
         >
-          + Add all remaining courses
+          Add all remaining courses
         </button>
       )}
       <div className="flex flex-wrap gap-2">
@@ -656,11 +668,15 @@ function FallbackRemainingCourseList({
               key={code}
               onClick={() => !isSelected && onAddCourse(code)}
               disabled={isSelected}
-              className="px-2 py-1 rounded-md text-xs font-medium border"
               style={{
-                background: isSelected ? '#f3f4f6' : '#fff',
-                color: isSelected ? '#6b7280' : '#374151',
-                borderColor: isSelected ? '#d1d5db' : '#e5e7eb',
+                padding: '6px 12px',
+                fontSize: '13px',
+                fontWeight: 500,
+                borderRadius: '6px',
+                border: '1px solid',
+                background: isSelected ? '#f8fafc' : '#fff',
+                color: isSelected ? '#94a3b8' : '#111',
+                borderColor: isSelected ? '#f1f5f9' : '#e2e8f0',
                 cursor: isSelected ? 'default' : 'pointer',
                 opacity: isSelected ? 0.7 : 1,
               }}
@@ -670,7 +686,7 @@ function FallbackRemainingCourseList({
           );
         })}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -708,82 +724,146 @@ export function SearchPanel({
   });
 
   return (
-    <div className="bg-white border border-gray-200 p-6" style={{ borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-      <h3 className="font-semibold text-gray-900 mb-4">Search Courses</h3>
+    <div 
+      style={{ 
+        background: '#fff', 
+        borderRadius: '12px', 
+        border: '1px solid #e2e8f0',
+        padding: '20px'
+      }}
+    >
+      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '16px' }}>
+        Search Courses
+      </h3>
       <div ref={searchRef} className="relative">
         <div className="relative">
-          <Search className="absolute w-4 h-4 text-gray-400" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <Search 
+            className="absolute w-4 h-4 text-slate-400" 
+            style={{ left: '14px', top: '50%', transform: 'translateY(-50%)' }} 
+          />
           <Input
             type="text"
-            placeholder="Search by course code or name (min 2 chars)..."
+            placeholder="Course code or name..."
             value={searchQuery}
             onChange={(e) => onSearch(e.target.value)}
             onFocus={onFocus}
-            className="pl-10"
-            style={{ height: '44px' }}
+            style={{ 
+              paddingLeft: '42px',
+              height: '44px',
+              fontSize: '14px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              background: '#f8fafc'
+            }}
           />
           {isSearching && (
-            <div className="absolute" style={{ right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
-              <div
-                className="w-4 h-4 border-2 border-gray-300 rounded-full"
-                style={{ borderTopColor: '#374151', animation: 'spin 1s linear infinite' }}
-              />
-            </div>
+            <div 
+              className="absolute w-4 h-4 border-2 border-slate-200 rounded-full"
+              style={{ 
+                right: '14px', 
+                top: '50%', 
+                transform: 'translateY(-50%)',
+                borderTopColor: '#64748b',
+                animation: 'spin 1s linear infinite'
+              }}
+            />
           )}
         </div>
 
         {showResults && searchResults.length > 0 && (
-          <div className="absolute w-full mt-2 bg-white border border-gray-200 shadow-lg overflow-y-auto" style={{ zIndex: 20, borderRadius: '12px', maxHeight: '320px' }}>
-            {sortedResults.map((course) => (
-              <button
-                key={course.code}
-                onClick={() => onAddCourse(course.code)}
-                disabled={selectedCourses.includes(course.code)}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100"
-                style={{ opacity: selectedCourses.includes(course.code) ? 0.5 : 1, cursor: selectedCourses.includes(course.code) ? 'not-allowed' : 'pointer' }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-gray-900">{course.code}</span>
-                    {course.name && course.name !== course.code && (
-                      <span className="text-gray-600 ml-2">{course.name}</span>
-                    )}
-                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
-                      <span>{course.credits} credits</span>
-                      {course.sectionTypes && course.sectionTypes.length > 0 && <span className="text-gray-300">|</span>}
-                      {course.sectionTypes && course.sectionTypes.length > 0 && <span>{course.sectionTypes.join(', ')}</span>}
-                      {course.terms && course.terms.length > 0 && (
-                        <>
-                          <span className="text-gray-300">|</span>
-                          <div className="flex gap-1">
-                            {course.terms.map(term => {
-                              const isCurrent = term === currentTerm;
-                              return (
-                                <span
-                                  key={term}
-                                  className={`px-1.5 py-0.5 rounded ${isCurrent ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600'}`}
-                                >
-                                  {getTermLabel(term)}{isCurrent ? ' (Available now)' : ''}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </>
+          <div 
+            className="absolute w-full mt-2 overflow-y-auto"
+            style={{ 
+              zIndex: 20, 
+              maxHeight: '320px',
+              background: '#fff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
+            }}
+          >
+            {sortedResults.map((course, index) => {
+              const isSelected = selectedCourses.includes(course.code);
+              const isAvailable = course.terms?.includes(currentTerm);
+              
+              return (
+                <button
+                  key={course.code}
+                  onClick={() => onAddCourse(course.code)}
+                  disabled={isSelected}
+                  className="w-full text-left transition-colors"
+                  style={{ 
+                    padding: '14px 16px',
+                    borderBottom: index < sortedResults.length - 1 ? '1px solid #f1f5f9' : 'none',
+                    opacity: isSelected ? 0.5 : 1, 
+                    cursor: isSelected ? 'not-allowed' : 'pointer',
+                    background: 'transparent'
+                  }}
+                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#f8fafc'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>
+                          {course.code}
+                        </span>
+                        {isAvailable && (
+                          <span style={{ 
+                            fontSize: '11px', 
+                            fontWeight: 500,
+                            color: '#059669',
+                            background: '#ecfdf5',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            Available
+                          </span>
+                        )}
+                      </div>
+                      {course.name && course.name !== course.code && (
+                        <p style={{ 
+                          fontSize: '13px', 
+                          color: '#64748b', 
+                          marginTop: '2px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {course.name}
+                        </p>
                       )}
+                      <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                        {course.credits} credits
+                      </p>
                     </div>
+                    {isSelected && (
+                      <span style={{ fontSize: '12px', color: '#94a3b8', flexShrink: 0 }}>
+                        Added
+                      </span>
+                    )}
                   </div>
-                  {selectedCourses.includes(course.code) && (
-                    <span className="text-xs text-gray-400">Added</span>
-                  )}
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {showResults && searchQuery && searchResults.length === 0 && (
-          <div className="absolute w-full mt-2 bg-white border border-gray-200 p-6 text-center text-gray-500 shadow-lg" style={{ zIndex: 20, borderRadius: '12px' }}>
-            No courses found matching "{searchQuery}"
+        {showResults && searchQuery && searchResults.length === 0 && !isSearching && (
+          <div 
+            className="absolute w-full mt-2 text-center"
+            style={{ 
+              zIndex: 20, 
+              padding: '24px',
+              background: '#fff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
+            }}
+          >
+            <p style={{ fontSize: '14px', color: '#64748b' }}>
+              No courses found for "{searchQuery}"
+            </p>
           </div>
         )}
       </div>
@@ -816,50 +896,74 @@ export function SelectedCoursesPanel({
   checkPrerequisiteStatus,
 }: SelectedCoursesPanelProps) {
   return (
-    <div className="bg-white border border-gray-200 p-6" style={{ borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-      <h3 className="font-semibold text-gray-900 mb-4">
-        Selected Courses
+    <div 
+      style={{ 
+        background: '#fff', 
+        borderRadius: '12px', 
+        border: '1px solid #e2e8f0',
+        padding: '20px'
+      }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111' }}>
+          Selected Courses
+        </h3>
         {selectedCourses.length > 0 && (
-          <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">
+          <span style={{ 
+            fontSize: '13px', 
+            fontWeight: 500,
+            color: '#64748b',
+            background: '#f1f5f9',
+            padding: '4px 10px',
+            borderRadius: '12px'
+          }}>
             {selectedCourses.length}
           </span>
         )}
-      </h3>
+      </div>
 
       {selectedCourses.length === 0 ? (
-        <div style={{ padding: '48px 0', textAlign: 'center' }}>
-          <p className="text-gray-500">No courses selected yet.</p>
-          <p className="text-sm text-gray-400 mt-1">Search above or add from remaining requirements.</p>
+        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+          <p style={{ fontSize: '14px', color: '#64748b' }}>
+            No courses selected
+          </p>
+          <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>
+            Search or add from your requirements
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {selectedCourses.map((courseCode) => {
             if (courseCode.startsWith('ELECTIVE:')) {
               const category = getElectiveTokenCategory(courseCode) || courseCode.replace('ELECTIVE:', '');
               const requirement = electiveRequirements.find(er => er.category === category);
               const label = requirement?.label || category;
-              const creditInfo = requirement ? `${getSelectionUnitCredits(requirement)} cr.` : '';
+              const creditInfo = requirement ? getSelectionUnitCredits(requirement) : 0;
 
               return (
                 <div
                   key={courseCode}
-                  className="border border-gray-200 rounded-lg p-4"
-                  style={{ background: '#f9fafb' }}
+                  style={{
+                    padding: '14px 16px',
+                    background: '#fafafa',
+                    borderRadius: '8px',
+                    border: '1px solid #f1f5f9'
+                  }}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <span className="font-semibold text-gray-900">{label}</span>
-                      {creditInfo && <span className="text-xs text-gray-500 ml-2">({creditInfo})</span>}
-                      <p className="text-xs text-gray-400" style={{ marginTop: '4px' }}>
-                        A course will be auto-selected when you generate the schedule
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                        {label}
+                      </p>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                        {creditInfo} credits &middot; Auto-selected
                       </p>
                     </div>
                     <button
                       onClick={() => onRemoveCourse(courseCode)}
-                      className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200"
-                      aria-label="Remove elective category"
+                      className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-4 h-4 text-slate-400" />
                     </button>
                   </div>
                 </div>
@@ -873,56 +977,79 @@ export function SelectedCoursesPanel({
             const hasUnmetPrereqs = isCompleted ? false : !areAllPrerequisitesMet(course.prerequisites, course.prerequisiteTree);
             const noSections = course.hasSections === false;
 
+            // Determine if there's a warning
+            const hasWarning = noSections || (hasUnmetPrereqs && hasAuditData) || isCompleted;
+            let warningText = '';
+            if (isCompleted) warningText = 'Already completed';
+            else if (noSections) warningText = 'No sections available';
+            else if (hasUnmetPrereqs && hasAuditData) warningText = 'Prerequisites not met';
+
             return (
               <div
                 key={courseCode}
-                className="border rounded-lg p-4"
                 style={{
-                  borderColor: noSections ? '#fca5a5' : isCompleted ? '#d1d5db' : hasUnmetPrereqs && hasAuditData ? '#fcd34d' : '#e5e7eb',
+                  padding: '14px 16px',
                   background: '#fff',
+                  borderRadius: '8px',
+                  border: '1px solid',
+                  borderColor: hasWarning ? '#fef3c7' : '#e2e8f0'
                 }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-gray-900">{course.code}</span>
-                      {isCompleted && <StatusBadge text="Already completed" />}
-                      {noSections && !isCompleted && <StatusBadge text="No sections available" />}
-                      {hasUnmetPrereqs && hasAuditData && !noSections && !isCompleted && (
-                        <StatusBadge text="Prerequisites not met" />
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>
+                        {course.code}
+                      </span>
+                      {hasWarning && (
+                        <span style={{ 
+                          fontSize: '11px', 
+                          fontWeight: 500,
+                          color: '#92400e',
+                          background: '#fef3c7',
+                          padding: '2px 6px',
+                          borderRadius: '4px'
+                        }}>
+                          {warningText}
+                        </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{course.name}</p>
+                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                      {course.name}
+                    </p>
 
                     {!isCompleted && course.prerequisites.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <span className="text-xs font-medium text-gray-500" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prerequisites: </span>
-                        <span className="text-xs">
-                          {course.prerequisites.map((prereq, index) => {
-                            const status = checkPrerequisiteStatus(prereq);
-                            return (
-                              <span key={prereq}>
-                                <span
-                                  className={`font-medium ${
-                                    status === 'met' ? 'text-green-600' : status === 'not-met' ? 'text-amber-600' : 'text-gray-600'
-                                  }`}
-                                >
-                                  {prereq}
-                                </span>
-                                {index < course.prerequisites.length - 1 && ', '}
-                              </span>
-                            );
-                          })}
+                      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          Prerequisites:{' '}
                         </span>
+                        {course.prerequisites.map((prereq, index) => {
+                          const status = checkPrerequisiteStatus(prereq);
+                          return (
+                            <span key={prereq}>
+                              <span
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: 500,
+                                  color: status === 'met' ? '#059669' : status === 'not-met' ? '#dc2626' : '#64748b',
+                                }}
+                              >
+                                {prereq}
+                              </span>
+                              {index < course.prerequisites.length - 1 && (
+                                <span style={{ color: '#94a3b8' }}>, </span>
+                              )}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                   <button
                     onClick={() => onRemoveCourse(courseCode)}
-                    className="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200"
-                    aria-label="Remove course"
+                    className="p-1.5 rounded-md hover:bg-slate-100 transition-colors ml-3"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
               </div>
@@ -931,14 +1058,6 @@ export function SelectedCoursesPanel({
         </div>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ text }: { text: string }) {
-  return (
-    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
-      {text}
-    </span>
   );
 }
 
@@ -959,39 +1078,51 @@ export function GenerateScheduleSidebar({
   onGenerateSchedules,
   getTermLabel,
 }: GenerateScheduleSidebarProps) {
+  const canGenerate = selectedCourses.length > 0;
+  
   return (
-    <div className="space-y-6">
-      <div className="bg-white border border-gray-200 p-6" style={{ borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', position: 'sticky', top: '24px' }}>
-        <h3 className="font-semibold text-gray-900 mb-3">Generate Schedule</h3>
-        <p className="text-sm text-gray-500" style={{ marginBottom: '12px' }}>
+    <div className="space-y-4">
+      <div 
+        style={{ 
+          background: '#fff', 
+          borderRadius: '12px', 
+          border: '1px solid #e2e8f0',
+          padding: '20px',
+          position: 'sticky',
+          top: '24px'
+        }}
+      >
+        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>
+          Generate Schedule
+        </h3>
+        <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', lineHeight: 1.5 }}>
           {selectedCourses.length === 0
-            ? 'Select courses to generate schedules'
-            : coursesWithSectionsCount === selectedCourses.length
-            ? `${selectedCourses.length} courses ready to schedule`
-            : `${coursesWithSectionsCount} of ${selectedCourses.length} courses have available sections`
+            ? 'Select courses to get started'
+            : `${coursesWithSectionsCount} course${coursesWithSectionsCount !== 1 ? 's' : ''} ready for ${getTermLabel(currentTerm)}`
           }
         </p>
-        <div
-          className="flex items-center gap-2 text-xs font-semibold rounded-md px-3 py-1.5 mb-4"
-          style={{ background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          Planning for {getTermLabel(currentTerm)}
-        </div>
         <Button
           onClick={onGenerateSchedules}
-          disabled={selectedCourses.length === 0}
-          className="w-full text-base"
-          style={{ height: '44px' }}
+          disabled={!canGenerate}
+          className="w-full"
+          style={{ height: '44px', fontSize: '14px' }}
         >
           Generate Schedules
         </Button>
       </div>
 
       {!hasAuditData && (
-        <div className="bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600" style={{ borderRadius: '12px' }}>
-          <p className="font-medium mb-1">Tip</p>
-          <p>Upload your Academic Audit on the previous page to see prerequisite validation.</p>
+        <div 
+          style={{ 
+            padding: '16px',
+            background: '#f8fafc',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0'
+          }}
+        >
+          <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+            Upload your Academic Audit on the previous page to see prerequisite validation and degree requirements.
+          </p>
         </div>
       )}
     </div>
