@@ -1,8 +1,14 @@
 import { PrismaClient } from '@prisma/client'
 import * as fs from 'fs'
-import { expandElectiveCategories, ELECTIVE_CATEGORIES } from './elective-mappings'
 
 const prisma = new PrismaClient()
+
+export interface ElectiveCategoryDefinition {
+  id: string
+  label: string
+  selectionUnitCredits: number
+  courses: string[]
+}
 
 export interface RequirementInfo {
   title: string
@@ -34,7 +40,10 @@ export interface StudentAuditData {
  * Elective categories are NOT expanded here — they are handled separately
  * via getElectiveRequirements().
  */
-export function getRemainingCourses(auditData: StudentAuditData): string[] {
+export function getRemainingCourses(
+  auditData: StudentAuditData,
+  electiveCategoryLookup: Record<string, ElectiveCategoryDefinition> = {}
+): string[] {
   const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
   const currentSet = new Set(auditData.currentCourses.map(c => c.courseId))
   const remainingCourses = new Set<string>()
@@ -46,7 +55,7 @@ export function getRemainingCourses(auditData: StudentAuditData): string[] {
     if (creditsNeeded > 0) {
       for (const option of req.courseOptions) {
         // Skip elective category tokens — those are handled by getElectiveRequirements()
-        if (ELECTIVE_CATEGORIES[option]) continue
+        if (electiveCategoryLookup[option]) continue
 
         // Add core course if it's not completed and not currently enrolled
         if (!completedSet.has(option) && !currentSet.has(option)) {
@@ -63,7 +72,10 @@ export function getRemainingCourses(auditData: StudentAuditData): string[] {
  * Get unfulfilled requirements with expanded course options
  * Useful for schedule suggestion where we need to know what requirements need courses
  */
-export function getUnfulfilledRequirements(auditData: StudentAuditData): Array<RequirementInfo & { expandedOptions: string[] }> {
+export function getUnfulfilledRequirements(
+  auditData: StudentAuditData,
+  electiveCategoryLookup: Record<string, ElectiveCategoryDefinition> = {}
+): Array<RequirementInfo & { expandedOptions: string[] }> {
   const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
   const currentSet = new Set(auditData.currentCourses.map(c => c.courseId))
   
@@ -73,7 +85,7 @@ export function getUnfulfilledRequirements(auditData: StudentAuditData): Array<R
       return creditsNeeded > 0
     })
     .map(req => {
-      const expandedOptions = expandElectiveCategories(req.courseOptions)
+      const expandedOptions = expandElectiveCategories(req.courseOptions, electiveCategoryLookup)
         .filter(c => !completedSet.has(c) && !currentSet.has(c))
       return { ...req, expandedOptions }
     })
@@ -87,15 +99,28 @@ export interface ElectiveRequirement {
   courseOptions: string[]     // Expanded list of courses that satisfy this requirement
 }
 
-const ELECTIVE_CATEGORY_LABELS: Record<string, string> = {
-  'CS_ELECTIVE': 'Computer Science Elective',
-  'SCIENCE_ELECTIVE': 'Basic Science Elective',
-  'COMPLEMENTARY_STUDIES': 'Complementary Studies',
-  'SYSC_ELEC_ELECTIVE': 'SYSC/ELEC Technical Elective',
-  'ELECTIVE': 'Elective',
-}
-
 const COURSE_CODE_PATTERN = /[A-Z]{3,4}\s*(?:\d{4}|\d{1}XXX)/g
+
+function expandElectiveCategories(
+  courseOptions: string[],
+  electiveCategoryLookup: Record<string, ElectiveCategoryDefinition>
+): string[] {
+  const expanded = new Set<string>()
+
+  for (const option of courseOptions) {
+    const category = electiveCategoryLookup[option]
+    if (category) {
+      for (const courseId of category.courses) {
+        expanded.add(courseId)
+      }
+      continue
+    }
+
+    expanded.add(option)
+  }
+
+  return Array.from(expanded)
+}
 
 function getCreditsNeeded(requirement: RequirementInfo): number {
   return requirement.creditsRequired - requirement.creditsCompleted - requirement.creditsInProgress
@@ -153,7 +178,10 @@ function buildCourseOptions(title: string): string[] {
  * Returns only unfulfilled elective-category requirements with their available course options
  * (excluding courses already completed or in progress).
  */
-export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRequirement[] {
+export function getElectiveRequirements(
+  auditData: StudentAuditData,
+  electiveCategoryLookup: Record<string, ElectiveCategoryDefinition> = {}
+): ElectiveRequirement[] {
   const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
   const currentSet = new Set(auditData.currentCourses.map(c => c.courseId))
   const grouped = new Map<string, ElectiveRequirement>()
@@ -164,8 +192,9 @@ export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRe
 
     // Check if any of the courseOptions is an elective category token
     for (const option of req.courseOptions) {
-      if (ELECTIVE_CATEGORIES[option]) {
-        const expanded = ELECTIVE_CATEGORIES[option]
+      const categoryDefinition = electiveCategoryLookup[option]
+      if (categoryDefinition) {
+        const expanded = categoryDefinition.courses
           .filter(c => !completedSet.has(c) && !currentSet.has(c))
         const existing = grouped.get(option)
 
@@ -175,9 +204,9 @@ export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRe
         } else {
           grouped.set(option, {
             category: option,
-            label: ELECTIVE_CATEGORY_LABELS[option] || option,
+            label: categoryDefinition.label,
             creditsNeeded,
-            selectionUnitCredits: 0.5,
+            selectionUnitCredits: categoryDefinition.selectionUnitCredits,
             courseOptions: expanded.sort(),
           })
         }

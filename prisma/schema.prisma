@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Course {
@@ -16,6 +15,7 @@ model Course {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   courseCompletions      CourseCompletion[]
+  electiveCategories     ElectiveCourse[]
   prerequisiteNodes      PrerequisiteNode[] @relation("CoursePrerequisites")
   requiredByCourses      PrerequisiteNode[] @relation("RequiredByCourses")
   prerequisiteExpression Prerequisite?      @relation("CoursePrerequisiteExpression")
@@ -127,4 +127,27 @@ model CourseCompletion {
 
   @@unique([studentId, courseId])
   @@map("course_completions")
+}
+
+model ElectiveCategory {
+  id        String           @id
+  label     String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  courses   ElectiveCourse[]
+
+  @@map("elective_categories")
+}
+
+model ElectiveCourse {
+  id         String           @id @default(cuid())
+  categoryId String
+  courseId   String
+  createdAt  DateTime         @default(now())
+  category   ElectiveCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, courseId])
+  @@index([courseId])
+  @@map("elective_courses")
 }

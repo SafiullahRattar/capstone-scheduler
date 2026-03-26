@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { SectionUpload } from './SectionUpload';
 import { CourseEditor } from './CourseEditor';
+import { ElectiveManager } from './ElectiveManager';
 import { API_BASE_URL } from '../../config/constants';
 
-type AdminTab = 'sections' | 'courses';
+type AdminTab = 'sections' | 'courses' | 'electives';
 
 interface AdminStats {
   courses: number;
@@ -49,6 +50,7 @@ export function AdminPage() {
   const tabs: { id: AdminTab; label: string }[] = [
     { id: 'sections', label: 'Section Data' },
     { id: 'courses', label: 'Courses & Prerequisites' },
+    { id: 'electives', label: 'Electives' },
   ];
 
   return (
@@ -140,6 +142,9 @@ export function AdminPage() {
           )}
           {activeTab === 'courses' && (
             <CourseEditor />
+          )}
+          {activeTab === 'electives' && (
+            <ElectiveManager />
           )}
         </div>
       </div>

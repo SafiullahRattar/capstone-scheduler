@@ -1,6 +1,6 @@
 
 import * as fs from 'fs';
-import { parseAuditHTML, parseAuditPDF } from '../cli/audit-parser.ts';
+import { parseAuditHTML, parseAuditPDF } from '../cli/audit-parser';
 import { execSync } from 'child_process';
 import * as path from 'path';
 

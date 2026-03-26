@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
 import multer from 'multer'
+import { listElectiveCategoryDefinitions } from '../lib/electives'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -218,18 +219,165 @@ router.delete('/sections/term/:term', async (req: Request, res: Response) => {
  */
 router.get('/electives', async (req: Request, res: Response) => {
   try {
-    // For now, return hardcoded categories - in production this would come from DB
-    const { ELECTIVE_CATEGORIES } = await import('../../cli/elective-mappings')
-    
-    const categories = Object.entries(ELECTIVE_CATEGORIES).map(([name, courses]) => ({
-      name,
-      courseCount: courses.length,
-      courses
-    }))
+    const categories = await listElectiveCategoryDefinitions(prisma)
 
-    res.json({ categories })
+    res.json({
+      categories: categories.map(category => ({
+        name: category.id,
+        label: category.label,
+        selectionUnitCredits: category.selectionUnitCredits,
+        courseCount: category.courses.length,
+        courses: category.courses
+      }))
+    })
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch elective categories' })
+  }
+})
+
+/**
+ * POST /api/admin/electives/:categoryId/courses
+ * Add a course to an elective category
+ * 
+ * Body: { courseId: string }
+ */
+router.post('/electives/:categoryId/courses', async (req: Request, res: Response) => {
+  try {
+    const { categoryId } = req.params
+    const { courseId } = req.body
+
+    if (!courseId) {
+      return res.status(400).json({ error: 'Course ID is required' })
+    }
+
+    const normalizedCourseId = courseId.toUpperCase().replace(/\s+/g, '')
+
+    // Check if category exists
+    const category = await prisma.electiveCategory.findUnique({
+      where: { id: categoryId }
+    })
+    if (!category) {
+      return res.status(404).json({ error: 'Elective category not found' })
+    }
+
+    // Check if course exists
+    const course = await prisma.course.findUnique({
+      where: { id: normalizedCourseId }
+    })
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+
+    // Check if already in category
+    const existing = await prisma.electiveCourse.findUnique({
+      where: {
+        categoryId_courseId: {
+          categoryId,
+          courseId: normalizedCourseId
+        }
+      }
+    })
+    if (existing) {
+      return res.status(409).json({ error: 'Course already in this category' })
+    }
+
+    // Add course to category
+    await prisma.electiveCourse.create({
+      data: {
+        categoryId,
+        courseId: normalizedCourseId
+      }
+    })
+
+    res.json({ success: true, courseId: normalizedCourseId, categoryId })
+  } catch (error) {
+    console.error('Add elective course error:', error)
+    res.status(500).json({ error: 'Failed to add course to category' })
+  }
+})
+
+/**
+ * DELETE /api/admin/electives/:categoryId/courses/:courseId
+ * Remove a course from an elective category
+ */
+router.delete('/electives/:categoryId/courses/:courseId', async (req: Request, res: Response) => {
+  try {
+    const { categoryId, courseId } = req.params
+    const normalizedCourseId = courseId.toUpperCase()
+
+    const result = await prisma.electiveCourse.delete({
+      where: {
+        categoryId_courseId: {
+          categoryId,
+          courseId: normalizedCourseId
+        }
+      }
+    })
+
+    res.json({ success: true, deleted: result })
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Course not found in this category' })
+    }
+    res.status(500).json({ error: 'Failed to remove course from category' })
+  }
+})
+
+/**
+ * POST /api/admin/electives
+ * Create a new elective category
+ * 
+ * Body: { id: string, label: string }
+ */
+router.post('/electives', async (req: Request, res: Response) => {
+  try {
+    const { id, label } = req.body
+
+    if (!id || !label) {
+      return res.status(400).json({ error: 'Category ID and label are required' })
+    }
+
+    const existing = await prisma.electiveCategory.findUnique({
+      where: { id }
+    })
+    if (existing) {
+      return res.status(409).json({ error: 'Category already exists' })
+    }
+
+    const category = await prisma.electiveCategory.create({
+      data: { id, label }
+    })
+
+    res.json({ success: true, category })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create elective category' })
+  }
+})
+
+/**
+ * DELETE /api/admin/electives/:categoryId
+ * Delete an elective category and all its course associations
+ */
+router.delete('/electives/:categoryId', async (req: Request, res: Response) => {
+  try {
+    const { categoryId } = req.params
+
+    // Delete course associations first
+    await prisma.electiveCourse.deleteMany({
+      where: { categoryId }
+    })
+
+    // Delete category
+    await prisma.electiveCategory.delete({
+      where: { id: categoryId }
+    })
+
+    res.json({ success: true })
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Category not found' })
+    }
+    res.status(500).json({ error: 'Failed to delete elective category' })
   }
 })
 

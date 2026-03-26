@@ -1,8 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 import { promises as fs } from 'fs'
 import * as path from 'path'
+import { ELECTIVE_CATEGORIES } from '../cli/elective-mappings'
 
 const prisma = new PrismaClient()
+
+const ELECTIVE_CATEGORY_SEED: Record<string, { label: string }> = {
+  CS_ELECTIVE: { label: 'Computer Science Elective' },
+  SCIENCE_ELECTIVE: { label: 'Basic Science Elective' },
+  COMPLEMENTARY_STUDIES: { label: 'Complementary Studies' },
+  SYSC_ELEC_ELECTIVE: { label: 'SYSC/ELEC Technical Elective' },
+  ELECTIVE: { label: 'Elective' }
+}
 
 // Enhanced course data interface
 interface CourseEntry {
@@ -361,6 +370,57 @@ async function main() {
   console.log(`   Total courses in database: ${totalCourses}`)
   console.log(`   Courses with proper titles: ${coursesWithTitles}`)
   console.log(`   Coverage: ${((coursesWithTitles / totalCourses) * 100).toFixed(1)}%`)
+
+  console.log('\n[ELECTIVES] Syncing elective categories...')
+  let electiveCourseLinks = 0
+
+  for (const [categoryId, courseIds] of Object.entries(ELECTIVE_CATEGORIES)) {
+    const metadata = ELECTIVE_CATEGORY_SEED[categoryId] || {
+      label: categoryId
+    }
+
+    await prisma.electiveCategory.upsert({
+      where: { id: categoryId },
+      update: {
+        label: metadata.label
+      },
+      create: {
+        id: categoryId,
+        label: metadata.label
+      }
+    })
+
+    await prisma.electiveCourse.deleteMany({
+      where: { categoryId }
+    })
+
+    const existingCourses = await prisma.course.findMany({
+      where: {
+        id: {
+          in: courseIds
+        }
+      },
+      select: {
+        id: true
+      }
+    })
+
+    if (existingCourses.length === 0) {
+      continue
+    }
+
+    await prisma.electiveCourse.createMany({
+      data: existingCourses.map(course => ({
+        categoryId,
+        courseId: course.id
+      })),
+      skipDuplicates: true
+    })
+
+    electiveCourseLinks += existingCourses.length
+  }
+
+  console.log(`[ELECTIVES] Synced ${Object.keys(ELECTIVE_CATEGORIES).length} categories and ${electiveCourseLinks} course links`)
 }
 
 main()

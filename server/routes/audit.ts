@@ -7,14 +7,14 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import { prisma } from '../index'
 import { ingestAudit } from '../../cli/audit'
-import { saveStudentAuditData, getUnfulfilledRequirements, getRemainingCourses, getElectiveRequirements } from '../../cli/audit-parser'
-import { expandElectiveCategories, ELECTIVE_CATEGORIES } from '../../cli/elective-mappings'
+import { saveStudentAuditData, getRemainingCourses, getElectiveRequirements } from '../../cli/audit-parser'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import crypto from 'crypto'
+import { getElectiveCategoryLookup } from '../lib/electives'
 
 const execAsync = promisify(exec)
 
@@ -192,11 +192,13 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
 
     const auditData = ingestAudit(fileContent, { filePath: req.file.originalname })
 
+    const electiveCategoryLookup = await getElectiveCategoryLookup(prisma)
+
     // Figure out which required courses the student still needs
-    const remainingCourses = getRemainingCourses(auditData)
+    const remainingCourses = getRemainingCourses(auditData, electiveCategoryLookup)
     
     // Extract structured elective requirements (categories with available options)
-    const electiveRequirements = getElectiveRequirements(auditData)
+    const electiveRequirements = getElectiveRequirements(auditData, electiveCategoryLookup)
     
     res.json({
       studentId: auditData.studentId,
