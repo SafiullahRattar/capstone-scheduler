@@ -3,13 +3,14 @@ import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { LoginPage } from './components/LoginPage';
+import { AdminPage } from './components/admin';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
 import { resolveElectiveSelections } from './utils/electiveResolver';
 import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
 import { getDefaultActiveTerm } from './utils/termUtils';
 import type { ElectiveRequirement } from './types/electives';
 
-type AppPage = 'import' | 'course-selection' | 'schedule-review';
+type AppPage = 'import' | 'course-selection' | 'schedule-review' | 'admin';
 
 interface StudentInfo {
   name: string;
@@ -56,13 +57,15 @@ const STORAGE_KEY = 'scheduler-state';
 const pageToPath: Record<AppPage, string> = {
   'import': '/',
   'course-selection': '/courses',
-  'schedule-review': '/schedules'
+  'schedule-review': '/schedules',
+  'admin': '/admin'
 };
 
 const pathToPage: Record<string, AppPage> = {
   '/': 'import',
   '/courses': 'course-selection',
-  '/schedules': 'schedule-review'
+  '/schedules': 'schedule-review',
+  '/admin': 'admin'
 };
 
 function getInitialPage(): AppPage {
@@ -111,14 +114,17 @@ export default function App() {
   
   const savedState = initialPage === 'import' ? null : loadState();
   
-  // If URL says we're on a page that requires data, but we have no saved state, redirect to import
+  // Admin page doesn't require any saved state - allow direct access
+  // Other pages need saved state to function properly
   const hasRequiredData = savedState && (
     (initialPage === 'course-selection') ||
     (initialPage === 'schedule-review' && (savedState.generatedSchedules?.length ?? 0) > 0)
   );
   
   const [currentPage, setCurrentPage] = useState<AppPage>(
-    hasRequiredData ? initialPage : (initialPage === 'import' ? 'import' : (savedState?.currentPage || 'import'))
+    initialPage === 'admin' ? 'admin' :
+    hasRequiredData ? initialPage : 
+    (initialPage === 'import' ? 'import' : (savedState?.currentPage || 'import'))
   );
   const [hasAuditData, setHasAuditData] = useState(savedState?.hasAuditData || false);
   const [completedCourses, setCompletedCourses] = useState<string[]>(savedState?.completedCourses || []);
@@ -415,6 +421,10 @@ export default function App() {
           onManualEntry={handleManualEntry}
           onUploadComplete={handleUploadComplete}
         />
+      )}
+
+      {currentPage === 'admin' && (
+        <AdminPage />
       )}
     </div>
   );

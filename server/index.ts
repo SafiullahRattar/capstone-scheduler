@@ -28,6 +28,7 @@ import studentRoutes from './routes/students'
 import scheduleRoutes from './routes/schedules'
 import auditRoutes from './routes/audit'
 import authRoutes from './routes/auth'
+import adminRoutes from './routes/admin'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -80,6 +81,7 @@ app.use('/api/students', studentRoutes)
 app.use('/api/schedules', scheduleRoutes)
 app.use('/api/audit', auditRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/admin', adminRoutes)
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
