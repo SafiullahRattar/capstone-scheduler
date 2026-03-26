@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Copy, Check, Loader2, Search, ChevronDown } 
 import { type GeneratedSchedule } from '../utils/scheduleGenerator';
 import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
 import { getCourseByCode } from '../utils/courseData';
-import type { ElectiveRequirement } from '../App';
+import type { ElectiveRequirement } from '../types/electives';
 
 interface ScheduleReviewPageProps {
   schedules: GeneratedSchedule[];

@@ -4,9 +4,10 @@ import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { LoginPage } from './components/LoginPage';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
-import { getCourseByCode } from './utils/courseData';
+import { resolveElectiveSelections } from './utils/electiveResolver';
 import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
 import { getDefaultActiveTerm } from './utils/termUtils';
+import type { ElectiveRequirement } from './types/electives';
 
 type AppPage = 'import' | 'course-selection' | 'schedule-review';
 
@@ -19,14 +20,6 @@ interface StudentInfo {
 interface CurrentCourse {
   courseId: string;
   term: string;
-}
-
-export interface ElectiveRequirement {
-  category: string;
-  label: string;
-  creditsNeeded: number;
-  selectionUnitCredits: number;
-  courseOptions: string[];
 }
 
 interface ParsedAuditData {
@@ -103,12 +96,6 @@ function clearState() {
   } catch {
     // Ignore storage errors
   }
-}
-
-function getElectiveTokenCategory(token: string): string | null {
-  if (!token.startsWith('ELECTIVE:')) return null;
-  const [, category] = token.split(':');
-  return category || null;
 }
 
 export default function App() {
@@ -261,73 +248,19 @@ export default function App() {
   const handleGenerateSchedules = async (courses: string[], termOverride?: string) => {
     const termToUse = termOverride || activeTerm;
     try {
-      const resolvedCourses: string[] = [];
-      const newSelectedElectives: Record<string, string[]> = {};
-      const newSelectedElectiveCredits: Record<string, number> = {};
-      const requestedElectiveCounts = new Map<string, number>();
+      const {
+        resolvedCourses,
+        resolvedElectives,
+        requestedElectiveCredits,
+      } = await resolveElectiveSelections({
+        courses,
+        electiveRequirements,
+        selectedElectives,
+        completedCourses,
+      });
 
-      for (const code of courses) {
-        const category = getElectiveTokenCategory(code);
-        if (!category) {
-          resolvedCourses.push(code);
-          continue;
-        }
-
-        requestedElectiveCounts.set(category, (requestedElectiveCounts.get(category) || 0) + 1);
-      }
-
-      for (const [category, tokenCount] of requestedElectiveCounts.entries()) {
-        const requirement = electiveRequirements.find(er => er.category === category);
-        if (!requirement) continue;
-
-        const selectionUnitCredits = requirement.selectionUnitCredits || 0.5;
-        const requestedCredits = Math.min(tokenCount * selectionUnitCredits, requirement.creditsNeeded);
-        newSelectedElectiveCredits[category] = requestedCredits;
-
-        let creditsFilled = 0;
-        const pickedCourses: string[] = [];
-        const seenCourses = new Set<string>();
-
-        const tryAddCourse = async (courseCode: string, requirePrereqs: boolean) => {
-          if (seenCourses.has(courseCode) || creditsFilled >= requestedCredits) return;
-
-          const courseInfo = await getCourseByCode(courseCode);
-          if (!courseInfo || !courseInfo.hasSections) return;
-
-          const prereqsMet = courseInfo.prerequisites.length === 0 ||
-            courseInfo.prerequisites.every(p => completedCourses.includes(p));
-          if (requirePrereqs && !prereqsMet) return;
-
-          pickedCourses.push(courseCode);
-          seenCourses.add(courseCode);
-          creditsFilled += courseInfo.credits || selectionUnitCredits;
-        };
-
-        const existingPicks = selectedElectives[category] || [];
-        for (const existingPick of existingPicks) {
-          await tryAddCourse(existingPick, false);
-        }
-
-        for (const option of requirement.courseOptions) {
-          if (creditsFilled >= requestedCredits) break;
-          await tryAddCourse(option, true);
-        }
-
-        if (creditsFilled < requestedCredits) {
-          for (const option of requirement.courseOptions) {
-            if (creditsFilled >= requestedCredits) break;
-            await tryAddCourse(option, false);
-          }
-        }
-
-        if (pickedCourses.length > 0) {
-          resolvedCourses.push(...pickedCourses);
-          newSelectedElectives[category] = pickedCourses;
-        }
-      }
-
-      setSelectedElectives(newSelectedElectives);
-      setSelectedElectiveCredits(newSelectedElectiveCredits);
+      setSelectedElectives(resolvedElectives);
+      setSelectedElectiveCredits(requestedElectiveCredits);
 
       if (resolvedCourses.length === 0) {
         alert('No courses could be resolved for scheduling. Please try different selections.');

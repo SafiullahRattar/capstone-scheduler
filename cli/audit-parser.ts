@@ -41,7 +41,7 @@ export function getRemainingCourses(auditData: StudentAuditData): string[] {
   
   // Look at unfulfilled requirements (status = 'NO' or 'IP' with remaining credits)
   for (const req of auditData.requirements) {
-    const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
+    const creditsNeeded = getCreditsNeeded(req)
     
     if (creditsNeeded > 0) {
       for (const option of req.courseOptions) {
@@ -69,7 +69,7 @@ export function getUnfulfilledRequirements(auditData: StudentAuditData): Array<R
   
   return auditData.requirements
     .filter(req => {
-      const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
+      const creditsNeeded = getCreditsNeeded(req)
       return creditsNeeded > 0
     })
     .map(req => {
@@ -95,6 +95,59 @@ const ELECTIVE_CATEGORY_LABELS: Record<string, string> = {
   'ELECTIVE': 'Elective',
 }
 
+const COURSE_CODE_PATTERN = /[A-Z]{3,4}\s*(?:\d{4}|\d{1}XXX)/g
+
+function getCreditsNeeded(requirement: RequirementInfo): number {
+  return requirement.creditsRequired - requirement.creditsCompleted - requirement.creditsInProgress
+}
+
+function parseRequirementStatus(statusClass: string): RequirementInfo['status'] {
+  if (statusClass.includes('OK')) return 'OK'
+  if (statusClass.includes('IP')) return 'IP'
+  if (statusClass.includes('NONE')) return 'NONE'
+  return 'NO'
+}
+
+function isGenericRequirementTitle(title: string): boolean {
+  const lowerTitle = title.toLowerCase()
+  return (
+    lowerTitle.includes('year standing') ||
+    lowerTitle.includes('residency') ||
+    lowerTitle.includes('cgpa required')
+  )
+}
+
+function extractCourseCodes(title: string): string[] {
+  return (title.match(COURSE_CODE_PATTERN) || [])
+    .map(code => code.replace(/\s+/g, ''))
+}
+
+function detectElectiveCategory(title: string): string | null {
+  const lowerTitle = title.toLowerCase()
+  if (lowerTitle.includes('complementary studies')) return 'COMPLEMENTARY_STUDIES'
+  if (lowerTitle.includes('computer science elective')) return 'CS_ELECTIVE'
+  if (lowerTitle.includes('basic science')) return 'SCIENCE_ELECTIVE'
+  if (
+    lowerTitle.match(/sysc or elec.*3000/i) ||
+    lowerTitle.match(/elec or sysc.*3000/i) ||
+    lowerTitle.includes('sysc or elec courses')
+  ) {
+    return 'SYSC_ELEC_ELECTIVE'
+  }
+  return null
+}
+
+function buildCourseOptions(title: string): string[] {
+  const courseCodes = extractCourseCodes(title)
+  const electiveCategory = detectElectiveCategory(title)
+
+  if (courseCodes.length === 0 && !electiveCategory) {
+    return []
+  }
+
+  return courseCodes.length > 0 ? courseCodes : [electiveCategory || 'ELECTIVE']
+}
+
 /**
  * Extract structured elective requirements from audit data.
  * Returns only unfulfilled elective-category requirements with their available course options
@@ -106,7 +159,7 @@ export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRe
   const grouped = new Map<string, ElectiveRequirement>()
 
   for (const req of auditData.requirements) {
-    const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
+    const creditsNeeded = getCreditsNeeded(req)
     if (creditsNeeded <= 0) continue
 
     // Check if any of the courseOptions is an elective category token
@@ -180,9 +233,7 @@ function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
       .trim()
 
     // Skip generic progress requirements
-    if (title.toLowerCase().includes('year standing') || 
-        title.toLowerCase().includes('residency') ||
-        title.toLowerCase().includes('cgpa required')) {
+    if (isGenericRequirementTitle(title)) {
       continue
     }
     
@@ -201,39 +252,17 @@ function extractRequirementsFromHTML(htmlContent: string): RequirementInfo[] {
     }
     
     // Determine status from class
-    let status: 'OK' | 'NO' | 'IP' | 'NONE' = 'NO'
-    if (statusClass.includes('OK')) status = 'OK'
-    else if (statusClass.includes('IP')) status = 'IP'
-    else if (statusClass.includes('NONE')) status = 'NONE'
-    
-    // Extract course codes from title (e.g., "SYSC 4907", "COMP 3005")
-    // Include 2XXX style for transfer credits
-    const coursePattern = /[A-Z]{3,4}\s*(?:\d{4}|\d{1}XXX)/g
-    const courseCodes = (title.match(coursePattern) || [])
-      .map(code => code.replace(/\s+/g, ''))
-    
-    // Detect elective categories
-    let electiveCategory: string | null = null
-    const lowerTitle = title.toLowerCase()
-    if (lowerTitle.includes('complementary studies')) {
-      electiveCategory = 'COMPLEMENTARY_STUDIES'
-    } else if (lowerTitle.includes('computer science elective')) {
-      electiveCategory = 'CS_ELECTIVE'
-    } else if (lowerTitle.includes('basic science')) {
-      electiveCategory = 'SCIENCE_ELECTIVE'
-    } else if (lowerTitle.match(/sysc or elec.*3000/i) || lowerTitle.match(/elec or sysc.*3000/i) || lowerTitle.includes('sysc or elec courses')) {
-      electiveCategory = 'SYSC_ELEC_ELECTIVE'
-    }
-    
-    // Include requirements with specific courses OR elective categories
-    if (courseCodes.length > 0 || electiveCategory) {
+    const status = parseRequirementStatus(statusClass)
+    const courseOptions = buildCourseOptions(title)
+
+    if (courseOptions.length > 0) {
       requirements.push({
         title: title.substring(0, 100),
         status,
         creditsRequired: rqdHours,
         creditsCompleted,
         creditsInProgress,
-        courseOptions: courseCodes.length > 0 ? courseCodes : [electiveCategory || 'ELECTIVE']
+        courseOptions,
       })
     }
   }
@@ -315,30 +344,12 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
       .trim();
 
     // Skip generic requirements
-    const lowerTitle = title.toLowerCase();
-    if (lowerTitle.includes('year standing') || 
-        lowerTitle.includes('residency') ||
-        lowerTitle.includes('cgpa required')) {
+    if (isGenericRequirementTitle(title)) {
       continue
     }
 
-    // Pull out all course codes like "NET 4001", "SYSC 3000"
-    const courseCodes = title.match(/[A-Z]{3,4}\s+\d{4}/g) || []
-    const courseOptions = courseCodes.map(code => code.replace(/\s+/g, ''))
-    
-    // Detect elective categories in PDF title
-    let electiveCategory: string | null = null
-    if (lowerTitle.includes('complementary studies')) {
-      electiveCategory = 'COMPLEMENTARY_STUDIES'
-    } else if (lowerTitle.includes('computer science elective')) {
-      electiveCategory = 'CS_ELECTIVE'
-    } else if (lowerTitle.includes('basic science')) {
-      electiveCategory = 'SCIENCE_ELECTIVE'
-    } else if (lowerTitle.match(/sysc or elec.*3000/i) || lowerTitle.match(/elec or sysc.*3000/i) || lowerTitle.includes('sysc or elec courses')) {
-      electiveCategory = 'SYSC_ELEC_ELECTIVE'
-    }
-
-    if (courseOptions.length === 0 && !electiveCategory) continue
+    const courseOptions = buildCourseOptions(title)
+    if (courseOptions.length === 0) continue
     
     // Check if requirement is satisfied by looking at the next few lines
     const textAfterReq = pdfText.substring(pdfText.indexOf(match[0]))
@@ -374,7 +385,7 @@ function extractRequirementsFromPDF(pdfText: string): RequirementInfo[] {
       creditsRequired,
       creditsCompleted,
       creditsInProgress,
-      courseOptions: courseOptions.length > 0 ? courseOptions : [electiveCategory || 'ELECTIVE']
+      courseOptions,
     })
   }
   

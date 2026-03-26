@@ -4,23 +4,18 @@ import { Input } from './ui/input';
 import { Search, X, RotateCcw, Sparkles, ChevronRight, Calendar, AlertCircle, CheckCircle2, XCircle, Info } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from './ui/hover-card';
-import type { ElectiveRequirement } from '../App';
+import type { ElectiveRequirement } from '../types/electives';
 import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termUtils';
+import {
+  buildElectiveToken,
+  getElectiveSlotCount,
+  getElectiveTokenCategory,
+  getMissingElectiveTokenNumbers,
+  getSelectedElectiveTokenCount,
+  getSelectionUnitCredits,
+} from '../utils/electiveUtils';
 
 const DEBOUNCE_MS = 300;
-
-function getElectiveTokenCategory(token: string): string | null {
-  if (!token.startsWith('ELECTIVE:')) return null;
-  const [, category] = token.split(':');
-  return category || null;
-}
-
-function getElectiveTokenIndex(token: string): number | null {
-  if (!token.startsWith('ELECTIVE:')) return null;
-  const [, , rawIndex] = token.split(':');
-  const index = Number(rawIndex);
-  return Number.isFinite(index) ? index : null;
-}
 
 interface CourseSelectionPageProps {
   hasAuditData: boolean;
@@ -97,25 +92,7 @@ export function CourseSelectionPage({
   const visibleTerms = getVisibleTerms();
 
   const getSemesterName = (termCode: string) => getTermLabel(termCode);
-
   const getSemesterShortName = (termCode: string) => getTermShortLabel(termCode);
-  const getElectiveSlotCredits = (elective: ElectiveRequirement) => elective.selectionUnitCredits || 0.5;
-  const getElectiveSlotCount = (elective: ElectiveRequirement) => Math.max(1, Math.round(elective.creditsNeeded / getElectiveSlotCredits(elective)));
-  const getSelectedElectiveTokenCount = (category: string) =>
-    selectedCourses.filter(code => getElectiveTokenCategory(code) === category).length;
-  const getMissingElectiveTokenNumbers = (category: string, slotCount: number) => {
-    const existing = new Set(
-      selectedCourses
-        .filter(code => getElectiveTokenCategory(code) === category)
-        .map(code => getElectiveTokenIndex(code))
-        .filter((index): index is number => index !== null)
-    );
-    const missing: number[] = [];
-    for (let i = 1; i <= slotCount; i++) {
-      if (!existing.has(i)) missing.push(i);
-    }
-    return missing;
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -536,8 +513,8 @@ export function CourseSelectionPage({
 
                       const electiveTokens = electiveRequirements.flatMap(er => {
                         const slotCount = getElectiveSlotCount(er);
-                        return getMissingElectiveTokenNumbers(er.category, slotCount).map(index =>
-                          `ELECTIVE:${er.category}:${index}`
+                        return getMissingElectiveTokenNumbers(selectedCourses, er.category, slotCount).map(index =>
+                          buildElectiveToken(er.category, index),
                         );
                       });
                       const allItems = [...addableCourses, ...electiveTokens];
@@ -745,10 +722,10 @@ export function CourseSelectionPage({
                       <div className="space-y-2 mt-4 pt-4 border-t border-gray-100">
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Elective Requirements</p>
                         {electiveRequirements.map((elective) => {
-                          const selectedCount = getSelectedElectiveTokenCount(elective.category);
+                          const selectedCount = getSelectedElectiveTokenCount(selectedCourses, elective.category);
                           const slotCount = getElectiveSlotCount(elective);
-                          const nextTokenNumber = getMissingElectiveTokenNumbers(elective.category, slotCount)[0];
-                          const nextToken = nextTokenNumber ? `ELECTIVE:${elective.category}:${nextTokenNumber}` : '';
+                          const nextTokenNumber = getMissingElectiveTokenNumbers(selectedCourses, elective.category, slotCount)[0];
+                          const nextToken = nextTokenNumber ? buildElectiveToken(elective.category, nextTokenNumber) : '';
                           const isFullySelected = selectedCount >= slotCount;
                           return (
                             <div key={elective.category}>
@@ -966,7 +943,7 @@ export function CourseSelectionPage({
                       const category = getElectiveTokenCategory(courseCode) || courseCode.replace('ELECTIVE:', '');
                       const requirement = electiveRequirements.find(er => er.category === category);
                       const label = requirement?.label || category;
-                      const creditInfo = requirement ? `${requirement.selectionUnitCredits || 0.5} cr.` : '';
+                      const creditInfo = requirement ? `${getSelectionUnitCredits(requirement)} cr.` : '';
 
                       return (
                         <div
