@@ -9,6 +9,19 @@ import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termU
 
 const DEBOUNCE_MS = 300;
 
+function getElectiveTokenCategory(token: string): string | null {
+  if (!token.startsWith('ELECTIVE:')) return null;
+  const [, category] = token.split(':');
+  return category || null;
+}
+
+function getElectiveTokenIndex(token: string): number | null {
+  if (!token.startsWith('ELECTIVE:')) return null;
+  const [, , rawIndex] = token.split(':');
+  const index = Number(rawIndex);
+  return Number.isFinite(index) ? index : null;
+}
+
 interface CourseSelectionPageProps {
   hasAuditData: boolean;
   completedCourses: string[];
@@ -86,6 +99,23 @@ export function CourseSelectionPage({
   const getSemesterName = (termCode: string) => getTermLabel(termCode);
 
   const getSemesterShortName = (termCode: string) => getTermShortLabel(termCode);
+  const getElectiveSlotCredits = (elective: ElectiveRequirement) => elective.selectionUnitCredits || 0.5;
+  const getElectiveSlotCount = (elective: ElectiveRequirement) => Math.max(1, Math.round(elective.creditsNeeded / getElectiveSlotCredits(elective)));
+  const getSelectedElectiveTokenCount = (category: string) =>
+    selectedCourses.filter(code => getElectiveTokenCategory(code) === category).length;
+  const getMissingElectiveTokenNumbers = (category: string, slotCount: number) => {
+    const existing = new Set(
+      selectedCourses
+        .filter(code => getElectiveTokenCategory(code) === category)
+        .map(code => getElectiveTokenIndex(code))
+        .filter((index): index is number => index !== null)
+    );
+    const missing: number[] = [];
+    for (let i = 1; i <= slotCount; i++) {
+      if (!existing.has(i)) missing.push(i);
+    }
+    return missing;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -504,7 +534,12 @@ export function CourseSelectionPage({
                         return areAllPrerequisitesMet(details.prerequisites || [], details.prerequisiteTree);
                       });
 
-                      const electiveTokens = electiveRequirements.map(er => `ELECTIVE:${er.category}`);
+                      const electiveTokens = electiveRequirements.flatMap(er => {
+                        const slotCount = getElectiveSlotCount(er);
+                        return getMissingElectiveTokenNumbers(er.category, slotCount).map(index =>
+                          `ELECTIVE:${er.category}:${index}`
+                        );
+                      });
                       const allItems = [...addableCourses, ...electiveTokens];
                       const hasUnselected = allItems.some(c => !selectedCourses.includes(c));
 
@@ -710,31 +745,34 @@ export function CourseSelectionPage({
                       <div className="space-y-2 mt-4 pt-4 border-t border-gray-100">
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Elective Requirements</p>
                         {electiveRequirements.map((elective) => {
-                          const token = `ELECTIVE:${elective.category}`;
-                          const isSelected = selectedCourses.includes(token);
+                          const selectedCount = getSelectedElectiveTokenCount(elective.category);
+                          const slotCount = getElectiveSlotCount(elective);
+                          const nextTokenNumber = getMissingElectiveTokenNumbers(elective.category, slotCount)[0];
+                          const nextToken = nextTokenNumber ? `ELECTIVE:${elective.category}:${nextTokenNumber}` : '';
+                          const isFullySelected = selectedCount >= slotCount;
                           return (
                             <div key={elective.category}>
                               <button
-                                onClick={() => !isSelected && addCourse(token)}
-                                disabled={isSelected}
+                                onClick={() => !isFullySelected && addCourse(nextToken)}
+                                disabled={isFullySelected}
                                 className="w-full text-left rounded-lg border flex items-center gap-2"
                                 style={{
                                   padding: '10px 14px',
-                                  background: isSelected ? '#f3f4f6' : '#fff',
-                                  borderColor: isSelected ? '#d1d5db' : '#e5e7eb',
-                                  cursor: isSelected ? 'default' : 'pointer',
-                                  opacity: isSelected ? 0.7 : 1,
+                                  background: isFullySelected ? '#f3f4f6' : '#fff',
+                                  borderColor: isFullySelected ? '#d1d5db' : '#e5e7eb',
+                                  cursor: isFullySelected ? 'default' : 'pointer',
+                                  opacity: isFullySelected ? 0.7 : 1,
                                 }}
                               >
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900">{elective.label}</p>
                                   <p className="text-xs text-gray-500" style={{ marginTop: '2px' }}>
-                                    {elective.creditsNeeded} cr. needed · {elective.courseOptions.length} options
+                                    {selectedCount}/{slotCount} selected · {elective.creditsNeeded} cr. total · {elective.courseOptions.length} options
                                   </p>
                                 </div>
-                                {isSelected && <span className="text-xs text-gray-400">Added</span>}
+                                {isFullySelected && <span className="text-xs text-gray-400">Added</span>}
                               </button>
-                              {!isSelected && (
+                              {!isFullySelected && (
                                 <p className="text-xs text-gray-400" style={{ marginTop: '4px', marginLeft: '4px' }}>
                                   A course will be auto-picked when you generate. Swap on the schedule page.
                                 </p>
@@ -925,10 +963,10 @@ export function CourseSelectionPage({
                   {selectedCourses.map((courseCode) => {
                     // Handle elective category tokens
                     if (courseCode.startsWith('ELECTIVE:')) {
-                      const category = courseCode.replace('ELECTIVE:', '');
+                      const category = getElectiveTokenCategory(courseCode) || courseCode.replace('ELECTIVE:', '');
                       const requirement = electiveRequirements.find(er => er.category === category);
                       const label = requirement?.label || category;
-                      const creditInfo = requirement ? `${requirement.creditsNeeded} cr.` : '';
+                      const creditInfo = requirement ? `${requirement.selectionUnitCredits || 0.5} cr.` : '';
 
                       return (
                         <div

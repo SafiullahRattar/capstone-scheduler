@@ -25,6 +25,7 @@ export interface ElectiveRequirement {
   category: string;
   label: string;
   creditsNeeded: number;
+  selectionUnitCredits: number;
   courseOptions: string[];
 }
 
@@ -53,6 +54,7 @@ interface AppState {
   studentInfo?: StudentInfo;
   generatedSchedules: GeneratedSchedule[];
   selectedElectives: Record<string, string[]>; // category -> selected course codes
+  selectedElectiveCredits: Record<string, number>; // category -> requested elective credits from selection page
   activeTerm: string;
 }
 
@@ -103,6 +105,12 @@ function clearState() {
   }
 }
 
+function getElectiveTokenCategory(token: string): string | null {
+  if (!token.startsWith('ELECTIVE:')) return null;
+  const [, category] = token.split(':');
+  return category || null;
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('auth_token'));
   const [user, setUser] = useState<any>(null);
@@ -133,6 +141,7 @@ export default function App() {
   const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>(savedState?.studentInfo);
   const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(savedState?.generatedSchedules || []);
   const [selectedElectives, setSelectedElectives] = useState<Record<string, string[]>>(savedState?.selectedElectives || {});
+  const [selectedElectiveCredits, setSelectedElectiveCredits] = useState<Record<string, number>>(savedState?.selectedElectiveCredits || {});
   const [activeTerm, setActiveTerm] = useState<string>(savedState?.activeTerm || getDefaultActiveTerm());
 
   // Navigate to a page and update URL
@@ -158,10 +167,11 @@ export default function App() {
       studentInfo,
       generatedSchedules,
       selectedElectives,
+      selectedElectiveCredits,
       activeTerm,
     };
     saveState(state);
-  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, activeTerm]);
+  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, selectedElectiveCredits, activeTerm]);
 
   // Sync URL with current page on mount
   useEffect(() => {
@@ -197,6 +207,7 @@ export default function App() {
     setStudentInfo(undefined);
     setGeneratedSchedules([]);
     setSelectedElectives({});
+    setSelectedElectiveCredits({});
     setActiveTerm(getDefaultActiveTerm());
     clearState();
     navigateTo('import');
@@ -250,68 +261,73 @@ export default function App() {
   const handleGenerateSchedules = async (courses: string[], termOverride?: string) => {
     const termToUse = termOverride || activeTerm;
     try {
-      // Resolve elective tokens to actual course codes
       const resolvedCourses: string[] = [];
-      // Start fresh: only categories in this selection will be populated
       const newSelectedElectives: Record<string, string[]> = {};
+      const newSelectedElectiveCredits: Record<string, number> = {};
+      const requestedElectiveCounts = new Map<string, number>();
 
       for (const code of courses) {
-        if (code.startsWith('ELECTIVE:')) {
-          const category = code.replace('ELECTIVE:', '');
-          const requirement = electiveRequirements.find(er => er.category === category);
-          
-          if (requirement) {
-            // If we already have selected electives for this category from a prior run, reuse them
-            const existingPicks = selectedElectives[category];
-            if (existingPicks && existingPicks.length > 0) {
-              resolvedCourses.push(...existingPicks);
-              newSelectedElectives[category] = existingPicks;
-              continue;
-            }
-
-            // Pick courses until credit requirement is filled
-            const creditsNeeded = requirement.creditsNeeded;
-            let creditsFilled = 0;
-            const pickedCourses: string[] = [];
-
-            // First pass: courses with sections and met prereqs
-            for (const option of requirement.courseOptions) {
-              if (creditsFilled >= creditsNeeded) break;
-              const courseInfo = await getCourseByCode(option);
-              if (courseInfo && courseInfo.hasSections) {
-                const prereqsMet = courseInfo.prerequisites.length === 0 ||
-                  courseInfo.prerequisites.every(p => completedCourses.includes(p));
-                if (prereqsMet) {
-                  pickedCourses.push(option);
-                  creditsFilled += courseInfo.credits || 0.5;
-                }
-              }
-            }
-
-            // Fallback pass: courses with sections even if prereqs not met
-            if (creditsFilled < creditsNeeded) {
-              for (const option of requirement.courseOptions) {
-                if (creditsFilled >= creditsNeeded) break;
-                if (pickedCourses.includes(option)) continue;
-                const courseInfo = await getCourseByCode(option);
-                if (courseInfo && courseInfo.hasSections) {
-                  pickedCourses.push(option);
-                  creditsFilled += courseInfo.credits || 0.5;
-                }
-              }
-            }
-
-            if (pickedCourses.length > 0) {
-              resolvedCourses.push(...pickedCourses);
-              newSelectedElectives[category] = pickedCourses;
-            }
-          }
-        } else {
+        const category = getElectiveTokenCategory(code);
+        if (!category) {
           resolvedCourses.push(code);
+          continue;
+        }
+
+        requestedElectiveCounts.set(category, (requestedElectiveCounts.get(category) || 0) + 1);
+      }
+
+      for (const [category, tokenCount] of requestedElectiveCounts.entries()) {
+        const requirement = electiveRequirements.find(er => er.category === category);
+        if (!requirement) continue;
+
+        const selectionUnitCredits = requirement.selectionUnitCredits || 0.5;
+        const requestedCredits = Math.min(tokenCount * selectionUnitCredits, requirement.creditsNeeded);
+        newSelectedElectiveCredits[category] = requestedCredits;
+
+        let creditsFilled = 0;
+        const pickedCourses: string[] = [];
+        const seenCourses = new Set<string>();
+
+        const tryAddCourse = async (courseCode: string, requirePrereqs: boolean) => {
+          if (seenCourses.has(courseCode) || creditsFilled >= requestedCredits) return;
+
+          const courseInfo = await getCourseByCode(courseCode);
+          if (!courseInfo || !courseInfo.hasSections) return;
+
+          const prereqsMet = courseInfo.prerequisites.length === 0 ||
+            courseInfo.prerequisites.every(p => completedCourses.includes(p));
+          if (requirePrereqs && !prereqsMet) return;
+
+          pickedCourses.push(courseCode);
+          seenCourses.add(courseCode);
+          creditsFilled += courseInfo.credits || selectionUnitCredits;
+        };
+
+        const existingPicks = selectedElectives[category] || [];
+        for (const existingPick of existingPicks) {
+          await tryAddCourse(existingPick, false);
+        }
+
+        for (const option of requirement.courseOptions) {
+          if (creditsFilled >= requestedCredits) break;
+          await tryAddCourse(option, true);
+        }
+
+        if (creditsFilled < requestedCredits) {
+          for (const option of requirement.courseOptions) {
+            if (creditsFilled >= requestedCredits) break;
+            await tryAddCourse(option, false);
+          }
+        }
+
+        if (pickedCourses.length > 0) {
+          resolvedCourses.push(...pickedCourses);
+          newSelectedElectives[category] = pickedCourses;
         }
       }
 
       setSelectedElectives(newSelectedElectives);
+      setSelectedElectiveCredits(newSelectedElectiveCredits);
 
       if (resolvedCourses.length === 0) {
         alert('No courses could be resolved for scheduling. Please try different selections.');
@@ -428,6 +444,7 @@ export default function App() {
           onBack={handleBackToCourseSelection}
           electiveRequirements={electiveRequirements}
           selectedElectives={selectedElectives}
+          selectedElectiveCredits={selectedElectiveCredits}
           onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
             setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
             // Re-generate schedules with the new electives swapped in

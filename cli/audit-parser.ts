@@ -83,6 +83,7 @@ export interface ElectiveRequirement {
   category: string            // e.g. 'CS_ELECTIVE', 'SCIENCE_ELECTIVE'
   label: string               // Human-readable label, e.g. 'Computer Science Elective'
   creditsNeeded: number       // Credits still needed for this category
+  selectionUnitCredits: number
   courseOptions: string[]     // Expanded list of courses that satisfy this requirement
 }
 
@@ -102,7 +103,7 @@ const ELECTIVE_CATEGORY_LABELS: Record<string, string> = {
 export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRequirement[] {
   const completedSet = new Set(auditData.completedCourses.map(c => c.courseId))
   const currentSet = new Set(auditData.currentCourses.map(c => c.courseId))
-  const results: ElectiveRequirement[] = []
+  const grouped = new Map<string, ElectiveRequirement>()
 
   for (const req of auditData.requirements) {
     const creditsNeeded = req.creditsRequired - req.creditsCompleted - req.creditsInProgress
@@ -113,18 +114,25 @@ export function getElectiveRequirements(auditData: StudentAuditData): ElectiveRe
       if (ELECTIVE_CATEGORIES[option]) {
         const expanded = ELECTIVE_CATEGORIES[option]
           .filter(c => !completedSet.has(c) && !currentSet.has(c))
+        const existing = grouped.get(option)
 
-        results.push({
-          category: option,
-          label: ELECTIVE_CATEGORY_LABELS[option] || option,
-          creditsNeeded,
-          courseOptions: expanded,
-        })
+        if (existing) {
+          existing.creditsNeeded += creditsNeeded
+          existing.courseOptions = Array.from(new Set([...existing.courseOptions, ...expanded])).sort()
+        } else {
+          grouped.set(option, {
+            category: option,
+            label: ELECTIVE_CATEGORY_LABELS[option] || option,
+            creditsNeeded,
+            selectionUnitCredits: 0.5,
+            courseOptions: expanded.sort(),
+          })
+        }
       }
     }
   }
 
-  return results
+  return Array.from(grouped.values())
 }
 
 // Extract requirements from HTML audit

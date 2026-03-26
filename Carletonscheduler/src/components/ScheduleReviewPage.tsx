@@ -10,6 +10,7 @@ interface ScheduleReviewPageProps {
   onBack: () => void;
   electiveRequirements?: ElectiveRequirement[];
   selectedElectives?: Record<string, string[]>;
+  selectedElectiveCredits?: Record<string, number>;
   onElectiveChange?: (category: string, courseCodes: string[], allSelectedCourses: string[]) => void;
   completedCourses?: string[];
 }
@@ -98,6 +99,7 @@ export function ScheduleReviewPage({
   onBack,
   electiveRequirements = [],
   selectedElectives = {},
+  selectedElectiveCredits = {},
   onElectiveChange,
   completedCourses = [],
 }: ScheduleReviewPageProps) {
@@ -112,7 +114,7 @@ export function ScheduleReviewPage({
 
   // Only show elective categories that the user selected on the previous page
   const activeElectiveRequirements = electiveRequirements.filter(
-    er => er.category in selectedElectives && er.courseOptions && er.courseOptions.length > 0
+    er => (selectedElectiveCredits[er.category] || 0) > 0 && er.courseOptions && er.courseOptions.length > 0
   );
   const [activeElectiveCategory, setActiveElectiveCategory] = useState<string>(
     activeElectiveRequirements.length > 0 ? activeElectiveRequirements[0].category : ''
@@ -181,6 +183,7 @@ export function ScheduleReviewPage({
     if (!onElectiveChange) return;
     const requirement = electiveRequirements.find(er => er.category === category);
     if (!requirement) return;
+    const creditsTarget = selectedElectiveCredits[category] || requirement.creditsNeeded;
 
     const currentPicks = selectedElectives[category] || [];
     const isSelected = currentPicks.includes(courseCode);
@@ -188,14 +191,14 @@ export function ScheduleReviewPage({
     let newPicks: string[];
     if (isSelected) {
       newPicks = currentPicks.filter(c => c !== courseCode);
-    } else if (courseCredits >= requirement.creditsNeeded) {
+    } else if (courseCredits >= creditsTarget) {
       newPicks = [courseCode];
     } else {
       const currentCredits = currentPicks.reduce((sum, code) => {
         const info = (electiveCourseDetails[category] || []).find(e => e.code === code);
         return sum + (info?.credits || 0.5);
       }, 0);
-      if (currentCredits + courseCredits > requirement.creditsNeeded) {
+      if (currentCredits + courseCredits > creditsTarget) {
         newPicks = [...currentPicks.slice(0, -1), courseCode];
       } else {
         newPicks = [...currentPicks, courseCode];
@@ -466,9 +469,10 @@ export function ScheduleReviewPage({
             const filteredAvail = available.filter(filterFn);
             const filteredUnavail = unavailable.filter(filterFn);
 
+            const creditsTarget = selectedElectiveCredits[category] || activeEr.creditsNeeded;
             const selectedCredits = allDetails.filter(e => currentPicks.includes(e.code)).reduce((s, e) => s + e.credits, 0);
-            const progress = Math.min((selectedCredits / activeEr.creditsNeeded) * 100, 100);
-            const isFulfilled = selectedCredits >= activeEr.creditsNeeded;
+            const progress = Math.min((selectedCredits / creditsTarget) * 100, 100);
+            const isFulfilled = selectedCredits >= creditsTarget;
 
             return (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -493,9 +497,10 @@ export function ScheduleReviewPage({
                         const picks = selectedElectives[er.category] || [];
                         const catDetails = electiveCourseDetails[er.category] || [];
                         const credits = catDetails.filter(e => picks.includes(e.code)).reduce((s, e) => s + e.credits, 0);
+                        const creditsTarget = selectedElectiveCredits[er.category] || er.creditsNeeded;
                         return (
                           <option key={er.category} value={er.category}>
-                            {er.label} ({credits}/{er.creditsNeeded} cr)
+                            {er.label} ({credits}/{creditsTarget} cr)
                           </option>
                         );
                       })}
@@ -514,7 +519,7 @@ export function ScheduleReviewPage({
                       <div style={{ width: `${progress}%`, height: '6px', borderRadius: '9999px', background: isFulfilled ? '#374151' : '#9ca3af', transition: 'width 0.3s' }} />
                     </div>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: isFulfilled ? '#374151' : '#6b7280' }}>
-                      {selectedCredits}/{activeEr.creditsNeeded} cr
+                      {selectedCredits}/{creditsTarget} cr
                     </span>
                   </div>
                   {currentPicks.length > 0 && (
