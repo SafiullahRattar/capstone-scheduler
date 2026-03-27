@@ -16,6 +16,7 @@ export interface Course {
   credits: number;
   prerequisites: string[];
   prerequisiteTree?: PrerequisiteNode[];
+  prerequisiteExpression?: string;
   description: string;
   type?: 'core' | 'technical-elective' | 'complementary-elective';
   sectionTypes?: string[];
@@ -88,14 +89,16 @@ setInterval(cleanCache, 60 * 1000);
  * - Returns cached results if available
  * - Cancels any in-flight requests when a new search starts
  */
-export async function searchCourses(query: string): Promise<Course[]> {
+export async function searchCourses(query: string, term?: string): Promise<Course[]> {
   const normalizedQuery = query.trim().toLowerCase();
+  const normalizedTerm = term?.trim() || '';
   
   // Check minimum query length
   if (normalizedQuery.length < 2) return [];
   
   // Check cache first
-  const cached = searchCache.get(normalizedQuery);
+  const cacheKey = `${normalizedQuery}:${normalizedTerm}`;
+  const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.results;
   }
@@ -111,7 +114,7 @@ export async function searchCourses(query: string): Promise<Course[]> {
   
   try {
     const response = await fetch(
-      `${API_BASE_URL}/courses/search?q=${encodeURIComponent(normalizedQuery)}`,
+      `${API_BASE_URL}/courses/search?q=${encodeURIComponent(normalizedQuery)}${normalizedTerm ? `&term=${encodeURIComponent(normalizedTerm)}` : ''}`,
       { signal }
     );
     
@@ -127,6 +130,7 @@ export async function searchCourses(query: string): Promise<Course[]> {
       credits: course.credits || 0,
       prerequisites: course.prerequisites || [],
       prerequisiteTree: course.prerequisiteTree || [],
+      prerequisiteExpression: course.prerequisiteExpression || '',
       description: course.description || '',
       type: course.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionTypes: course.sectionTypes || [],
@@ -134,7 +138,7 @@ export async function searchCourses(query: string): Promise<Course[]> {
     })).slice(0, SCHEDULE_CONFIG.MAX_SEARCH_RESULTS);
     
     // Cache the results
-    searchCache.set(normalizedQuery, { results, timestamp: Date.now() });
+    searchCache.set(cacheKey, { results, timestamp: Date.now() });
     
     return results;
   } catch (error) {
@@ -184,6 +188,7 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
       credits: data.credits || 0,
       prerequisites: data.prerequisites || [],
       prerequisiteTree: data.prerequisiteTree || [],
+      prerequisiteExpression: data.prerequisiteExpression || '',
       description: data.description || '',
       type: data.type as 'core' | 'technical-elective' | 'complementary-elective' | undefined,
       sectionCount: data.sectionCount || 0,

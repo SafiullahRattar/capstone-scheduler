@@ -31,7 +31,7 @@ const router = Router()
  */
 router.get('/search', async (req: Request, res: Response) => {
   try {
-    const { q, limit = '20' } = req.query
+    const { q, limit = '20', term } = req.query
     
     if (!q || typeof q !== 'string') {
       return res.status(400).json({ 
@@ -41,10 +41,11 @@ router.get('/search', async (req: Request, res: Response) => {
     }
 
     const limitNum = Math.min(parseInt(limit as string) || 20, 100)
+    const normalizedTerm = typeof term === 'string' && term.trim() ? term.trim() : null
     
     // Search algorithm: OR condition on code and title
     // Uses Prisma's contains operator with case-insensitive mode
-    // Only return courses that have sections available
+    // Only return courses that have sections available in the requested term
     const courses = await prisma.course.findMany({
       where: {
         OR: [
@@ -62,7 +63,7 @@ router.get('/search', async (req: Request, res: Response) => {
           }
         ],
         sections: {
-          some: {} // Only courses with at least one section
+          some: normalizedTerm ? { term: normalizedTerm } : {}
         }
       },
       include: {
@@ -92,7 +93,10 @@ router.get('/search', async (req: Request, res: Response) => {
     const coursesWithSectionInfo = await Promise.all(
       courses.map(async (course) => {
         const sections = await prisma.section.findMany({
-          where: { courseId: course.id },
+          where: {
+            courseId: course.id,
+            ...(normalizedTerm ? { term: normalizedTerm } : {})
+          },
           select: { sectionType: true, term: true },
           distinct: ['sectionType', 'term']
         })
@@ -118,6 +122,7 @@ router.get('/search', async (req: Request, res: Response) => {
         description: course.description || '',
         prerequisites,
         prerequisiteTree: course.prerequisiteNodes,
+        prerequisiteExpression: course.prerequisiteExpression?.expression || '',
         type: 'core' as const,
         sectionTypes: sectionTypes,
         terms: terms

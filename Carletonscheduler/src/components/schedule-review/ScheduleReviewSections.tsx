@@ -24,7 +24,7 @@ export function ElectiveCourseCard({
   isSwapping: boolean;
   onToggle: (category: string, code: string, credits: number) => void;
 }) {
-  const isAvailable = elective.status === 'available' || elective.status === 'tba';
+  const isAvailable = elective.status !== 'conflicting';
   const statusLabel = elective.status === 'conflicting'
     ? 'Conflicts with current schedule'
     : elective.status === 'prereq'
@@ -66,7 +66,7 @@ export function ElectiveCourseCard({
         )}
         {isSwapping && <Loader2 style={{ width: '16px', height: '16px', color: '#6b7280', flexShrink: 0 }} className="animate-spin" />}
       </div>
-      {!isAvailable && statusLabel && (
+      {statusLabel && (
         <p style={{ marginTop: '4px', fontSize: '11px', color: '#9ca3af', margin: '4px 0 0 0' }}>
           {statusLabel}
         </p>

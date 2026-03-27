@@ -94,19 +94,18 @@ export function ScheduleReviewPage({
                 course.prerequisites.every(p => completedCourses.includes(p));
               const sections = sectionsByCode.get(code) || [];
               const hasAnyTimedSections = sections.some(section => section.timeSlots.length > 0);
-              const hasConflictFreeOption = prereqsMet &&
-                hasValidNonConflictingCombination(sections, occupiedSlots);
+              const hasConflictFreeOption = hasValidNonConflictingCombination(sections, occupiedSlots);
               details.push({
                 code,
                 name: course.name || code,
                 credits: course.credits || 0.5,
-                status: !prereqsMet
-                  ? 'prereq'
-                  : !hasAnyTimedSections
-                    ? 'tba'
-                    : hasConflictFreeOption
-                      ? 'available'
-                      : 'conflicting',
+                status: hasAnyTimedSections && !hasConflictFreeOption
+                  ? 'conflicting'
+                  : !prereqsMet
+                    ? 'prereq'
+                    : !hasAnyTimedSections
+                      ? 'tba'
+                      : 'available',
                 prerequisites: course.prerequisites,
               });
             }

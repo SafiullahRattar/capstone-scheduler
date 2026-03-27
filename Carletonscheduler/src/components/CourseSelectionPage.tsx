@@ -126,11 +126,11 @@ export function CourseSelectionPage({
       return;
     }
     
-    const results = await searchCourses(query);
+    const results = await searchCourses(query, CURRENT_TERM);
     setSearchResults(results);
     setShowResults(true);
     setIsSearching(false);
-  }, []);
+  }, [CURRENT_TERM]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

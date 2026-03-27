@@ -493,8 +493,7 @@ function RemainingCoreCourseList({
         const isOfferedNow = hasTermData && details!.terms!.includes(currentTerm);
         const prereqsMet = isOfferedNow && areAllPrerequisitesMet(details!.prerequisites || [], details!.prerequisiteTree);
         const isSelected = selectedCourses.includes(code);
-        const eligible = isOfferedNow && prereqsMet;
-        const canAdd = eligible && !isSelected;
+        const canAdd = isOfferedNow && !isSelected;
         const isClickable = canAdd || isSelected;
 
         const courseChip = (
@@ -976,6 +975,8 @@ export function SelectedCoursesPanel({
             const isCompleted = completedCourses.includes(courseCode);
             const hasUnmetPrereqs = isCompleted ? false : !areAllPrerequisitesMet(course.prerequisites, course.prerequisiteTree);
             const noSections = course.hasSections === false;
+            const prerequisiteExpression = course.prerequisiteExpression?.trim();
+            const prerequisiteSummary = prerequisiteExpression || course.prerequisites.join(', ');
 
             // Determine if there's a warning
             const hasWarning = noSections || (hasUnmetPrereqs && hasAuditData) || isCompleted;
@@ -1018,30 +1019,60 @@ export function SelectedCoursesPanel({
                       {course.name}
                     </p>
 
-                    {!isCompleted && course.prerequisites.length > 0 && (
+                    {!isCompleted && prerequisiteSummary && (
                       <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                          Prerequisites:{' '}
-                        </span>
-                        {course.prerequisites.map((prereq, index) => {
-                          const status = checkPrerequisiteStatus(prereq);
-                          return (
-                            <span key={prereq}>
-                              <span
-                                style={{
-                                  fontSize: '12px',
-                                  fontWeight: 500,
-                                  color: status === 'met' ? '#059669' : status === 'not-met' ? '#dc2626' : '#64748b',
-                                }}
-                              >
-                                {prereq}
-                              </span>
-                              {index < course.prerequisites.length - 1 && (
-                                <span style={{ color: '#94a3b8' }}>, </span>
-                              )}
-                            </span>
-                          );
-                        })}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                            Prerequisite Logic:
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: hasUnmetPrereqs ? '#b91c1c' : '#047857',
+                              background: hasUnmetPrereqs ? '#fef2f2' : '#ecfdf5',
+                              padding: '2px 6px',
+                              borderRadius: '9999px'
+                            }}
+                          >
+                            {hasUnmetPrereqs ? 'Not met' : 'Met'}
+                          </span>
+                        </div>
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            color: hasUnmetPrereqs ? '#dc2626' : '#059669',
+                            marginTop: '6px',
+                            fontFamily: 'monospace',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word'
+                          }}
+                        >
+                          {prerequisiteSummary}
+                        </p>
+                        {!prerequisiteExpression && course.prerequisites.length > 0 && (
+                          <div style={{ marginTop: '6px' }}>
+                            {course.prerequisites.map((prereq, index) => {
+                              const status = checkPrerequisiteStatus(prereq);
+                              return (
+                                <span key={prereq}>
+                                  <span
+                                    style={{
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                      color: status === 'met' ? '#059669' : status === 'not-met' ? '#dc2626' : '#64748b',
+                                    }}
+                                  >
+                                    {prereq}
+                                  </span>
+                                  {index < course.prerequisites.length - 1 && (
+                                    <span style={{ color: '#94a3b8' }}>, </span>
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
