@@ -3,16 +3,19 @@ import { X } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import type { ElectiveRequirement } from '../types/electives';
 import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termUtils';
-import { buildElectiveToken, getElectiveSlotCount, getMissingElectiveTokenNumbers } from '../utils/electiveUtils';
+import { buildElectiveToken, getElectiveSlotCount, getElectiveTokenCategory, getElectiveTokenIndex, getMissingElectiveTokenNumbers } from '../utils/electiveUtils';
 import {
   validatePrerequisitesFromTree,
   type PrerequisiteValidationResult,
   type StudentTranscript
 } from '@shared/prerequisite-evaluator';
+import { fetchElectiveCatalog } from '../utils/electiveCatalog';
+import { mergeElectiveRequirements } from '../utils/electiveRequirements';
 import {
   AuditSummaryCard,
   CourseSelectionHeader,
   GenerateScheduleSidebar,
+  ManualElectivePicker,
   SearchPanel,
   SelectedCoursesPanel,
   TermSelectionTabs,
@@ -26,6 +29,7 @@ interface CourseSelectionPageProps {
   currentCourses: Array<{ courseId: string; term: string }>;
   remainingCourses?: string[];
   electiveRequirements?: ElectiveRequirement[];
+  onElectiveRequirementsChange: (requirements: ElectiveRequirement[]) => void;
   studentInfo?: {
     name: string;
     studentId: string;
@@ -43,12 +47,14 @@ export function CourseSelectionPage({
   currentCourses,
   remainingCourses = [],
   electiveRequirements = [],
+  onElectiveRequirementsChange,
   studentInfo,
   onGenerateSchedules,
   onStartOver,
   activeTerm,
   onTermChange
 }: CourseSelectionPageProps) {
+  const [catalogElectiveRequirements, setCatalogElectiveRequirements] = useState<ElectiveRequirement[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Course[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
@@ -64,6 +70,25 @@ export function CourseSelectionPage({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const availableElectiveRequirements = mergeElectiveRequirements(electiveRequirements, catalogElectiveRequirements);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadElectiveCatalog = async () => {
+      const catalog = await fetchElectiveCatalog();
+      if (!cancelled) {
+        setCatalogElectiveRequirements(catalog);
+      }
+    };
+
+    loadElectiveCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Pre-fetch details for remaining courses to know their semesters
   useEffect(() => {
@@ -220,6 +245,23 @@ export function CourseSelectionPage({
 
   const removeCourse = (courseCode: string) => {
     setSelectedCourses(selectedCourses.filter(code => code !== courseCode));
+  };
+
+  const addElectiveCategory = (category: string) => {
+    const existingIndices = selectedCourses
+      .filter((code) => getElectiveTokenCategory(code) === category)
+      .map((code) => getElectiveTokenIndex(code))
+      .filter((index): index is number => index !== null);
+
+    const nextIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 1;
+    const token = buildElectiveToken(category, nextIndex);
+
+    const mergedRequirements = mergeElectiveRequirements(electiveRequirements, catalogElectiveRequirements);
+    if (mergedRequirements.length !== electiveRequirements.length) {
+      onElectiveRequirementsChange(mergedRequirements);
+    }
+
+    setSelectedCourses((prev) => prev.includes(token) ? prev : [...prev, token]);
   };
 
   useEffect(() => {
@@ -453,11 +495,16 @@ export function CourseSelectionPage({
               onAddCourse={addCourse}
               getTermLabel={getSemesterName}
             />
+            <ManualElectivePicker
+              electiveRequirements={availableElectiveRequirements}
+              selectedCourses={selectedCourses}
+              onAddElectiveCategory={addElectiveCategory}
+            />
             <SelectedCoursesPanel
               selectedCourses={selectedCourses}
               completedCourses={completedCourses}
               courseDetails={courseDetails}
-              electiveRequirements={electiveRequirements}
+              electiveRequirements={availableElectiveRequirements}
               hasAuditData={hasAuditData}
               onRemoveCourse={removeCourse}
               areAllPrerequisitesMet={areAllPrerequisitesMet}

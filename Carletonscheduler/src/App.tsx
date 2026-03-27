@@ -9,6 +9,8 @@ import { API_BASE_URL } from './config/constants';
 import { getDefaultActiveTerm } from './utils/termUtils';
 import type { ElectiveRequirement } from './types/electives';
 import { collectRequestedElectiveCounts, getSelectionUnitCredits } from './utils/electiveUtils';
+import { fetchElectiveCatalog } from './utils/electiveCatalog';
+import { mergeElectiveRequirements } from './utils/electiveRequirements';
 
 type AppPage = 'import' | 'course-selection' | 'schedule-review' | 'admin';
 
@@ -252,13 +254,30 @@ export default function App() {
       const regularCourses = courses.filter(course => !course.startsWith('ELECTIVE:'));
       const requestedElectiveCounts = collectRequestedElectiveCounts(courses);
       const requestedCredits: Record<string, number> = {};
+      let effectiveElectiveRequirements = electiveRequirements;
+
+      const missingCategories = Array.from(requestedElectiveCounts.keys()).filter((category) =>
+        !effectiveElectiveRequirements.some((item) => item.category === category)
+      );
+
+      if (missingCategories.length > 0) {
+        const catalogRequirements = await fetchElectiveCatalog();
+        effectiveElectiveRequirements = mergeElectiveRequirements(
+          effectiveElectiveRequirements,
+          catalogRequirements.filter((item) => missingCategories.includes(item.category))
+        );
+        setElectiveRequirements(effectiveElectiveRequirements);
+      }
 
       for (const [category, tokenCount] of requestedElectiveCounts.entries()) {
-        const requirement = electiveRequirements.find(item => item.category === category);
+        const requirement = effectiveElectiveRequirements.find(item => item.category === category);
         if (!requirement) continue;
 
         const selectionUnitCredits = getSelectionUnitCredits(requirement);
-        requestedCredits[category] = Math.min(tokenCount * selectionUnitCredits, requirement.creditsNeeded);
+        const maxRequestableCredits = requirement.creditsNeeded > 0
+          ? requirement.creditsNeeded
+          : tokenCount * selectionUnitCredits;
+        requestedCredits[category] = Math.min(tokenCount * selectionUnitCredits, maxRequestableCredits);
       }
 
       setSelectedElectives({});
@@ -368,6 +387,7 @@ export default function App() {
           currentCourses={currentCourses}
           remainingCourses={remainingCourses}
           electiveRequirements={electiveRequirements}
+          onElectiveRequirementsChange={setElectiveRequirements}
           studentInfo={studentInfo}
           onGenerateSchedules={handleGenerateSchedules}
           onStartOver={handleStartOver}

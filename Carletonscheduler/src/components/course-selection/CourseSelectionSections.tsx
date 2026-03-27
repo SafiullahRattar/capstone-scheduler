@@ -859,6 +859,79 @@ export function SearchPanel({
   );
 }
 
+export function ManualElectivePicker({
+  electiveRequirements,
+  selectedCourses,
+  onAddElectiveCategory,
+}: {
+  electiveRequirements: ElectiveRequirement[];
+  selectedCourses: string[];
+  onAddElectiveCategory: (category: string) => void;
+}) {
+  if (electiveRequirements.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        padding: '20px'
+      }}
+    >
+      <div style={{ marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '4px' }}>
+          Add Electives
+        </h3>
+        <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+          Add elective categories manually even if your audit does not list them.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {electiveRequirements.map((elective) => {
+          const selectedCount = getSelectedElectiveTokenCount(selectedCourses, elective.category);
+          return (
+            <button
+              key={elective.category}
+              onClick={() => onAddElectiveCategory(elective.category)}
+              className="w-full text-left"
+              style={{
+                padding: '12px 16px',
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 150ms',
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                    {elective.label}
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    {elective.selectionUnitCredits || 0.5} credits per selection
+                  </p>
+                </div>
+                <span style={{
+                  fontSize: '13px',
+                  color: '#64748b',
+                  fontWeight: 500
+                }}>
+                  {selectedCount} selected
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 interface SelectedCoursesPanelProps {
   selectedCourses: string[];
   completedCourses: string[];
