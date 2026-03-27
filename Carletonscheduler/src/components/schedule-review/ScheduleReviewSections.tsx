@@ -425,7 +425,7 @@ export function ScheduleSidebar({
                     <p style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                       Available ({filteredAvail.length})
                     </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
                       {filteredAvail.map(elective => (
                         <ElectiveCourseCard
                           key={elective.code}
@@ -445,7 +445,7 @@ export function ScheduleSidebar({
                     <p style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                       TBA ({filteredTba.length})
                     </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
                       {filteredTba.map(elective => (
                         <ElectiveCourseCard
                           key={elective.code}
@@ -470,7 +470,7 @@ export function ScheduleSidebar({
                       Conflicting ({filteredConflicting.length})
                     </button>
                     {showUnavailable[`${category}:conflicting`] && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
                         {filteredConflicting.map(elective => (
                           <ElectiveCourseCard
                             key={elective.code}
@@ -496,7 +496,7 @@ export function ScheduleSidebar({
                       Prereq not met ({filteredPrereqNotMet.length})
                     </button>
                     {showUnavailable[`${category}:prereq`] && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
                         {filteredPrereqNotMet.map(elective => (
                           <ElectiveCourseCard
                             key={elective.code}
