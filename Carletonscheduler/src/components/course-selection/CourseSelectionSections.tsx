@@ -3,7 +3,7 @@ import { ChevronDown, Search, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card';
-import type { Course } from '../../utils/courseData';
+import type { Course, PrerequisiteValidationResult } from '../../utils/courseData';
 import type { ElectiveRequirement } from '../../types/electives';
 import {
   buildElectiveToken,
@@ -125,13 +125,8 @@ interface AuditSummaryCardProps {
   onAddAllCourses: (courseCodes: string[]) => void | Promise<void>;
   onRemoveCourse: (courseCode: string) => void;
   onClearSelected: () => void;
-  areAllPrerequisitesMet: (
-    prerequisites: string[],
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[],
-  ) => boolean;
-  getPrerequisiteBreakdown: (
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[],
-  ) => { code: string; met: boolean }[];
+  areAllPrerequisitesMet: (courseCode: string) => boolean;
+  getMissingPrerequisites: (courseCode: string) => string[];
   getTermLabel: (term: string) => string;
   getTermShortLabel: (term: string) => string;
 }
@@ -160,7 +155,7 @@ export function AuditSummaryCard({
   onRemoveCourse,
   onClearSelected,
   areAllPrerequisitesMet,
-  getPrerequisiteBreakdown,
+  getMissingPrerequisites,
   getTermLabel,
   getTermShortLabel,
 }: AuditSummaryCardProps) {
@@ -173,7 +168,7 @@ export function AuditSummaryCard({
     if (electiveCourseSet.has(code)) return false;
     const details = courseDetails.get(code);
     if (!details || !details.terms || !details.terms.includes(currentTerm)) return false;
-    return areAllPrerequisitesMet(details.prerequisites || [], details.prerequisiteTree);
+    return areAllPrerequisitesMet(code);
   });
 
   const electiveTokens = electiveRequirements.flatMap((elective) => {
@@ -340,7 +335,7 @@ export function AuditSummaryCard({
                     onAddCourse={onAddCourse}
                     onRemoveCourse={onRemoveCourse}
                     areAllPrerequisitesMet={areAllPrerequisitesMet}
-                    getPrerequisiteBreakdown={getPrerequisiteBreakdown}
+                    getMissingPrerequisites={getMissingPrerequisites}
                     getTermLabel={getTermLabel}
                     getTermShortLabel={getTermShortLabel}
                   />
@@ -462,13 +457,8 @@ interface RemainingCoreCourseListProps {
   currentTerm: string;
   onAddCourse: (courseCode: string) => void | Promise<void>;
   onRemoveCourse: (courseCode: string) => void;
-  areAllPrerequisitesMet: (
-    prerequisites: string[],
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[],
-  ) => boolean;
-  getPrerequisiteBreakdown: (
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[],
-  ) => { code: string; met: boolean }[];
+  areAllPrerequisitesMet: (courseCode: string) => boolean;
+  getMissingPrerequisites: (courseCode: string) => string[];
   getTermLabel: (term: string) => string;
   getTermShortLabel: (term: string) => string;
 }
@@ -481,7 +471,7 @@ function RemainingCoreCourseList({
   onAddCourse,
   onRemoveCourse,
   areAllPrerequisitesMet,
-  getPrerequisiteBreakdown,
+  getMissingPrerequisites,
   getTermLabel,
   getTermShortLabel,
 }: RemainingCoreCourseListProps) {
@@ -491,7 +481,7 @@ function RemainingCoreCourseList({
         const details = courseDetails.get(code);
         const hasTermData = details?.terms && details.terms.length > 0;
         const isOfferedNow = hasTermData && details!.terms!.includes(currentTerm);
-        const prereqsMet = isOfferedNow && areAllPrerequisitesMet(details!.prerequisites || [], details!.prerequisiteTree);
+        const prereqsMet = isOfferedNow && areAllPrerequisitesMet(code);
         const isSelected = selectedCourses.includes(code);
         const canAdd = isOfferedNow && !isSelected;
         const isClickable = canAdd || isSelected;
@@ -529,14 +519,13 @@ function RemainingCoreCourseList({
         }
 
         // Non-clickable courses get a hover card explaining why
-        const prereqBreakdown = getPrerequisiteBreakdown(details?.prerequisiteTree);
-        const missingPrereqs = prereqBreakdown.filter(prereq => !prereq.met);
+        const missingPrereqs = getMissingPrerequisites(code);
 
         let reason = 'No schedule data available';
         if (hasTermData && !isOfferedNow) {
           reason = `Not offered in ${getTermLabel(currentTerm)}`;
         } else if (!prereqsMet && missingPrereqs.length > 0) {
-          reason = `Missing: ${missingPrereqs.map(p => p.code).join(', ')}`;
+          reason = `Missing: ${missingPrereqs.join(', ')}`;
         }
 
         return (
@@ -877,11 +866,8 @@ interface SelectedCoursesPanelProps {
   electiveRequirements: ElectiveRequirement[];
   hasAuditData: boolean;
   onRemoveCourse: (courseCode: string) => void;
-  areAllPrerequisitesMet: (
-    prerequisites: string[],
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[],
-  ) => boolean;
-  checkPrerequisiteStatus: (prerequisite: string) => 'met' | 'not-met' | 'unknown';
+  areAllPrerequisitesMet: (courseCode: string) => boolean;
+  prerequisiteValidation: Record<string, PrerequisiteValidationResult>;
 }
 
 export function SelectedCoursesPanel({
@@ -892,7 +878,7 @@ export function SelectedCoursesPanel({
   hasAuditData,
   onRemoveCourse,
   areAllPrerequisitesMet,
-  checkPrerequisiteStatus,
+  prerequisiteValidation,
 }: SelectedCoursesPanelProps) {
   return (
     <div 
@@ -973,9 +959,10 @@ export function SelectedCoursesPanel({
             if (!course) return null;
 
             const isCompleted = completedCourses.includes(courseCode);
-            const hasUnmetPrereqs = isCompleted ? false : !areAllPrerequisitesMet(course.prerequisites, course.prerequisiteTree);
+            const validation = prerequisiteValidation[courseCode];
+            const hasUnmetPrereqs = isCompleted ? false : !areAllPrerequisitesMet(courseCode);
             const noSections = course.hasSections === false;
-            const prerequisiteExpression = course.prerequisiteExpression?.trim();
+            const prerequisiteExpression = validation?.expressionEvaluated?.trim() || course.prerequisiteExpression?.trim();
             const prerequisiteSummary = prerequisiteExpression || course.prerequisites.join(', ');
 
             // Determine if there's a warning
@@ -1053,7 +1040,7 @@ export function SelectedCoursesPanel({
                         {!prerequisiteExpression && course.prerequisites.length > 0 && (
                           <div style={{ marginTop: '6px' }}>
                             {course.prerequisites.map((prereq, index) => {
-                              const status = checkPrerequisiteStatus(prereq);
+                              const status = completedCourses.includes(prereq) ? 'met' : 'not-met';
                               return (
                                 <span key={prereq}>
                                   <span

@@ -280,6 +280,13 @@ export function ScheduleSidebar({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {Array.from(groupedCourses.entries()).map(([courseCode, sections]) => {
             const colors = courseColorMap.get(courseCode) || COURSE_COLORS[0];
+            const prerequisiteInfo = currentSchedule.prerequisiteInfo?.[courseCode];
+            const hasUnmetPrerequisites = Boolean(
+              prerequisiteInfo &&
+              prerequisiteInfo.isValid === false &&
+              prerequisiteInfo.expressionEvaluated &&
+              prerequisiteInfo.expressionEvaluated !== 'None'
+            );
 
             return sections.map((selection) => {
               const itemId = `${courseCode}-${selection.section.sectionCode}`;
@@ -300,6 +307,20 @@ export function ScheduleSidebar({
                       <span style={{ fontSize: '11px', color: '#9ca3af' }}>{selection.section.type}</span>
                     </div>
                     <p style={{ fontSize: '11px', color: '#9ca3af', margin: 0 }}>{days} {times}</p>
+                    {hasUnmetPrerequisites && (
+                      <p
+                        style={{
+                          fontSize: '11px',
+                          color: '#dc2626',
+                          margin: '4px 0 0 0',
+                          fontFamily: 'monospace',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word'
+                        }}
+                      >
+                        {prerequisiteInfo?.expressionEvaluated}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => onCopyToClipboard(selection.section.crn, `crn-${itemId}`)}

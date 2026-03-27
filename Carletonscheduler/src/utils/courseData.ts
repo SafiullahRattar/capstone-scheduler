@@ -1,14 +1,8 @@
 import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
 import type { TimeSlot } from './scheduleGenerator';
+import type { PrerequisiteNodeData, PrerequisiteValidationResult } from '@shared/prerequisite-evaluator';
 
-export interface PrerequisiteNode {
-  id: string;
-  nodeType: string;
-  requiredCourseId: string | null;
-  requiredYear: string | null;
-  requiredGrade: string | null;
-  parentId: string | null;
-}
+export type PrerequisiteNode = PrerequisiteNodeData;
 
 export interface Course {
   code: string;

@@ -5,6 +5,11 @@ import type { ElectiveRequirement } from '../types/electives';
 import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termUtils';
 import { buildElectiveToken, getElectiveSlotCount, getMissingElectiveTokenNumbers } from '../utils/electiveUtils';
 import {
+  validatePrerequisitesFromTree,
+  type PrerequisiteValidationResult,
+  type StudentTranscript
+} from '@shared/prerequisite-evaluator';
+import {
   AuditSummaryCard,
   CourseSelectionHeader,
   GenerateScheduleSidebar,
@@ -52,6 +57,7 @@ export function CourseSelectionPage({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [prerequisiteValidation, setPrerequisiteValidation] = useState<Record<string, PrerequisiteValidationResult>>({});
   const [completedOpen, setCompletedOpen] = useState(false);
   const [enrolledOpen, setEnrolledOpen] = useState(false);
   const [remainingOpen, setRemainingOpen] = useState(true);
@@ -216,78 +222,73 @@ export function CourseSelectionPage({
     setSelectedCourses(selectedCourses.filter(code => code !== courseCode));
   };
 
-  const checkPrerequisiteStatus = (prerequisite: string): 'met' | 'not-met' | 'unknown' => {
-    if (!hasAuditData) return 'unknown';
-    return completedCourses.includes(prerequisite) ? 'met' : 'not-met';
-  };
-
-  const evaluatePrerequisiteNode = (
-    node: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null },
-    allNodes: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[]
-  ): { met: boolean; childStatuses?: { nodeId: string; met: boolean }[] } => {
-    if (node.nodeType === 'COURSE') {
-      const met = node.requiredCourseId ? completedCourses.includes(node.requiredCourseId) : false;
-      return { met };
+  useEffect(() => {
+    if (!hasAuditData) {
+      setPrerequisiteValidation({});
+      return;
     }
 
-    if (node.nodeType === 'YEAR_STANDING' || node.nodeType === 'PERMISSION' || node.nodeType === 'OTHER_REQUIREMENT') {
-      return { met: true };
+    const courseCodes = Array.from(new Set([
+      ...remainingCourses,
+      ...selectedCourses.filter(code => !code.startsWith('ELECTIVE:')),
+    ]));
+
+    if (courseCodes.length === 0) {
+      setPrerequisiteValidation({});
+      return;
     }
 
-    if (node.nodeType === 'AND') {
-      const children = allNodes.filter(child => child.parentId === node.id);
-      const results = children.map(child => evaluatePrerequisiteNode(child, allNodes));
-      const allMet = results.every(r => r.met);
-      return {
-        met: allMet,
-        childStatuses: results.map((r, i) => ({ nodeId: children[i].id, met: r.met }))
-      };
-    }
+    let isCancelled = false;
 
-    if (node.nodeType === 'OR') {
-      const children = allNodes.filter(child => child.parentId === node.id);
-      const results = children.map(child => evaluatePrerequisiteNode(child, allNodes));
-      const anyMet = results.some(r => r.met);
-      return {
-        met: anyMet,
-        childStatuses: results.map((r, i) => ({ nodeId: children[i].id, met: r.met }))
-      };
-    }
+    const loadValidation = async () => {
+      try {
+        const transcript: StudentTranscript = {
+          completedCourses: completedCourses.map(courseId => courseId.toUpperCase()),
+          currentYear: 'FOURTH_YEAR',
+          hasSpecialPermission: false,
+        };
 
-    return { met: false };
-  };
+        const results = Object.fromEntries(
+          courseCodes.map((courseId) => {
+            const course = courseDetails.get(courseId);
+            return [
+              courseId,
+              validatePrerequisitesFromTree(
+                course?.prerequisiteExpression,
+                course?.prerequisiteTree || [],
+                transcript
+              ),
+            ] as const;
+          })
+        );
 
-  const areAllPrerequisitesMet = (
-    prerequisites: string[],
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[]
-  ): boolean => {
+        if (!isCancelled) {
+          setPrerequisiteValidation(results);
+        }
+      } catch {
+        if (!isCancelled) {
+          setPrerequisiteValidation({});
+        }
+      }
+    };
+
+    loadValidation();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [hasAuditData, remainingCourses, selectedCourses, completedCourses, courseDetails]);
+
+  const areAllPrerequisitesMet = (courseCode: string): boolean => {
     if (!hasAuditData) return true;
-    if (prerequisites.length === 0) return true;
-    if (!prerequisiteTree || prerequisiteTree.length === 0) return true;
-
-    const hasCourseRequirements = prerequisiteTree.some(node => node.nodeType === 'COURSE' && node.requiredCourseId);
-    if (!hasCourseRequirements) return true;
-
-    const rootNode = prerequisiteTree.find(node => !node.parentId);
-    if (!rootNode) {
-      return prerequisites.every(prereq => completedCourses.includes(prereq));
-    }
-
-    const result = evaluatePrerequisiteNode(rootNode, prerequisiteTree);
-    return result.met;
+    const validation = prerequisiteValidation[courseCode];
+    if (!validation) return true;
+    return validation.isValid;
   };
 
-  // Get detailed prerequisite breakdown for the hover info box
-  const getPrerequisiteBreakdown = (
-    prerequisiteTree?: { id: string; nodeType: string; requiredCourseId: string | null; parentId: string | null }[]
-  ): { code: string; met: boolean }[] => {
-    if (!prerequisiteTree || prerequisiteTree.length === 0) return [];
-    return prerequisiteTree
-      .filter(node => node.nodeType === 'COURSE' && node.requiredCourseId)
-      .map(node => ({
-        code: node.requiredCourseId!,
-        met: completedCourses.includes(node.requiredCourseId!),
-      }));
+  const getMissingPrerequisites = (courseCode: string): string[] => {
+    const validation = prerequisiteValidation[courseCode];
+    return validation?.missingCourses || [];
   };
 
   const handleGenerateSchedules = () => {
@@ -341,6 +342,27 @@ export function CourseSelectionPage({
         });
       }
 
+      const transcript: StudentTranscript = {
+        completedCourses: completedCourses.map(courseId => courseId.toUpperCase()),
+        currentYear: 'FOURTH_YEAR',
+        hasSpecialPermission: false,
+      };
+      const validationResults = hasAuditData
+        ? Object.fromEntries(
+            remainingCourses.map((courseId) => {
+              const course = detailsMap.get(courseId);
+              return [
+                courseId,
+                validatePrerequisitesFromTree(
+                  course?.prerequisiteExpression,
+                  course?.prerequisiteTree || [],
+                  transcript
+                ),
+              ] as const;
+            })
+          )
+        : {};
+
       const maxCourses = 6;
       const autoSelected: string[] = [];
 
@@ -350,7 +372,7 @@ export function CourseSelectionPage({
         if (!details) continue;
         const isOfferedNow = details.terms?.includes(CURRENT_TERM);
         if (!isOfferedNow) continue;
-        if (!areAllPrerequisitesMet(details.prerequisites || [], details.prerequisiteTree)) continue;
+        if (hasAuditData && validationResults[code] && !validationResults[code].isValid) continue;
         autoSelected.push(code);
       }
 
@@ -411,7 +433,7 @@ export function CourseSelectionPage({
           onRemoveCourse={removeCourse}
           onClearSelected={() => setSelectedCourses([])}
           areAllPrerequisitesMet={areAllPrerequisitesMet}
-          getPrerequisiteBreakdown={getPrerequisiteBreakdown}
+          getMissingPrerequisites={getMissingPrerequisites}
           getTermLabel={getSemesterName}
           getTermShortLabel={getSemesterShortName}
         />
@@ -439,7 +461,7 @@ export function CourseSelectionPage({
               hasAuditData={hasAuditData}
               onRemoveCourse={removeCourse}
               areAllPrerequisitesMet={areAllPrerequisitesMet}
-              checkPrerequisiteStatus={checkPrerequisiteStatus}
+              prerequisiteValidation={prerequisiteValidation}
             />
           </div>
 
