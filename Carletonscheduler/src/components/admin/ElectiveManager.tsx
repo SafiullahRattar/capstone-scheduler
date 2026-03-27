@@ -21,11 +21,6 @@ export function ElectiveManager() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // New category form
-  const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newCategoryId, setNewCategoryId] = useState('');
-  const [newCategoryLabel, setNewCategoryLabel] = useState('');
-
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -99,65 +94,6 @@ export function ElectiveManager() {
     }
   };
 
-  const handleCreateCategory = async () => {
-    if (!newCategoryId.trim() || !newCategoryLabel.trim()) {
-      setError('Please enter both ID and label');
-      return;
-    }
-
-    setActionLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/electives`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: newCategoryId.trim(), label: newCategoryLabel.trim() })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to create category');
-        return;
-      }
-
-      setNewCategoryId('');
-      setNewCategoryLabel('');
-      setShowNewCategory(false);
-      fetchCategories();
-    } catch (err) {
-      setError('Failed to create category');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDeleteCategory = async (categoryId: string, label: string) => {
-    if (!confirm(`Delete "${label}"? This will remove all course associations.`)) {
-      return;
-    }
-
-    setActionLoading(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/electives/${categoryId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        if (expandedCategory === categoryId) {
-          setExpandedCategory(null);
-        }
-        fetchCategories();
-      }
-    } catch (err) {
-      console.error('Failed to delete category:', err);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   // Filter categories by search
   const filteredCategories = categories.filter(cat =>
     cat.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -177,7 +113,7 @@ export function ElectiveManager() {
         </p>
       </div>
 
-      {/* Search and Actions */}
+      {/* Search */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: '1', minWidth: '200px', maxWidth: '320px' }}>
           <Search 
@@ -205,93 +141,7 @@ export function ElectiveManager() {
             }}
           />
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => setShowNewCategory(true)}
-          style={{ fontSize: '14px' }}
-        >
-          New Category
-        </Button>
       </div>
-
-      {/* New Category Form */}
-      {showNewCategory && (
-        <div style={{
-          marginBottom: '24px',
-          padding: '20px',
-          background: '#f8fafc',
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <p style={{ fontSize: '14px', fontWeight: 500, color: '#111', marginBottom: '16px' }}>
-            Create New Category
-          </p>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: '1', minWidth: '120px' }}>
-              <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                Category ID
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., TECH_ELECTIVE"
-                value={newCategoryId}
-                onChange={e => setNewCategoryId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '14px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-            <div style={{ flex: '2', minWidth: '200px' }}>
-              <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                Display Label
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Technical Elective"
-                value={newCategoryLabel}
-                onChange={e => setNewCategoryLabel(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '14px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px'
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button onClick={handleCreateCategory} disabled={actionLoading}>
-                Create
-              </Button>
-              <button
-                onClick={() => {
-                  setShowNewCategory(false);
-                  setNewCategoryId('');
-                  setNewCategoryLabel('');
-                  setError(null);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  color: '#64748b',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-          {error && (
-            <p style={{ fontSize: '13px', color: '#dc2626', marginTop: '12px' }}>{error}</p>
-          )}
-        </div>
-      )}
 
       {/* Categories List */}
       {loading ? (
@@ -348,31 +198,6 @@ export function ElectiveManager() {
                       {category.name} · {category.courseCount} course{category.courseCount !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleDeleteCategory(category.name, category.label);
-                    }}
-                    style={{
-                      padding: '6px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      color: '#94a3b8'
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background = '#fee2e2';
-                      e.currentTarget.style.color = '#dc2626';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = '#94a3b8';
-                    }}
-                    title="Delete category"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
 
                 {/* Expanded Content */}

@@ -323,64 +323,6 @@ router.delete('/electives/:categoryId/courses/:courseId', async (req: Request, r
   }
 })
 
-/**
- * POST /api/admin/electives
- * Create a new elective category
- * 
- * Body: { id: string, label: string }
- */
-router.post('/electives', async (req: Request, res: Response) => {
-  try {
-    const { id, label } = req.body
-
-    if (!id || !label) {
-      return res.status(400).json({ error: 'Category ID and label are required' })
-    }
-
-    const existing = await prisma.electiveCategory.findUnique({
-      where: { id }
-    })
-    if (existing) {
-      return res.status(409).json({ error: 'Category already exists' })
-    }
-
-    const category = await prisma.electiveCategory.create({
-      data: { id, label }
-    })
-
-    res.json({ success: true, category })
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create elective category' })
-  }
-})
-
-/**
- * DELETE /api/admin/electives/:categoryId
- * Delete an elective category and all its course associations
- */
-router.delete('/electives/:categoryId', async (req: Request, res: Response) => {
-  try {
-    const { categoryId } = req.params
-
-    // Delete course associations first
-    await prisma.electiveCourse.deleteMany({
-      where: { categoryId }
-    })
-
-    // Delete category
-    await prisma.electiveCategory.delete({
-      where: { id: categoryId }
-    })
-
-    res.json({ success: true })
-  } catch (error: any) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Category not found' })
-    }
-    res.status(500).json({ error: 'Failed to delete elective category' })
-  }
-})
-
 // ============================================================================
 // COURSE & PREREQUISITE MANAGEMENT
 // ============================================================================
