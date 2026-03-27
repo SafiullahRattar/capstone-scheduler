@@ -5,7 +5,7 @@ import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { LoginPage } from './components/LoginPage';
 import { AdminPage } from './components/admin';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
-import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
+import { API_BASE_URL } from './config/constants';
 import { getDefaultActiveTerm } from './utils/termUtils';
 import type { ElectiveRequirement } from './types/electives';
 import { collectRequestedElectiveCounts, getSelectionUnitCredits } from './utils/electiveUtils';
@@ -31,11 +31,6 @@ interface ParsedAuditData {
   studentName?: string;
   studentId?: string;
   program?: string;
-}
-
-interface CourseSuggestion {
-  code: string;
-  name?: string;
 }
 
 interface AppState {
@@ -304,64 +299,6 @@ export default function App() {
     navigateTo('course-selection');
   };
 
-  const fetchCourseSuggestions = async (): Promise<CourseSuggestion[]> => {
-    const response = await fetch(`${API_BASE_URL}/audit/suggest-courses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        remainingCourses,
-        completedCourses: completedCourses.map(c => ({ courseId: c })),
-        maxSuggestions: SCHEDULE_CONFIG.MAX_SUGGESTIONS
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get course suggestions');
-    }
-
-    const data = await response.json();
-    return data.readyToTake || [];
-  };
-
-  const fetchCourseRecommendations = async (): Promise<CourseSuggestion[]> => {
-    const response = await fetch(`${API_BASE_URL}/courses/recommend-next`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        completedCourses,
-        program: studentInfo?.program
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get recommendations');
-    }
-
-    const data = await response.json();
-    return data.recommendations || [];
-  };
-
-  const handleGenerateSmartSchedule = async () => {
-    try {
-      const suggestions = remainingCourses.length > 0
-        ? await fetchCourseSuggestions()
-        : await fetchCourseRecommendations();
-
-      if (suggestions.length === 0) {
-        alert('No courses available with met prerequisites. Please try manual selection.');
-        return;
-      }
-
-      const coursesToSchedule = suggestions
-        .slice(0, SCHEDULE_CONFIG.DEFAULT_COURSE_LOAD)
-        .map(course => course.code);
-
-      await handleGenerateSchedules(coursesToSchedule);
-    } catch {
-      alert('An error occurred while generating your schedule. Please try manual selection.');
-    }
-  };
-
   const handleLoginSuccess = (token: string, userData: any) => {
     setIsAuthenticated(true);
     setUser(userData);
@@ -423,7 +360,6 @@ export default function App() {
           electiveRequirements={electiveRequirements}
           studentInfo={studentInfo}
           onGenerateSchedules={handleGenerateSchedules}
-          onGenerateSmartSchedule={handleGenerateSmartSchedule}
           onStartOver={handleStartOver}
           activeTerm={activeTerm}
           onTermChange={setActiveTerm}

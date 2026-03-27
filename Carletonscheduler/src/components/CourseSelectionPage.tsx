@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import type { ElectiveRequirement } from '../types/electives';
 import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termUtils';
+import { buildElectiveToken, getElectiveSlotCount, getMissingElectiveTokenNumbers } from '../utils/electiveUtils';
 import {
   AuditSummaryCard,
   CourseSelectionHeader,
@@ -26,7 +27,6 @@ interface CourseSelectionPageProps {
     program: string;
   };
   onGenerateSchedules: (courses: string[], termOverride?: string) => void;
-  onGenerateSmartSchedule: () => void;
   onStartOver: () => void;
   activeTerm: string;
   onTermChange: (term: string) => void;
@@ -40,7 +40,6 @@ export function CourseSelectionPage({
   electiveRequirements = [],
   studentInfo,
   onGenerateSchedules,
-  onGenerateSmartSchedule,
   onStartOver,
   activeTerm,
   onTermChange
@@ -315,6 +314,63 @@ export function CourseSelectionPage({
     onGenerateSchedules([...coursesWithSections, ...electiveTokens], CURRENT_TERM);
   };
 
+  const handleAutoFillSelection = async () => {
+    setIsGenerating(true);
+    try {
+      const unresolvedCodes = remainingCourses.filter(code => !courseDetails.has(code));
+      if (unresolvedCodes.length > 0) {
+        const fetchedCourses = await Promise.all(unresolvedCodes.map(code => getCourseByCode(code)));
+        setCourseDetails(prev => {
+          const newMap = new Map(prev);
+          fetchedCourses.forEach(course => {
+            if (course) {
+              newMap.set(course.code, course);
+            }
+          });
+          return newMap;
+        });
+      }
+
+      const detailsMap = new Map(courseDetails);
+      if (unresolvedCodes.length > 0) {
+        const fetchedCourses = await Promise.all(unresolvedCodes.map(code => getCourseByCode(code)));
+        fetchedCourses.forEach(course => {
+          if (course) {
+            detailsMap.set(course.code, course);
+          }
+        });
+      }
+
+      const maxCourses = 6;
+      const autoSelected: string[] = [];
+
+      for (const code of remainingCourses) {
+        if (autoSelected.length >= maxCourses) break;
+        const details = detailsMap.get(code);
+        if (!details) continue;
+        const isOfferedNow = details.terms?.includes(CURRENT_TERM);
+        if (!isOfferedNow) continue;
+        if (!areAllPrerequisitesMet(details.prerequisites || [], details.prerequisiteTree)) continue;
+        autoSelected.push(code);
+      }
+
+      if (autoSelected.length < maxCourses) {
+        for (const elective of electiveRequirements) {
+          if (autoSelected.length >= maxCourses) break;
+          const slotCount = getElectiveSlotCount(elective);
+          for (const tokenNumber of getMissingElectiveTokenNumbers([], elective.category, slotCount)) {
+            if (autoSelected.length >= maxCourses) break;
+            autoSelected.push(buildElectiveToken(elective.category, tokenNumber));
+          }
+        }
+      }
+
+      setSelectedCourses(autoSelected);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const coursesWithSectionsCount = selectedCourses.filter(code => {
     if (code.startsWith('ELECTIVE:')) return true; // Elective tokens always count
     const course = courseDetails.get(code);
@@ -349,14 +405,7 @@ export function CourseSelectionPage({
           onToggleCompleted={() => setCompletedOpen(!completedOpen)}
           onToggleEnrolled={() => setEnrolledOpen(!enrolledOpen)}
           onToggleRemaining={() => setRemainingOpen(!remainingOpen)}
-          onGenerateSmartSchedule={async () => {
-            setIsGenerating(true);
-            try {
-              await onGenerateSmartSchedule();
-            } finally {
-              setIsGenerating(false);
-            }
-          }}
+          onGenerateSmartSchedule={handleAutoFillSelection}
           onAddCourse={addCourse}
           onAddAllCourses={addAllCourses}
           onRemoveCourse={removeCourse}
