@@ -200,14 +200,10 @@ export function ScheduleReviewPage({
     return hours * 60 + minutes;
   };
 
-  // Compute visible time range
-  const allTimeSlots = currentSchedule.selections.flatMap(s => s.section.timeSlots);
-  const allStartMins = allTimeSlots.map(s => parseTime(s.startTime));
-  const allEndMins = allTimeSlots.map(s => parseTime(s.endTime));
-  const earliestHour = allStartMins.length > 0 ? Math.floor(Math.min(...allStartMins) / 60) : 8;
-  const latestHour = allEndMins.length > 0 ? Math.ceil(Math.max(...allEndMins) / 60) : 18;
-  const visibleStartHour = Math.max(TIMETABLE_CONFIG.START_HOUR, earliestHour - 1);
-  const visibleEndHour = Math.min(22, Math.max(TIMETABLE_CONFIG.END_HOUR, latestHour + 1));
+  // Keep the calendar viewport fixed so the layout and navigation controls
+  // do not shift as the chosen courses change.
+  const visibleStartHour = TIMETABLE_CONFIG.START_HOUR;
+  const visibleEndHour = TIMETABLE_CONFIG.END_HOUR;
   const visibleTimeSlots: string[] = [];
   for (let h = visibleStartHour; h < visibleEndHour; h++) {
     visibleTimeSlots.push(`${h.toString().padStart(2, '0')}:00`);
