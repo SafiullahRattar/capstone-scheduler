@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
-import { type GeneratedSchedule } from '../utils/scheduleGenerator';
+import { hasTimeConflict, type GeneratedSchedule, type TimeSlot } from '../utils/scheduleGenerator';
 import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
-import { getCourseByCode } from '../utils/courseData';
+import { getCourseByCode, getCourseSections, type CourseSection } from '../utils/courseData';
 import type { ElectiveRequirement } from '../types/electives';
 import {
   ScheduleCalendarSection,
@@ -23,8 +23,7 @@ interface ElectiveCourseInfo {
   code: string;
   name: string;
   credits: number;
-  hasSections: boolean;
-  prereqsMet: boolean;
+  status: 'available' | 'tba' | 'conflicting' | 'prereq';
   prerequisites: string[];
 }
 
@@ -70,37 +69,55 @@ export function ScheduleReviewPage({
         setLoadingElectives(prev => ({ ...prev, [category]: true }));
         const details: ElectiveCourseInfo[] = [];
         const coursesToLoad = er.courseOptions.slice(0, 100);
+        const occupiedSlots = getOccupiedSlots(currentSchedule, electiveRequirements, selectedElectives, category);
 
         for (let batchStart = 0; batchStart < coursesToLoad.length; batchStart += 20) {
           const batch = coursesToLoad.slice(batchStart, batchStart + 20);
           const courses = await Promise.all(batch.map(code => getCourseByCode(code)));
+          const sectionsByCode = new Map<string, CourseSection[]>();
+
+          await Promise.all(batch.map(async (code, i) => {
+            const course = courses[i];
+            if (!course || !(course.terms || []).includes(activeTerm)) return;
+            sectionsByCode.set(code, await getCourseSections(code, activeTerm));
+          }));
 
           for (let i = 0; i < batch.length; i++) {
             const course = courses[i];
             const code = batch[i];
             if (course) {
               const hasSectionsInActiveTerm = (course.terms || []).includes(activeTerm);
+              if (!hasSectionsInActiveTerm) {
+                continue;
+              }
               const prereqsMet = course.prerequisites.length === 0 ||
                 course.prerequisites.every(p => completedCourses.includes(p));
+              const sections = sectionsByCode.get(code) || [];
+              const hasAnyTimedSections = sections.some(section => section.timeSlots.length > 0);
+              const hasConflictFreeOption = prereqsMet &&
+                hasValidNonConflictingCombination(sections, occupiedSlots);
               details.push({
                 code,
                 name: course.name || code,
                 credits: course.credits || 0.5,
-                hasSections: hasSectionsInActiveTerm,
-                prereqsMet,
+                status: !prereqsMet
+                  ? 'prereq'
+                  : !hasAnyTimedSections
+                    ? 'tba'
+                    : hasConflictFreeOption
+                      ? 'available'
+                      : 'conflicting',
                 prerequisites: course.prerequisites,
               });
-            } else {
-              details.push({ code, name: code, credits: 0.5, hasSections: false, prereqsMet: true, prerequisites: [] });
             }
           }
         }
 
         details.sort((a, b) => {
-          const aOk = a.hasSections && a.prereqsMet;
-          const bOk = b.hasSections && b.prereqsMet;
-          if (aOk && !bOk) return -1;
-          if (bOk && !aOk) return 1;
+          const rank = { available: 0, tba: 1, conflicting: 2, prereq: 3 } as const;
+          const aRank = rank[a.status];
+          const bRank = rank[b.status];
+          if (aRank !== bRank) return aRank - bRank;
           return a.code.localeCompare(b.code);
         });
 
@@ -109,7 +126,7 @@ export function ScheduleReviewPage({
       };
       loadDetails();
     }
-  }, [activeElectiveRequirements, completedCourses, activeTerm]);
+  }, [activeElectiveRequirements, completedCourses, activeTerm, currentSchedule, electiveRequirements, selectedElectives]);
 
   const handlePrevious = () => setCurrentIndex(prev => (prev > 0 ? prev - 1 : schedules.length - 1));
   const handleNext = () => setCurrentIndex(prev => (prev < schedules.length - 1 ? prev + 1 : 0));
@@ -257,4 +274,73 @@ export function ScheduleReviewPage({
       </div>
     </div>
   );
+}
+
+function getOccupiedSlots(
+  currentSchedule: GeneratedSchedule,
+  electiveRequirements: ElectiveRequirement[],
+  selectedElectives: Record<string, string[]>,
+  activeCategory: string
+): TimeSlot[] {
+  return currentSchedule.selections
+    .filter((selection) => {
+      for (const requirement of electiveRequirements) {
+        if (requirement.category !== activeCategory && selectedElectives[requirement.category]?.includes(selection.courseCode)) {
+          return true;
+        }
+      }
+
+      return !selectedElectives[activeCategory]?.includes(selection.courseCode);
+    })
+    .flatMap((selection) => selection.section.timeSlots);
+}
+
+function hasValidNonConflictingCombination(sections: CourseSection[], occupiedSlots: TimeSlot[]): boolean {
+  const sectionsByType = new Map<string, CourseSection[]>();
+
+  for (const section of sections) {
+    const existing = sectionsByType.get(section.type) || [];
+    existing.push(section);
+    sectionsByType.set(section.type, existing);
+  }
+
+  const typeGroups = Array.from(sectionsByType.values());
+  if (typeGroups.length === 0) return false;
+
+  const build = (index: number, current: CourseSection[]): boolean => {
+    if (index === typeGroups.length) {
+      return !hasInternalConflicts(current) && !hasConflictWithOccupiedSlots(current, occupiedSlots);
+    }
+
+    for (const section of typeGroups[index]) {
+      current.push(section);
+      if (!hasInternalConflicts(current) && !hasConflictWithOccupiedSlots([section], occupiedSlots) && build(index + 1, current)) {
+        return true;
+      }
+      current.pop();
+    }
+
+    return false;
+  };
+
+  return build(0, []);
+}
+
+function hasInternalConflicts(sections: CourseSection[]): boolean {
+  for (let i = 0; i < sections.length; i++) {
+    for (let j = i + 1; j < sections.length; j++) {
+      if (sectionsConflict(sections[i].timeSlots, sections[j].timeSlots)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function hasConflictWithOccupiedSlots(sections: CourseSection[], occupiedSlots: TimeSlot[]): boolean {
+  return sections.some((section) => sectionsConflict(section.timeSlots, occupiedSlots));
+}
+
+function sectionsConflict(slotsA: TimeSlot[], slotsB: TimeSlot[]): boolean {
+  return slotsA.some((slotA) => slotsB.some((slotB) => hasTimeConflict(slotA, slotB)));
 }

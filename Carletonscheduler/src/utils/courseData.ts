@@ -1,4 +1,5 @@
 import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
+import type { TimeSlot } from './scheduleGenerator';
 
 export interface PrerequisiteNode {
   id: string;
@@ -23,12 +24,36 @@ export interface Course {
   terms?: string[];
 }
 
+export interface CourseMeeting {
+  days: string;
+  startTime: string;
+  endTime: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  roomCapacity?: number | null;
+}
+
+export interface CourseSection {
+  sectionId: string;
+  sectionCode: string;
+  type: string;
+  instructor: string;
+  location?: string | null;
+  term?: string | null;
+  capacity?: number | null;
+  enrolled?: number | null;
+  status?: string | null;
+  meetings: CourseMeeting[];
+  timeSlots: TimeSlot[];
+}
+
 // Cache for search results - stores results for 5 minutes
 const searchCache = new Map<string, { results: Course[]; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Cache for individual course lookups
 const courseCache = new Map<string, { course: Course; timestamp: number }>();
+const sectionCache = new Map<string, { sections: CourseSection[]; timestamp: number }>();
 
 // Current abort controller for search requests
 let currentSearchController: AbortController | null = null;
@@ -46,6 +71,11 @@ function cleanCache() {
   for (const [key, value] of courseCache.entries()) {
     if (now - value.timestamp > CACHE_TTL_MS) {
       courseCache.delete(key);
+    }
+  }
+  for (const [key, value] of sectionCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      sectionCache.delete(key);
     }
   }
 }
@@ -177,4 +207,83 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
     };
     return fallback;
   }
+}
+
+export async function getCourseSections(code: string, term: string): Promise<CourseSection[]> {
+  const normalizedCode = code.trim().toUpperCase();
+  const cacheKey = `${normalizedCode}:${term}`;
+
+  const cached = sectionCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.sections;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${encodeURIComponent(normalizedCode)}/sections?term=${encodeURIComponent(term)}`
+    );
+
+    if (!response.ok) {
+      sectionCache.set(cacheKey, { sections: [], timestamp: Date.now() });
+      return [];
+    }
+
+    const data = await response.json();
+    const sections: CourseSection[] = (data.sections || []).map((section: any) => ({
+      sectionId: section.sectionId,
+      sectionCode: section.sectionCode,
+      type: section.type,
+      instructor: section.instructor || 'TBA',
+      location: section.location ?? null,
+      term: section.term ?? null,
+      capacity: section.capacity ?? null,
+      enrolled: section.enrolled ?? null,
+      status: section.status ?? null,
+      meetings: section.meetings || [],
+      timeSlots: (section.meetings || []).flatMap((meeting: any) =>
+        expandMeetingDays(meeting.days, meeting.startTime, meeting.endTime)
+      ),
+    }));
+
+    sectionCache.set(cacheKey, { sections, timestamp: Date.now() });
+    return sections;
+  } catch {
+    return [];
+  }
+}
+
+function expandMeetingDays(days: string | null, startTime: string | null, endTime: string | null): TimeSlot[] {
+  if (!days || !startTime || !endTime) return [];
+
+  return days
+    .split('')
+    .map((day) => mapDayCode(day))
+    .filter((day): day is TimeSlot['day'] => Boolean(day))
+    .map((day) => ({
+      day,
+      startTime: formatSectionTime(startTime),
+      endTime: formatSectionTime(endTime),
+    }));
+}
+
+function mapDayCode(day: string): TimeSlot['day'] | null {
+  switch (day) {
+    case 'M':
+      return 'Monday';
+    case 'T':
+      return 'Tuesday';
+    case 'W':
+      return 'Wednesday';
+    case 'R':
+      return 'Thursday';
+    case 'F':
+      return 'Friday';
+    default:
+      return null;
+  }
+}
+
+function formatSectionTime(time: string): string {
+  if (time.length !== 4) return '00:00';
+  return `${time.slice(0, 2)}:${time.slice(2, 4)}`;
 }

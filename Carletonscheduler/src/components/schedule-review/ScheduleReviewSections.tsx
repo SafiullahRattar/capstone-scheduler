@@ -7,8 +7,7 @@ interface ElectiveCourseInfo {
   code: string;
   name: string;
   credits: number;
-  hasSections: boolean;
-  prereqsMet: boolean;
+  status: 'available' | 'tba' | 'conflicting' | 'prereq';
   prerequisites: string[];
 }
 
@@ -25,7 +24,14 @@ export function ElectiveCourseCard({
   isSwapping: boolean;
   onToggle: (category: string, code: string, credits: number) => void;
 }) {
-  const isAvailable = elective.hasSections && elective.prereqsMet;
+  const isAvailable = elective.status === 'available' || elective.status === 'tba';
+  const statusLabel = elective.status === 'conflicting'
+    ? 'Conflicts with current schedule'
+    : elective.status === 'prereq'
+      ? 'Prereqs not met'
+      : elective.status === 'tba'
+        ? 'Timing TBA'
+      : null;
 
   return (
     <button
@@ -60,9 +66,9 @@ export function ElectiveCourseCard({
         )}
         {isSwapping && <Loader2 style={{ width: '16px', height: '16px', color: '#6b7280', flexShrink: 0 }} className="animate-spin" />}
       </div>
-      {!isAvailable && (
+      {!isAvailable && statusLabel && (
         <p style={{ marginTop: '4px', fontSize: '11px', color: '#9ca3af', margin: '4px 0 0 0' }}>
-          {!elective.hasSections ? 'No sections' : 'Prereqs not met'}
+          {statusLabel}
         </p>
       )}
     </button>
@@ -244,15 +250,19 @@ export function ScheduleSidebar({
   const allDetails = electiveCourseDetails[category] || [];
   const isLoading = loadingElectives[category];
   const searchTerm = electiveSearchTerms[category] || '';
-  const available = allDetails.filter(e => e.hasSections && e.prereqsMet);
-  const unavailable = allDetails.filter(e => !e.hasSections || !e.prereqsMet);
+  const available = allDetails.filter(e => e.status === 'available');
+  const tba = allDetails.filter(e => e.status === 'tba');
+  const conflicting = allDetails.filter(e => e.status === 'conflicting');
+  const prereqNotMet = allDetails.filter(e => e.status === 'prereq');
   const filterFn = (e: ElectiveCourseInfo) => {
     if (!searchTerm) return true;
     const t = searchTerm.toLowerCase();
     return e.code.toLowerCase().includes(t) || e.name.toLowerCase().includes(t);
   };
   const filteredAvail = available.filter(filterFn);
-  const filteredUnavail = unavailable.filter(filterFn);
+  const filteredTba = tba.filter(filterFn);
+  const filteredConflicting = conflicting.filter(filterFn);
+  const filteredPrereqNotMet = prereqNotMet.filter(filterFn);
   const creditsTarget = selectedElectiveCredits[category] || activeEr?.creditsNeeded || 0;
   const selectedCredits = allDetails.filter(e => currentPicks.includes(e.code)).reduce((s, e) => s + e.credits, 0);
   const progress = creditsTarget > 0 ? Math.min((selectedCredits / creditsTarget) * 100, 100) : 0;
@@ -409,18 +419,38 @@ export function ScheduleSidebar({
                   </div>
                 )}
 
-                {filteredUnavail.length > 0 && (
+                {filteredTba.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                      TBA ({filteredTba.length})
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      {filteredTba.map(elective => (
+                        <ElectiveCourseCard
+                          key={elective.code}
+                          elective={elective}
+                          category={category}
+                          isSelected={currentPicks.includes(elective.code)}
+                          isSwapping={swappingElective === elective.code}
+                          onToggle={onElectiveToggle}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {filteredConflicting.length > 0 && (
                   <div>
                     <button
-                      onClick={() => setShowUnavailable(prev => ({ ...prev, [category]: !prev[category] }))}
+                      onClick={() => setShowUnavailable(prev => ({ ...prev, [`${category}:conflicting`]: !prev[`${category}:conflicting`] }))}
                       style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '6px', padding: 0 }}
                     >
-                      <ChevronDown style={{ width: '12px', height: '12px', transform: showUnavailable[category] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                      Unavailable ({filteredUnavail.length})
+                      <ChevronDown style={{ width: '12px', height: '12px', transform: showUnavailable[`${category}:conflicting`] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                      Conflicting ({filteredConflicting.length})
                     </button>
-                    {showUnavailable[category] && (
+                    {showUnavailable[`${category}:conflicting`] && (
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                        {filteredUnavail.map(elective => (
+                        {filteredConflicting.map(elective => (
                           <ElectiveCourseCard
                             key={elective.code}
                             elective={elective}
@@ -435,7 +465,33 @@ export function ScheduleSidebar({
                   </div>
                 )}
 
-                {filteredAvail.length === 0 && filteredUnavail.length === 0 && (
+                {filteredPrereqNotMet.length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setShowUnavailable(prev => ({ ...prev, [`${category}:prereq`]: !prev[`${category}:prereq`] }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '6px', padding: 0 }}
+                    >
+                      <ChevronDown style={{ width: '12px', height: '12px', transform: showUnavailable[`${category}:prereq`] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                      Prereq not met ({filteredPrereqNotMet.length})
+                    </button>
+                    {showUnavailable[`${category}:prereq`] && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        {filteredPrereqNotMet.map(elective => (
+                          <ElectiveCourseCard
+                            key={elective.code}
+                            elective={elective}
+                            category={category}
+                            isSelected={false}
+                            isSwapping={false}
+                            onToggle={onElectiveToggle}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {filteredAvail.length === 0 && filteredTba.length === 0 && filteredConflicting.length === 0 && filteredPrereqNotMet.length === 0 && (
                   <div style={{ padding: '24px 0', textAlign: 'center', color: '#9ca3af' }}>
                     <p style={{ fontSize: '12px' }}>{searchTerm ? 'No matches.' : 'No options found.'}</p>
                   </div>
