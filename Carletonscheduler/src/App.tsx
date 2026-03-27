@@ -338,6 +338,16 @@ export default function App() {
             setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
             // Re-generate schedules with the new electives swapped in
             try {
+              if (allSelectedCourses.length === 0) {
+                setGeneratedSchedules([{
+                  id: 1,
+                  selections: [],
+                  hasUnmetPrerequisites: false,
+                  prerequisiteInfo: {},
+                }]);
+                return;
+              }
+
               const schedules = await generateSchedules(allSelectedCourses, completedCourses, activeTerm);
               if (schedules.length > 0) {
                 setGeneratedSchedules(schedules);
