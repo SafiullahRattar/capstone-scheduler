@@ -194,6 +194,12 @@ function generateSchedulesRecursive(
   maxSchedules: number,
   result: GeneratedSchedule[]
 ): void {
+  // Stop immediately once we've hit the cap, even if a recursive branch
+  // reaches the base case afterward.
+  if (result.length >= maxSchedules) {
+    return
+  }
+
   // Base case: Found a complete schedule
   if (currentIndex === courseSections.length) {
     result.push({
@@ -201,11 +207,6 @@ function generateSchedulesRecursive(
       selections: [...currentSelections],
       hasConflicts: false
     })
-    return
-  }
-  
-  // Stop if we've generated enough schedules
-  if (result.length >= maxSchedules) {
     return
   }
   
@@ -219,6 +220,10 @@ function generateSchedulesRecursive(
   
   // Try each combination
   for (const sectionCombination of combinations) {
+    if (result.length >= maxSchedules) {
+      return
+    }
+
     // Skip if sections within this combination conflict with each other
     if (hasInternalConflicts(sectionCombination)) {
       continue
@@ -246,6 +251,13 @@ function generateSchedulesRecursive(
         maxSchedules,
         result
       )
+
+      if (result.length >= maxSchedules) {
+        for (let i = 0; i < sectionCombination.length; i++) {
+          currentSelections.pop()
+        }
+        return
+      }
       
       // Backtrack by removing the sections we just tried
       for (let i = 0; i < sectionCombination.length; i++) {
