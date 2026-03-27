@@ -32,15 +32,6 @@ function detectElectiveCategory(title: string): string | null {
   if (lower.includes('complementary studies')) return 'COMPLEMENTARY_STUDIES'
   if (lower.includes('computer science elective')) return 'CS_ELECTIVE'
   if (lower.includes('basic science')) return 'SCIENCE_ELECTIVE'
-  if (
-    /sysc or elec.*3000/i.test(title) ||
-    /elec or sysc.*3000/i.test(title) ||
-    lower.includes('sysc or elec courses') ||
-    /elec or sysc at the 3000/i.test(title) ||
-    /sysc or elec at the 3000/i.test(title)
-  ) {
-    return 'SYSC_ELEC_ELECTIVE'
-  }
   return null
 }
 

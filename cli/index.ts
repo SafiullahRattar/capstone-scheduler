@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import * as readline from 'readline'
 import { validatePrerequisites, getPrerequisiteExplanation, StudentTranscript } from './prerequisite-validator'
 import { ingestAuditFromFile } from './audit-parser'
+import { fetchSectionMeetings, SectionMeetingRecord } from '../server/lib/section-meetings'
 
 const prisma = new PrismaClient()
 
@@ -162,8 +163,7 @@ async function validateCoursePrerequisites(courseCode: string, completedCoursesS
 
 async function showSections(courseCode: string) {
   const course = await prisma.course.findUnique({
-    where: { id: courseCode.toUpperCase() },
-    include: { sections: true }
+    where: { id: courseCode.toUpperCase() }
   })
 
   if (!course) {
@@ -173,15 +173,29 @@ async function showSections(courseCode: string) {
 
   console.log(`\n[COURSE] ${course.id} - ${course.title || 'No title available'}`)
   
-  if (course.sections.length === 0) {
+  const sections = await prisma.section.findMany({
+    where: { courseId: course.id },
+    orderBy: [
+      { sectionType: 'asc' },
+      { sectionCode: 'asc' }
+    ]
+  })
+
+  const meetingsBySection = await fetchSectionMeetings(prisma, sections.map(section => section.id))
+  const sectionsWithMeetings = sections.map(section => ({
+    ...section,
+    meetings: meetingsBySection.get(section.id) || []
+  }))
+
+  if (sectionsWithMeetings.length === 0) {
     console.log('[ERROR] No sections available for this course')
     return
   }
 
-  console.log(`\nAvailable Sections Available Sections (${course.sections.length} total):\n`)
+  console.log(`\nAvailable Sections Available Sections (${sectionsWithMeetings.length} total):\n`)
   
   // Group sections by type for better display
-  const sectionsByType = course.sections.reduce((acc, section) => {
+  const sectionsByType = sectionsWithMeetings.reduce((acc, section) => {
     if (!acc[section.sectionType]) {
       acc[section.sectionType] = []
     }
@@ -192,15 +206,21 @@ async function showSections(courseCode: string) {
   Object.entries(sectionsByType).forEach(([type, sections]) => {
     console.log(` ${type} Sections:`)
     sections.forEach(section => {
-      const timeStr = section.startTime && section.endTime 
-        ? `${formatTime(section.startTime)}-${formatTime(section.endTime)}`
-        : 'TBA'
-      
       const enrollmentStr = section.capacity && section.enrolled !== null
         ? `${section.enrolled}/${section.capacity}`
         : 'N/A'
-        
-      console.log(`   ${section.sectionCode}: ${section.days || 'TBA'} ${timeStr}`)
+
+      const meetingSummary = section.meetings.length > 0
+        ? section.meetings.map((meeting: SectionMeetingRecord) => {
+            const timeStr = meeting.startTime && meeting.endTime
+              ? `${formatTime(meeting.startTime)}-${formatTime(meeting.endTime)}`
+              : 'TBA'
+
+            return `${meeting.days || 'TBA'} ${timeStr}`
+          }).join(' | ')
+        : 'TBA'
+
+      console.log(`   ${section.sectionCode}: ${meetingSummary}`)
       console.log(`      Enrollment: ${enrollmentStr} | Term: ${section.term || 'N/A'} | Status: ${section.status || 'N/A'}`)
       if (section.instructor) {
         console.log(`      Instructor: ${section.instructor}`)

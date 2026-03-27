@@ -5,10 +5,10 @@ import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { LoginPage } from './components/LoginPage';
 import { AdminPage } from './components/admin';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
-import { resolveElectiveSelections } from './utils/electiveResolver';
 import { API_BASE_URL, SCHEDULE_CONFIG } from './config/constants';
 import { getDefaultActiveTerm } from './utils/termUtils';
 import type { ElectiveRequirement } from './types/electives';
+import { collectRequestedElectiveCounts, getSelectionUnitCredits } from './utils/electiveUtils';
 
 type AppPage = 'import' | 'course-selection' | 'schedule-review' | 'admin';
 
@@ -254,26 +254,38 @@ export default function App() {
   const handleGenerateSchedules = async (courses: string[], termOverride?: string) => {
     const termToUse = termOverride || activeTerm;
     try {
-      const {
-        resolvedCourses,
-        resolvedElectives,
-        requestedElectiveCredits,
-      } = await resolveElectiveSelections({
-        courses,
-        electiveRequirements,
-        selectedElectives,
-        completedCourses,
-      });
+      const regularCourses = courses.filter(course => !course.startsWith('ELECTIVE:'));
+      const requestedElectiveCounts = collectRequestedElectiveCounts(courses);
+      const requestedCredits: Record<string, number> = {};
 
-      setSelectedElectives(resolvedElectives);
-      setSelectedElectiveCredits(requestedElectiveCredits);
+      for (const [category, tokenCount] of requestedElectiveCounts.entries()) {
+        const requirement = electiveRequirements.find(item => item.category === category);
+        if (!requirement) continue;
 
-      if (resolvedCourses.length === 0) {
-        alert('No courses could be resolved for scheduling. Please try different selections.');
+        const selectionUnitCredits = getSelectionUnitCredits(requirement);
+        requestedCredits[category] = Math.min(tokenCount * selectionUnitCredits, requirement.creditsNeeded);
+      }
+
+      setSelectedElectives({});
+      setSelectedElectiveCredits(requestedCredits);
+
+      if (regularCourses.length === 0 && Object.keys(requestedCredits).length === 0) {
+        alert('Select at least one course or elective category before generating schedules.');
         return;
       }
 
-      const schedules = await generateSchedules(resolvedCourses, completedCourses, termToUse);
+      if (regularCourses.length === 0) {
+        setGeneratedSchedules([{
+          id: 1,
+          selections: [],
+          hasUnmetPrerequisites: false,
+          prerequisiteInfo: {},
+        }]);
+        navigateTo('schedule-review');
+        return;
+      }
+
+      const schedules = await generateSchedules(regularCourses, completedCourses, termToUse);
 
       if (schedules.length === 0) {
         alert('No schedules could be generated. The selected courses may have time conflicts or no available sections.');
@@ -384,6 +396,7 @@ export default function App() {
           electiveRequirements={electiveRequirements}
           selectedElectives={selectedElectives}
           selectedElectiveCredits={selectedElectiveCredits}
+          activeTerm={activeTerm}
           onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
             setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
             // Re-generate schedules with the new electives swapped in
@@ -392,8 +405,9 @@ export default function App() {
               if (schedules.length > 0) {
                 setGeneratedSchedules(schedules);
               }
-            } catch {
-              // Keep existing schedules if regeneration fails
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Unknown error';
+              alert(`Failed to regenerate schedules: ${message}`);
             }
           }}
           completedCourses={completedCourses}

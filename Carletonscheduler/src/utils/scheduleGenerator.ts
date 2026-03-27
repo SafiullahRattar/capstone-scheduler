@@ -41,15 +41,13 @@ export interface GeneratedSchedule {
 }
 
 interface ApiSection {
-  crn: string;
+  crn: string | null;
   sectionCode: string;
   sectionType: string;
-  days: string;
-  startTime: string;
-  endTime: string;
+  timeSlots: TimeSlot[];
   instructor: string | null;
-  capacity: number;
-  enrolled: number;
+  capacity: number | null;
+  enrolled: number | null;
 }
 
 interface ApiScheduleSelection {
@@ -120,26 +118,14 @@ export async function generateSchedules(
  * Map backend section format to frontend Section interface
  */
 function mapApiSectionToFrontend(apiSection: ApiSection): Section {
-  const dayMap: Record<string, TimeSlot['day']> = {
-    'M': 'Monday',
-    'T': 'Tuesday',
-    'W': 'Wednesday',
-    'R': 'Thursday',
-    'F': 'Friday'
-  };
-
-  const days: TimeSlot['day'][] = apiSection.days 
-    ? apiSection.days.split('').map((d: string) => dayMap[d]).filter((d): d is TimeSlot['day'] => Boolean(d))
-    : [];
-
-  const timeSlots: TimeSlot[] = days.map((day) => ({
-    day,
-    startTime: formatTime(apiSection.startTime),
-    endTime: formatTime(apiSection.endTime)
+  const timeSlots: TimeSlot[] = apiSection.timeSlots.map((slot) => ({
+    day: slot.day,
+    startTime: formatTime(slot.startTime),
+    endTime: formatTime(slot.endTime)
   }));
 
   return {
-    crn: apiSection.crn,
+    crn: apiSection.crn || '',
     sectionCode: apiSection.sectionCode,
     type: apiSection.sectionType as 'Lecture' | 'Tutorial' | 'Lab',
     instructor: apiSection.instructor || 'TBA',

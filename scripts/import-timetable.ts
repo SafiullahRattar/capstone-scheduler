@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
+import { ensureSectionMeetingsTable, insertSectionMeetings } from '../server/lib/section-meetings'
 
 const prisma = new PrismaClient()
 
@@ -66,6 +67,7 @@ function parseTimetableLine(line: string): TimetableRecord | null {
 
 async function main() {
   console.log('[SCHEDULE] Starting timetable data import...')
+  await ensureSectionMeetingsTable(prisma)
 
   // Read the timetable file
   const timetablePath = path.join(process.cwd(), 'scheduling-timings.txt')
@@ -104,23 +106,29 @@ async function main() {
       }
 
       // Create the section
-      await prisma.section.create({
+      const section = await prisma.section.create({
         data: {
           crn: record.sectionId,
           courseId: courseId,
           sectionCode: record.sectionCode,
           sectionType: record.sectionType,
-          days: record.days,
-          startTime: record.startTime,
-          endTime: record.endTime,
-          startDate: record.startDate,
-          endDate: record.endDate,
           term: record.term,
           capacity: record.capacity,
           enrolled: record.enrolled,
           status: record.status
         }
       })
+
+      if (record.days || record.startTime || record.endTime || record.startDate || record.endDate) {
+        await insertSectionMeetings(prisma, section.id, [{
+          days: record.days || null,
+          startTime: record.startTime || null,
+          endTime: record.endTime || null,
+          startDate: record.startDate || null,
+          endDate: record.endDate || null,
+          roomCapacity: null
+        }])
+      }
 
       imported++
 

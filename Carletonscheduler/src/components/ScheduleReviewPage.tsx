@@ -17,6 +17,7 @@ interface ScheduleReviewPageProps {
   selectedElectiveCredits?: Record<string, number>;
   onElectiveChange?: (category: string, courseCodes: string[], allSelectedCourses: string[]) => void;
   completedCourses?: string[];
+  activeTerm: string;
 }
 interface ElectiveCourseInfo {
   code: string;
@@ -35,6 +36,7 @@ export function ScheduleReviewPage({
   selectedElectiveCredits = {},
   onElectiveChange,
   completedCourses = [],
+  activeTerm,
 }: ScheduleReviewPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
@@ -52,6 +54,11 @@ export function ScheduleReviewPage({
   const [activeElectiveCategory, setActiveElectiveCategory] = useState<string>(
     activeElectiveRequirements.length > 0 ? activeElectiveRequirements[0].category : ''
   );
+
+  useEffect(() => {
+    setElectiveCourseDetails({});
+    setLoadingElectives({});
+  }, [activeTerm]);
 
   useEffect(() => {
     for (const er of activeElectiveRequirements) {
@@ -72,13 +79,14 @@ export function ScheduleReviewPage({
             const course = courses[i];
             const code = batch[i];
             if (course) {
+              const hasSectionsInActiveTerm = (course.terms || []).includes(activeTerm);
               const prereqsMet = course.prerequisites.length === 0 ||
                 course.prerequisites.every(p => completedCourses.includes(p));
               details.push({
                 code,
                 name: course.name || code,
                 credits: course.credits || 0.5,
-                hasSections: course.hasSections !== false,
+                hasSections: hasSectionsInActiveTerm,
                 prereqsMet,
                 prerequisites: course.prerequisites,
               });
@@ -101,7 +109,7 @@ export function ScheduleReviewPage({
       };
       loadDetails();
     }
-  }, [activeElectiveRequirements, completedCourses]);
+  }, [activeElectiveRequirements, completedCourses, activeTerm]);
 
   const handlePrevious = () => setCurrentIndex(prev => (prev > 0 ? prev - 1 : schedules.length - 1));
   const handleNext = () => setCurrentIndex(prev => (prev < schedules.length - 1 ? prev + 1 : 0));

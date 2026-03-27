@@ -2,15 +2,14 @@ import { PrismaClient } from '@prisma/client'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import { ELECTIVE_CATEGORIES } from '../cli/elective-mappings'
+import { ensureSectionMeetingsTable, insertSectionMeetings } from '../server/lib/section-meetings'
 
 const prisma = new PrismaClient()
 
 const ELECTIVE_CATEGORY_SEED: Record<string, { label: string }> = {
   CS_ELECTIVE: { label: 'Computer Science Elective' },
   SCIENCE_ELECTIVE: { label: 'Basic Science Elective' },
-  COMPLEMENTARY_STUDIES: { label: 'Complementary Studies' },
-  SYSC_ELEC_ELECTIVE: { label: 'SYSC/ELEC Technical Elective' },
-  ELECTIVE: { label: 'Elective' }
+  COMPLEMENTARY_STUDIES: { label: 'Complementary Studies' }
 }
 
 // Enhanced course data interface
@@ -20,6 +19,22 @@ interface CourseEntry {
   title?: string
   credits?: number
   description?: string
+}
+
+interface SectionMeetingSeed {
+  days: string | null
+  startTime: string | null
+  endTime: string | null
+  roomCapacity: number | null
+}
+
+interface SectionSeed {
+  crn: string
+  courseId: string
+  sectionCode: string
+  sectionType: string
+  term: string
+  meetings: SectionMeetingSeed[]
 }
 
 // Prerequisite expression parser
@@ -198,14 +213,111 @@ function extractCourseCodesFromExpression(expression: string): string[] {
   return expression.match(coursePattern) || []
 }
 
+async function resolveScheduleCsvPath(): Promise<string> {
+  for (const fileName of ['Sched.csv', 'sched.csv']) {
+    const fullPath = path.join(process.cwd(), fileName)
+    try {
+      await fs.access(fullPath)
+      return fullPath
+    } catch {
+      continue
+    }
+  }
+
+  throw new Error('Sched.csv not found in project root')
+}
+
+function mapScheduleTermLabel(termLabel: string): string {
+  const normalized = termLabel.trim().toLowerCase()
+
+  // This dataset contains Fall 2025 and Winter 2026.
+  if (normalized === 'fall') return '202530'
+  if (normalized === 'winter') return '202610'
+
+  throw new Error(`Unsupported schedule term label: ${termLabel}`)
+}
+
+function parseScheduleCsv(content: string): SectionSeed[] {
+  const lines = content.split(/\r?\n/).filter(line => line.trim())
+  if (lines.length <= 1) return []
+
+  const header = lines[0].split('\t')
+  const expectedHeader = ['TERM', 'CRN', 'SUBJ', 'CRSE', 'SECT', 'INSTR_TYPE', 'DAYS', 'START_TIME', 'END_TIME', 'ROOM_CAP']
+  if (header.join('\t') !== expectedHeader.join('\t')) {
+    throw new Error(`Unexpected Sched.csv header: ${header.join(', ')}`)
+  }
+
+  const groupedSections = new Map<string, SectionSeed>()
+
+  for (const line of lines.slice(1)) {
+    const parts = line.split('\t')
+    if (parts.length < 10) continue
+
+    const [
+      termLabel,
+      crn,
+      department,
+      courseNumber,
+      sectionCode,
+      sectionType,
+      days,
+      startTime,
+      endTime,
+      roomCapacity
+    ] = parts
+
+    const normalizedTerm = mapScheduleTermLabel(termLabel)
+    const courseId = `${department}${courseNumber}`
+    const sectionKey = [normalizedTerm, crn, courseId, sectionCode, sectionType].join('|')
+
+    const meeting: SectionMeetingSeed = {
+      days: days || null,
+      startTime: startTime ? startTime.padStart(4, '0') : null,
+      endTime: endTime ? endTime.padStart(4, '0') : null,
+      roomCapacity: roomCapacity ? parseInt(roomCapacity, 10) || null : null
+    }
+
+    const existingSection = groupedSections.get(sectionKey)
+    if (!existingSection) {
+      groupedSections.set(sectionKey, {
+        crn,
+        courseId,
+        sectionCode,
+        sectionType,
+        term: normalizedTerm,
+        meetings: meeting.days || meeting.startTime || meeting.endTime || meeting.roomCapacity !== null
+          ? [meeting]
+          : []
+      })
+      continue
+    }
+
+    const alreadySeenMeeting = existingSection.meetings.some(existing =>
+      existing.days === meeting.days &&
+      existing.startTime === meeting.startTime &&
+      existing.endTime === meeting.endTime &&
+      existing.roomCapacity === meeting.roomCapacity
+    )
+
+    if (!alreadySeenMeeting && (meeting.days || meeting.startTime || meeting.endTime || meeting.roomCapacity !== null)) {
+      existingSection.meetings.push(meeting)
+    }
+  }
+
+  return Array.from(groupedSections.values())
+}
+
 async function main() {
   console.log('[SEED] Starting database seed...')
 
   // Read the enhanced prerequisites JSON file
   const prerequisitesPath = path.join(process.cwd(), 'course_prerequisites_simple.json')
   const prerequisitesData: Record<string, CourseEntry> = JSON.parse(await fs.readFile(prerequisitesPath, 'utf-8'))
+  const scheduleCsvPath = await resolveScheduleCsvPath()
+  const scheduleSections = parseScheduleCsv(await fs.readFile(scheduleCsvPath, 'utf-8'))
 
   console.log(`[COURSES] Found ${Object.keys(prerequisitesData).length} courses with enhanced data`)
+  console.log(`[SCHEDULE] Found ${scheduleSections.length} normalized sections in ${path.basename(scheduleCsvPath)}`)
 
   // PASS 1: Collect all unique course codes mentioned in prerequisites
   console.log('[SEARCH] Pass 1: Collecting all referenced courses...')
@@ -220,6 +332,10 @@ async function main() {
       const prereqCourses = extractCourseCodesFromExpression(courseEntry.required)
       prereqCourses.forEach(course => allReferencedCourses.add(course))
     }
+  }
+
+  for (const section of scheduleSections) {
+    allReferencedCourses.add(section.courseId)
   }
   
   console.log(`[LIST] Found ${allReferencedCourses.size} unique courses to create`)
@@ -354,6 +470,43 @@ async function main() {
   } catch (err) {
     console.log(`[WARNING] Could not backfill titles from course_titles.json: ${err}`)
   }
+
+  console.log('\n[SCHEDULE] Rebuilding section and meeting data from Sched.csv...')
+  await ensureSectionMeetingsTable(prisma)
+  await prisma.section.deleteMany({})
+
+  let sectionsCreated = 0
+  let meetingsCreated = 0
+
+  for (const section of scheduleSections) {
+    const createdSection = await prisma.section.create({
+      data: {
+        crn: section.crn,
+        courseId: section.courseId,
+        sectionCode: section.sectionCode,
+        sectionType: section.sectionType,
+        term: section.term
+      }
+    })
+
+    await insertSectionMeetings(
+      prisma,
+      createdSection.id,
+      section.meetings.map(meeting => ({
+        days: meeting.days,
+        startTime: meeting.startTime,
+        endTime: meeting.endTime,
+        startDate: null,
+        endDate: null,
+        roomCapacity: meeting.roomCapacity
+      }))
+    )
+
+    sectionsCreated++
+    meetingsCreated += section.meetings.length
+  }
+
+  console.log(`[SCHEDULE] Seeded ${sectionsCreated} sections and ${meetingsCreated} meeting rows`)
   
   // Show statistics about course titles
   const coursesWithTitles = await prisma.course.count({
@@ -373,6 +526,23 @@ async function main() {
 
   console.log('\n[ELECTIVES] Syncing elective categories...')
   let electiveCourseLinks = 0
+  const activeElectiveCategoryIds = Object.keys(ELECTIVE_CATEGORIES)
+
+  await prisma.electiveCourse.deleteMany({
+    where: {
+      categoryId: {
+        notIn: activeElectiveCategoryIds
+      }
+    }
+  })
+
+  await prisma.electiveCategory.deleteMany({
+    where: {
+      id: {
+        notIn: activeElectiveCategoryIds
+      }
+    }
+  })
 
   for (const [categoryId, courseIds] of Object.entries(ELECTIVE_CATEGORIES)) {
     const metadata = ELECTIVE_CATEGORY_SEED[categoryId] || {

@@ -14,6 +14,7 @@
 
 import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
+import { fetchSectionMeetings } from '../lib/section-meetings'
 
 const router = Router()
 
@@ -237,6 +238,8 @@ router.get('/:courseId/sections', async (req: Request, res: Response) => {
       ]
     })
 
+    const meetingsBySection = await fetchSectionMeetings(prisma, sections.map(section => section.id))
+
     if (sections.length === 0) {
       return res.status(404).json({
         error: 'Not Found',
@@ -251,14 +254,19 @@ router.get('/:courseId/sections', async (req: Request, res: Response) => {
         sectionCode: section.sectionCode,
         type: section.sectionType,
         instructor: section.instructor || 'TBA',
-        days: section.days,
-        startTime: section.startTime,
-        endTime: section.endTime,
         location: section.location,
         term: section.term,
         capacity: section.capacity,
         enrolled: section.enrolled,
-        status: section.status
+        status: section.status,
+        meetings: (meetingsBySection.get(section.id) || []).map(meeting => ({
+          days: meeting.days,
+          startTime: meeting.startTime,
+          endTime: meeting.endTime,
+          startDate: meeting.startDate,
+          endDate: meeting.endDate,
+          roomCapacity: meeting.roomCapacity
+        }))
       }))
     })
   } catch (error) {

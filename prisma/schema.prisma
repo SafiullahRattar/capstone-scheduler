@@ -58,11 +58,6 @@ model Section {
   sectionCode String
   sectionType String
   instructor  String?
-  days        String?
-  startTime   String?
-  endTime     String?
-  startDate   String?
-  endDate     String?
   location    String?
   term        String?
   capacity    Int?
@@ -71,10 +66,28 @@ model Section {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   course      Course   @relation(fields: [courseId], references: [id])
+  meetings    SectionMeeting[]
 
   @@index([courseId])
   @@index([term])
   @@map("sections")
+}
+
+model SectionMeeting {
+  id           String   @id @default(cuid())
+  sectionId    String
+  days         String?
+  startTime    String?
+  endTime      String?
+  startDate    String?
+  endDate      String?
+  roomCapacity Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId])
+  @@map("section_meetings")
 }
 
 model Student {

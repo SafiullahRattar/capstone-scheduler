@@ -11,6 +11,7 @@
 import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
 import { validatePrerequisites } from '../../cli/prerequisite-validator'
+import { fetchSectionMeetings } from '../lib/section-meetings'
 
 const router = Router()
 
@@ -27,12 +28,10 @@ interface Section {
   sectionCode: string
   sectionType: string
   instructor: string | null
-  days: string | null
-  startTime: string | null
-  endTime: string | null
   location: string | null
   capacity: number | null
   enrolled: number | null
+  timeSlots: TimeSlot[]
 }
 
 interface ScheduleSelection {
@@ -95,16 +94,7 @@ function hasTimeConflict(slot1: TimeSlot, slot2: TimeSlot): boolean {
 
 // Turn a section's schedule into individual time slots (one per day it meets)
 function getTimeSlots(section: Section): TimeSlot[] {
-  if (!section.days || !section.startTime || !section.endTime) {
-    return []
-  }
-  
-  const days = parseDays(section.days)
-  return days.map(day => ({
-    day,
-    startTime: section.startTime!,
-    endTime: section.endTime!
-  }))
+  return section.timeSlots
 }
 
 // Check if adding this section would create a time conflict with what's already in the schedule
@@ -294,19 +284,35 @@ router.post('/generate', async (req: Request, res: Response) => {
             ...(term && { term })
           }
         })
-        
-        // Remove duplicate sections (in case same section was imported twice)
-        const uniqueSections = sections.reduce((acc, section) => {
-          const key = `${section.crn}-${section.sectionCode}-${section.days}-${section.startTime}-${section.endTime}`
-          if (!acc.has(key)) {
-            acc.set(key, section)
-          }
-          return acc
-        }, new Map())
+
+        const meetingsBySection = await fetchSectionMeetings(prisma, sections.map(section => section.id))
+
+        const normalizedSections = sections.map((section) => ({
+          id: section.id,
+          courseId: section.courseId,
+          crn: section.crn,
+          sectionCode: section.sectionCode,
+          sectionType: section.sectionType,
+          instructor: section.instructor,
+          location: section.location,
+          capacity: section.capacity,
+          enrolled: section.enrolled,
+          timeSlots: (meetingsBySection.get(section.id) || []).flatMap((meeting) => {
+            if (!meeting.days || !meeting.startTime || !meeting.endTime) {
+              return []
+            }
+
+            return parseDays(meeting.days).map(day => ({
+              day,
+              startTime: meeting.startTime,
+              endTime: meeting.endTime
+            }))
+          })
+        }))
         
         return {
           courseId: courseId.toUpperCase(),
-          sections: Array.from(uniqueSections.values()) as Section[]
+          sections: normalizedSections as Section[]
         }
       })
     )

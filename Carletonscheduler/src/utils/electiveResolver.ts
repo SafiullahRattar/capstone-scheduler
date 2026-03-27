@@ -7,6 +7,7 @@ interface ResolveElectivesParams {
   electiveRequirements: ElectiveRequirement[];
   selectedElectives: Record<string, string[]>;
   completedCourses: string[];
+  activeTerm: string;
 }
 
 interface ResolveElectivesResult {
@@ -20,6 +21,7 @@ export async function resolveElectiveSelections({
   electiveRequirements,
   selectedElectives,
   completedCourses,
+  activeTerm,
 }: ResolveElectivesParams): Promise<ResolveElectivesResult> {
   const resolvedCourses = courses.filter(course => !course.startsWith('ELECTIVE:'));
   const resolvedElectives: Record<string, string[]> = {};
@@ -40,6 +42,7 @@ export async function resolveElectiveSelections({
       existingPicks: selectedElectives[category] || [],
       completedCourses,
       selectionUnitCredits,
+      activeTerm,
     });
 
     if (pickedCourses.length > 0) {
@@ -61,6 +64,7 @@ interface PickElectiveCoursesParams {
   existingPicks: string[];
   completedCourses: string[];
   selectionUnitCredits: number;
+  activeTerm: string;
 }
 
 async function pickElectiveCourses({
@@ -69,6 +73,7 @@ async function pickElectiveCourses({
   existingPicks,
   completedCourses,
   selectionUnitCredits,
+  activeTerm,
 }: PickElectiveCoursesParams): Promise<string[]> {
   let creditsFilled = 0;
   const pickedCourses: string[] = [];
@@ -78,7 +83,8 @@ async function pickElectiveCourses({
     if (seenCourses.has(courseCode) || creditsFilled >= requestedCredits) return;
 
     const courseInfo = await getCourseByCode(courseCode);
-    if (!courseInfo || !courseInfo.hasSections) return;
+    const hasSectionsInActiveTerm = (courseInfo?.terms || []).includes(activeTerm);
+    if (!courseInfo || !hasSectionsInActiveTerm) return;
 
     const prereqsMet =
       courseInfo.prerequisites.length === 0 ||

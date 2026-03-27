@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
 import multer from 'multer'
 import { listElectiveCategoryDefinitions } from '../lib/electives'
+import { ensureSectionMeetingsTable, insertSectionMeetings } from '../lib/section-meetings'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -69,6 +70,8 @@ function parseTimetableLine(line: string): TimetableRecord | null {
  */
 router.post('/sections/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
+    await ensureSectionMeetingsTable(prisma)
+
     const file = req.file
     const { mode, term } = req.query
 
@@ -129,23 +132,30 @@ router.post('/sections/upload', upload.single('file'), async (req: Request, res:
         })
 
         // Create section
-        await prisma.section.create({
+        const section = await prisma.section.create({
           data: {
             crn: record.sectionId,
             courseId,
             sectionCode: record.sectionCode,
             sectionType: record.sectionType,
-            days: record.days,
-            startTime: record.startTime,
-            endTime: record.endTime,
-            startDate: record.startDate,
-            endDate: record.endDate,
             term: record.term,
             capacity: record.capacity,
             enrolled: record.enrolled,
             status: record.status
           }
         })
+
+        if (record.days || record.startTime || record.endTime || record.startDate || record.endDate) {
+          await insertSectionMeetings(prisma, section.id, [{
+            days: record.days || null,
+            startTime: record.startTime || null,
+            endTime: record.endTime || null,
+            startDate: record.startDate || null,
+            endDate: record.endDate || null,
+            roomCapacity: null
+          }])
+        }
+
         imported++
       } catch (err) {
         errors++

@@ -152,13 +152,6 @@ function detectElectiveCategory(title: string): string | null {
   if (lowerTitle.includes('complementary studies')) return 'COMPLEMENTARY_STUDIES'
   if (lowerTitle.includes('computer science elective')) return 'CS_ELECTIVE'
   if (lowerTitle.includes('basic science')) return 'SCIENCE_ELECTIVE'
-  if (
-    lowerTitle.match(/sysc or elec.*3000/i) ||
-    lowerTitle.match(/elec or sysc.*3000/i) ||
-    lowerTitle.includes('sysc or elec courses')
-  ) {
-    return 'SYSC_ELEC_ELECTIVE'
-  }
   return null
 }
 
@@ -170,7 +163,7 @@ function buildCourseOptions(title: string): string[] {
     return []
   }
 
-  return courseCodes.length > 0 ? courseCodes : [electiveCategory || 'ELECTIVE']
+  return courseCodes.length > 0 ? courseCodes : electiveCategory ? [electiveCategory] : []
 }
 
 /**
