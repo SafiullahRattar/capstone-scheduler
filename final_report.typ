@@ -139,7 +139,7 @@
 #align(center)[#text(size: 14pt, weight: "bold")[Abstract]]
 #v(0.3em)
 
-The Smart Scheduler is a web application that helps Carleton students plan their course timetables. It parses a student's academic audit, checks prerequisite eligibility, and generates conflict-free schedules from the available course sections. We built it as a full-stack system with a React and TypeScript frontend, an Express and Node.js backend, and a PostgreSQL database holding the course, section, and prerequisite data. This report explains the requirements, design decisions, implementation, and testing work behind the project. It also covers the features we cut, the parts that still feel unfinished, and what we learned over the two terms.
+The Smart Scheduler is a web application that helps Carleton students plan their course timetables. It parses a student's academic audit, checks prerequisite eligibility, and generates conflict-free schedules from the available course sections. We built it as a full-stack system with a React and TypeScript frontend, an Express and Node.js backend, and a PostgreSQL database holding the course, section, and prerequisite data. This report explains the requirements, design decisions, implementation, and testing behind the project. It also covers the features we cut, the parts that still feel unfinished, and what we learned over the two terms.
 
 #pagebreak()
 
@@ -162,9 +162,9 @@ The Smart Scheduler is a web application that helps Carleton students plan their
 #align(center)[#text(size: 14pt, weight: "bold")[List of Appendices]]
 #v(0.3em)
 
-- Appendix A: Original Project Proposal
-- Appendix B: API Reference
-- Appendix C: Database Statistics
+- Appendix A: API Reference
+- Appendix B: Database Statistics
+- Appendix C: Original Project Proposal
 
 #pagebreak()
 
@@ -198,7 +198,7 @@ The application was scoped to run locally. We were not trying to integrate with 
 
 == Report Overview
 
-The rest of this report is organized as follows. Chapter 2 covers the standard engineering project considerations required by the department: health and safety, professionalism, project management, suitability for the Software Engineering degree, and who did what. Chapter 3 goes through the requirements and design, including what we originally proposed, what alternatives we considered, and why we made the architectural choices we did. Chapter 4 gets into the implementation details for the prerequisite validator, scheduling algorithm, audit parser, database, API, and frontend. Chapter 5 covers testing and evaluation. Chapter 6 is a reflection on the project: what went well, what did not, and what we would change. The original project proposal is in Appendix A.
+The rest of this report is organized as follows. Chapter 2 covers the standard engineering project considerations required by the department: health and safety, professionalism, project management, suitability for the Software Engineering degree, and who did what. Chapter 3 goes through the requirements and design, including what we originally proposed, what alternatives we considered, and why we made the architectural choices we did. Chapter 4 gets into the implementation details for the prerequisite validator, scheduling algorithm, audit parser, database, API, and frontend. Chapter 5 covers testing and evaluation. Chapter 6 is a reflection on the project: what went well, what did not, and what we would change. The original project proposal is reproduced in Appendix C.
 
 
 // =============================================================================
@@ -209,13 +209,13 @@ The rest of this report is organized as follows. Chapter 2 covers the standard e
 
 == Health and Safety
 
-This is a software project. There is no hardware, no lab equipment, and no physical safety risk. The main concern is data privacy: students upload their academic audits, which contain their name, student ID, and course history. We handle this by processing uploaded files in memory and not writing them to disk on the server. The parsed data (name, ID, courses, grades) goes into a local PostgreSQL database that only runs on the developer's machine and is not exposed to the internet.
+This is a software project. There is no hardware, no lab equipment, and no physical safety risk. The main concern is data privacy: students upload their academic audits, which contain their name, student ID, and course history. Uploaded files are initially handled in memory, but PDF parsing requires a temporary file so `pdftotext -layout` can convert the document into structured text. Those temporary files are deleted immediately after parsing. If the user uses the import-and-save flow rather than preview-only parsing, the parsed student data is stored in the local PostgreSQL database, and the raw audit can also be stored for deduplication and later reference.
 
-We did not build an authentication system because the application runs locally, not as a public service. If it were ever deployed publicly, authentication and proper access control would be necessary. Similarly, all communication between the frontend and backend happens over plain HTTP on localhost. A production deployment would need HTTPS, which was one of our original non-functional requirements (NFR6) that we did not end up meeting. Section 6 discusses this.
+We did add a lightweight authentication layer for the current version of the system. The frontend starts with a login page, and the backend exposes JWT-based login and session-validation endpoints. That is enough for local development and for separating normal use from the admin tooling, but it is not production-grade security. All communication between the frontend and backend still happens over plain HTTP on localhost. A production deployment would need stronger credential handling, proper access control, and HTTPS, which was one of our original non-functional requirements (NFR6) that we still did not meet. Section 6 discusses this.
 
 == Engineering Professionalism
 
-We tried to be honest throughout the project, both with our supervisor and with ourselves. When we fell behind on features, we told Prof. Talim in our meetings rather than pretending things were on track. When preference-based ranking turned out to be more work than we could do well in the remaining time, we chose to cut it rather than ship something half-baked. That felt like the right call, even though it meant the final product does not match the full scope of the proposal.
+We tried to be honest throughout the project, both with our supervisor and with ourselves. When we fell behind on features, we said so in our meetings with Prof. Talim instead of pretending things were fine. When preference-based ranking turned out to be more work than we could do properly in the remaining time, we cut it rather than ship something half-baked. That was the right call, even though it meant the final product no longer matched the full scope of the proposal.
 
 On the code side, we followed consistent TypeScript conventions, used descriptive names, and added comments where the logic was not obvious. The Prisma schema is the single source of truth for the data model, and the API follows RESTful conventions.
 
@@ -227,6 +227,8 @@ During the Fall term, we focused on the foundation: backend infrastructure, data
 
 In the Winter term, we shifted to integration, PDF audit parsing, elective recommendations, frontend polish, and this report. We tracked remaining work through shared lists and meeting notes instead of a formal issue tracker. For four people, that mostly worked. But there were times when it was not clear who owned a particular task, and a few things slipped through the cracks because of it. Chapter 6 says more about this.
 
+More concretely, our tracking tools were lightweight rather than formal. We kept shared to-do lists for the current sprint of work, added checklists to meeting notes, and used GitHub branches and pull requests to show what had actually been completed. That combination let us answer three practical questions every week: what is done, what is blocked, and what still belongs to someone. It was not as structured as a Kanban board or issue tracker, but it was still a real progression-tracking process rather than ad hoc memory.
+
 We did not set up CI/CD. Builds and tests were run manually. For a project of this duration and team size, that was workable, but it would not scale.
 
 == Justification of Suitability for Degree Program
@@ -237,7 +239,7 @@ All four team members are in the Software Engineering program, and this project 
 
 *Algorithms and Data Structures* (SYSC 2100): The schedule generator is a constraint-satisfaction problem solved with backtracking search. The prerequisite validator uses recursive tree traversal. We analyzed both for time and space complexity and optimized the scheduler with pruning to get it under two seconds for typical inputs.
 
-*Database Management* (COMP 3005): We designed the PostgreSQL schema in Third Normal Form with six interrelated models, foreign key constraints, unique constraints, and indexes. Prisma ORM gave us type-safe database access from TypeScript.
+*Database Management* (COMP 3005): We designed the PostgreSQL schema in Third Normal Form with interrelated models for courses, prerequisites, sections, meetings, students, saved audits, users, and elective categories. The design uses foreign key constraints, unique constraints, and indexes, and Prisma ORM gave us type-safe database access from TypeScript.
 
 *Web Application Development* (SYSC 4806): The frontend uses React 18 with component-based architecture, state management, and async API calls. The backend uses Express.js with RESTful routing, error handling, input validation, and middleware for file uploads and CORS.
 
@@ -287,7 +289,7 @@ The proposal (October 2025) listed nine functional requirements (FR1--FR9) and s
     [FR1], [Academic Audit Parsing (HTML/PDF)], [Implemented], [HTML fully supported; PDF supported via `pdftotext` CLI tool],
     [FR2], [Prerequisite Validation], [Implemented], [Tree-based recursive evaluation with grade checking],
     [FR3], [Manual Course Entry], [Implemented], [Search and select interface on Course Selection page],
-    [FR4], [Elective Recommendation], [Partially Implemented], [Course suggestion endpoint exists; elective category display on frontend],
+    [FR4], [Elective Recommendation and Selection], [Implemented], [Audit parsing extracts elective categories, users can add elective tokens, the system resolves eligible options, and the schedule view supports elective swapping/regeneration],
     [FR5], [Schedule Generation], [Implemented], [Backtracking CSP solver with multi-section support],
     [FR6], [Preference-based Ranking], [Not Implemented], [Descoped; all valid schedules returned unranked],
     [FR7], [Interactive Timetable View], [Implemented], [Visual weekly grid with color-coded courses],
@@ -321,7 +323,7 @@ The proposal called for a single Next.js 14 application. In that setup, the user
 
 So we split it. The frontend became a standalone React 18 app built with Vite and TypeScript. The backend became an Express.js server with its own TypeScript codebase, talking to PostgreSQL through Prisma. The two communicate over a REST API on localhost:3001.
 
-This worked well. The frontend developer could build pages against mock data or a running backend without needing to touch any server code. The backend developers could test endpoints with curl or the CLI tool without opening a browser. Merge conflicts dropped significantly.
+In practice, this worked better than the single-app setup. The frontend developer could build pages against mock data or a running backend without touching server code. The backend developers could test endpoints with curl or the CLI tool without opening a browser. Merge conflicts dropped a lot.
 
 Vite's hot-module replacement was also faster in practice. Hot-module replacement is the feature that updates the browser immediately after a code change without rebuilding and reloading the whole page. With Vite, small frontend edits usually showed up almost right away. With Next.js, the feedback loop felt slower because the development server had more framework overhead and often needed to do more work before showing the change. That speed difference mattered because frontend development involved a lot of small adjustments to layout, state handling, and component behavior. When each edit appears quickly, you can iterate much faster.
 
@@ -329,15 +331,15 @@ The tradeoff was losing Next.js features like server-side rendering, file-based 
 
 === High-Level Architecture
 
-The system has three layers:
+The system has three main runtime layers:
 
 + *Client layer (React + Vite)*: A single-page app that renders the UI, takes user input (audit uploads, course selections), and displays generated schedules. It talks to the backend via HTTP requests to `localhost:3001/api`.
 
-+ *Server layer (Express + Node.js)*: The application server with the business logic. It has four groups of routes: courses (search, detail, sections), students (profile, prerequisite validation, eligibility), schedules (generation), and audit (upload, parse, course suggestion). It accesses the database through Prisma Client.
++ *Server layer (Express + Node.js)*: The application server with the business logic. Its routes are organized into courses, students, schedules, audit, authentication, and admin management. The admin endpoints support section-data uploads, course and prerequisite editing, and elective-category management. All data access goes through Prisma Client.
 
 + *Data layer (PostgreSQL + Prisma)*: A relational database with all the course catalog data, section schedules, prerequisite rules, and student records. Prisma handles type-safe queries and schema migrations.
 
-There is also a *CLI layer* for development and testing. Command-line scripts let you test the prerequisite validator, audit parser, and schedule generator without running the web app. This turned out to be one of the more useful things we built, because it let us iterate on algorithm logic much faster than going through the browser every time.
+There is also a *CLI layer* for development and testing. Command-line scripts let you test the prerequisite validator, audit parser, and schedule generator without running the web app. It ended up being one of the handier parts of the project because it let us iterate on algorithm logic much faster than going through the browser every time.
 
 === Design Patterns
 
@@ -357,6 +359,21 @@ A few standard patterns show up in the codebase:
 
 The database schema went through several iterations. The first version stored prerequisites as plain text strings (e.g., "SYSC 3110 and SYSC 3020 or COMP 3005"). Easy to implement, impossible to evaluate programmatically. The system would have needed to parse that natural-language string every time it checked a prerequisite, and the phrasings in the Carleton calendar are inconsistent enough that reliable parsing was not realistic.
 
+To make the evolution explicit, Table 3.3 summarizes the main schema iterations we went through before arriving at the final model.
+
+#figure(
+  text(size: 9pt)[#table(
+    columns: (0.55fr, 1fr, 1.1fr, 1.7fr),
+    align: (left, left, left, left),
+    [*Iteration*], [*Idea*], [*What Worked*], [*Why It Failed / Changed*],
+    [V1], [Single `Course.prerequisiteText` field], [Easy to scrape and display raw prerequisite text], [Could not evaluate logic programmatically; natural-language prerequisite strings were too inconsistent to parse reliably at runtime],
+    [V2], [Simple prerequisite junction table], [Worked for basic "A and B" relationships], [Could not represent nested logic such as `(A and B) or (C and D)`, minimum grades, year standing, or permission requirements],
+    [V3], [Partially normalized prerequisite rows with type flags], [Started separating course requirements from non-course requirements], [Still awkward for nested expressions; evaluation logic became messy because grouping information was incomplete],
+    [V4], [Self-referential `PrerequisiteNode` tree plus display text], [Supports nested AND/OR groups, grade thresholds, year standing, permission, and recursive evaluation], [This is the final design because it was the first version that correctly modeled the real prerequisite structures we found],
+  )],
+  caption: [Database Schema Iterations for Prerequisite Modeling],
+)
+
 We looked at three options:
 
 + *Flat text*: Store the raw prerequisite string. Simple, but requires runtime parsing of unstructured text. We rejected this because the parsing would be too fragile.
@@ -367,26 +384,33 @@ We looked at three options:
 
 The tree structure was the only option that correctly represents the full range of Carleton's prerequisite rules while still being straightforward to evaluate with a recursive traversal.
 
+What made the prerequisite tree complex was not just the number of courses, but the shape of the logic. Carleton prerequisite statements often mix several kinds of conditions in the same expression: specific courses, minimum grades, year standing, and department permission. Some expressions also contain nested groups where one branch is a conjunction and another is a disjunction. A flat representation loses that structure. The traversal is therefore complex for the same reason: the algorithm is not just checking membership in a set, it is walking a logical expression tree and combining child results differently depending on whether a node is `AND`, `OR`, or a leaf condition.
+
 === Final Schema
 
-The database has six models:
+The final schema grew beyond the original six-model design. In the current version, the main models are:
 
 #figure(
-  table(
-    columns: (auto, auto, auto),
+  text(size: 9pt)[#table(
+    columns: (0.9fr, 1fr, 1.8fr),
     align: (left, left, left),
     [*Model*], [*Primary Key*], [*Description*],
     [`Course`], [`id` (e.g., "SYSC4907")], [Course metadata: title, credits, description],
     [`Prerequisite`], [`courseId` (FK)], [Raw prerequisite expression string for display],
     [`PrerequisiteNode`], [`id` (generated unique string ID)], [Tree node: type, required course/year, parent pointer],
-    [`Section`], [`id` (generated unique string ID)], [Section schedule: CRN, days, times, instructor, location, term],
+    [`Section`], [`id` (generated unique string ID)], [Section metadata: CRN, section code, type, term, enrollment data],
+    [`SectionMeeting`], [`id` (generated unique string ID)], [Meeting rows for section day/time/date details],
     [`Student`], [`id` (generated unique string ID)], [Student profile: student ID, name, program],
+    [`SavedAudit`], [`id` (generated unique string ID)], [Stored raw audit content and hash for deduplication],
+    [`User`], [`id` (generated unique string ID)], [Application login identity and role],
     [`CourseCompletion`], [`id` (generated unique string ID)], [Junction table: student-course with grade],
-  ),
+    [`ElectiveCategory`], [`id`], [Named elective bucket such as a program-specific elective category],
+    [`ElectiveCourse`], [`id` (generated unique string ID)], [Join table linking elective categories to valid course options],
+  )],
   caption: [Database Schema Summary],
 )
 
-The schema is in Third Normal Form. We used the course code (for example, "SYSC4907") as the primary key for `Course` because that is already the identifier used throughout the Carleton calendar and the rest of the application. The other models use generated IDs because they represent records such as sections, students, prerequisite nodes, and course completions, where there is no single natural key that is as clear or stable. The `PrerequisiteNode` table also uses a self-referential foreign key (`parentId` referencing `id`) so prerequisite expressions can be stored as trees.
+The schema is in Third Normal Form. We used the course code (for example, "SYSC4907") as the primary key for `Course` because that is already the identifier used throughout the Carleton calendar and the rest of the application. The other models use generated IDs where appropriate because they represent records such as sections, meetings, students, users, saved audits, prerequisite nodes, and course completions, where there is no single natural key that is as clear or stable. The `PrerequisiteNode` table uses a self-referential foreign key (`parentId` referencing `id`) so prerequisite expressions can be stored as trees, and the elective subsystem uses `ElectiveCategory` plus `ElectiveCourse` to map degree-audit elective requirements to concrete course options.
 
 === Data Population
 
@@ -396,11 +420,13 @@ The database was populated from two sources:
 
 + *Prerequisite data*: We scraped prerequisite rules from the Carleton undergraduate calendar with a Node.js script. The scraper walked the calendar site, pulled out the prerequisite text for each course, and parsed it into tree form. The database has 322 courses with parsed prerequisite trees, 348 courses total.
 
-Appendix C gives a compact summary of the final database statistics.
+Appendix B gives a compact summary of the final database statistics.
 
 == Descoped Features and Rationale
 
-*FR6: Preference-based ranking.* The proposal described a scoring system that would rank schedules based on preferences like avoiding morning classes or keeping a day free. We cut this for two reasons. First, we underestimated how much work the core scheduling engine (FR5) and prerequisite validation (FR2) would need, particularly handling multi-section courses and evaluating the prerequisite trees. Those took up most of the Winter term. Second, the system already returns up to 50 valid schedules that you can flip through visually, which gets you most of the way there even without automated ranking. Building a proper preference UI, a scoring algorithm, and testing it all was more than we could do well in the time we had left.
+*FR6: Preference-based ranking.* The proposal described a scoring system that would rank schedules based on preferences like avoiding morning classes or keeping a day free. We cut this for two reasons. First, we underestimated how much work the core scheduling engine (FR5) and prerequisite validation (FR2) would need, particularly handling multi-section courses and evaluating the prerequisite trees. Those took up most of the Winter term. Second, the system already returns a capped set of valid schedules that you can flip through visually, which gets you most of the way there even without automated ranking. Building a proper preference UI, a scoring algorithm, and testing it all was more than we could do well in the time we had left.
+
+The misjudgment was mostly in the algorithmic core. On paper, schedule generation looked like a straightforward combination problem and prerequisite checking looked like a standard tree walk. In practice, both expanded. Schedule generation needed support for lecture/lab/tutorial combinations, internal conflicts within one course, pruning, and a cap on result count. Prerequisite validation needed minimum grades, year standing, permission nodes, and parser support for nested expressions from the calendar. Those parts were more foundational than ranking, so once they consumed more time than expected, ranking became the feature that had to be dropped.
 
 
 // =============================================================================
@@ -470,13 +496,19 @@ evaluateNode(node, transcript):
 
 The time complexity is O(n) where n is the number of nodes in the prerequisite tree, since each node is visited exactly once. The space complexity is O(h) where h is the height of the tree, due to the recursion stack.
 
+We wrote this evaluator from scratch. We did not use a rule engine or a third-party library for prerequisite logic because the shape of the problem was tightly coupled to our own schema and to the exact node types we needed to support. The implementation went through several iterations: first a simple course-only checker, then support for `AND` and `OR` groups, then grade thresholds, then year-standing and permission leaves, and finally better error reporting so the frontend could explain why a course failed validation.
+
+=== Why the Traversal Was Non-Trivial
+
+The traversal looks short in pseudocode, but the real difficulty is that each node type changes the meaning of the subtree below it. A `COURSE` node asks whether one requirement is met. An `AND` node asks whether all of its children are true. An `OR` node asks whether at least one branch is true. Once minimum grades and year standing are included, the algorithm is no longer just checking whether a student has taken a course; it must interpret different kinds of evidence from the transcript and combine them correctly. That is why the tree representation and the traversal algorithm had to be designed together.
+
 === Grade Comparison
 
 Grades are mapped to numbers (A+ = 12, A = 11, down to F = 0) so we can compare them. If a grade cannot be parsed (transfer credits marked "TR" or "SAT," for instance), the system treats the requirement as satisfied. If the system has to guess, we would rather let a student through than incorrectly block them from a course they are probably allowed to take.
 
 === Design Decision: Recursive vs. Iterative
 
-We used recursion because prerequisite rules are stored as trees, and recursion is an intuitive way to process that kind of structure. An iterative version was possible, but it would have needed extra code to keep track of which nodes had already been visited, which ones still needed to be checked, and how the child results should be combined at each AND or OR node. That makes the logic harder to follow. Since prerequisite trees are small (typically under 20 nodes), recursion does not add much risk here. The call depth stays shallow, so there is no realistic chance of running into stack overflow problems.
+We used recursion because prerequisite rules are stored as trees, and recursion is the clearest way to process that kind of structure. An iterative version was possible, but it would have needed extra code to track which nodes had already been visited, which ones still needed to be checked, and how the child results should be combined at each AND or OR node. That makes the logic harder to follow. Since prerequisite trees are small, usually under 20 nodes, recursion does not add much risk here. The call depth stays shallow, so stack overflow is not a realistic concern.
 
 == Schedule Generation Algorithm
 
@@ -499,13 +531,15 @@ We considered three approaches:
 
 + *Backtracking with constraint propagation (what we used)*: Explore the possible schedules in an organized way, one course at a time. Whenever a partial schedule already has a time conflict, stop exploring that path immediately and move on to the next one. This lets the algorithm find all valid schedules without wasting time on combinations that are already invalid.
 
+We also wrote this algorithm from scratch. There are libraries and research tools for timetabling, but they are usually aimed at institutional scheduling problems with different constraints than ours. Our problem was narrower: given a small set of student-selected courses, enumerate all valid schedules and stop after a reasonable cap. Building our own solver let us control the search order, pruning rules, section grouping, and output format.
+
 === Implementation
 
 The algorithm works in three phases:
 
 *Phase 1: Data preparation.* For each selected course, fetch all available sections from the database and group them by type (LEC, LAB, TUT). Compute the Cartesian product across section types to get every possible combination for that course. A course with 3 lectures and 2 labs produces 6 LEC+LAB combinations. Before the search even starts, we filter out any combination where a course's own sections conflict with each other (e.g., a lecture and a lab that overlap).
 
-*Phase 2: Recursive backtracking.* Process courses one at a time. For the current course, try each valid section combination. Check whether any section in the combination conflicts with sections already assigned to previous courses. If there is no conflict, add the combination to the partial schedule and recurse to the next course. If all courses have been assigned, record the schedule as a solution. Then backtrack: remove the last assignment and try the next combination. Stop after finding 50 valid schedules.
+*Phase 2: Recursive backtracking.* Process courses one at a time. For the current course, try each valid section combination. Check whether any section in the combination conflicts with sections already assigned to previous courses. If there is no conflict, add the combination to the partial schedule and recurse to the next course. If all courses have been assigned, record the schedule as a solution. Then backtrack: remove the last assignment and try the next combination. Stop after reaching the requested schedule cap.
 
 *Phase 3: Prerequisite check.* After generating schedules, optionally validate that the student meets the prerequisites for each course using the validator from Section 4.1. This information goes into the API response so the frontend can show prerequisite warnings.
 
@@ -516,6 +550,41 @@ Two sections conflict if they are on the same day and their time intervals overl
 $ "start"_1 < "end"_2 and "start"_2 < "end"_1 $
 
 This is O(1) per pair of time slots. Day strings like "MWF" are expanded into individual days before comparison.
+
+=== Backtracking Example
+
+Suppose the student selects three courses:
+
+- `SYSC4001` with two valid section combinations: `A1` and `A2`
+- `COMP3005` with two valid section combinations: `B1` and `B2`
+- `ELEC4700` with one valid section combination: `C1`
+
+Assume `A1` conflicts with `B1`, `A2` conflicts with `C1`, and the other pairings do not conflict. The search proceeds like this:
+
+```
+start: []
+try A1 -> [A1]
+  try B1 -> conflict, reject branch
+  try B2 -> [A1, B2]
+    try C1 -> valid, record [A1, B2, C1]
+  backtrack from B2
+backtrack from A1
+
+try A2 -> [A2]
+  try B1 -> [A2, B1]
+    try C1 -> conflict, reject branch
+  backtrack from B1
+  try B2 -> [A2, B2]
+    try C1 -> conflict, reject branch
+  backtrack from B2
+backtrack from A2
+```
+
+The important point is that the solver never keeps exploring after a partial schedule is already invalid. As soon as `A1 + B1` conflicts, the entire subtree under that partial assignment is discarded. That pruning is what makes backtracking practical.
+
+=== Deterministic Behavior
+
+The generator is deterministic. For a fixed input set of courses, sections, and completed-course data, it visits the search space in the same order and therefore returns the same schedules in the same order every time. That means if 50 students upload the exact same audit and make the exact same selections, the system will generate the same result set for all 50 of them. This is useful for debugging and for consistent user expectations.
 
 === Performance
 
@@ -550,35 +619,39 @@ The main audit parsing method processes the HTML file that students can save fro
 - *Current courses*: Same structure, identified by grade value "CUR".
 - *Degree requirements*: Extracted from `subrequirement` div elements, with credit counts, completion status, and the courses that satisfy each requirement.
 
-We used regular expressions instead of a DOM parsing library (Cheerio was in the proposal) after looking at the actual HTML. Carleton's audit pages are generated by a consistent server-side system and follow predictable patterns. A DOM parser would be more robust against structural changes, but it would add a dependency for something that regex handles fine given how regular the input is.
+The current HTML parser uses Cheerio rather than trying to parse the page as raw text. Carleton's audit pages are generated by a consistent server-side system and expose predictable tags and classes, so DOM traversal turned out to be a cleaner fit for the current implementation than the older regex-based approach.
 
 === PDF Parsing
 
 PDF parsing was a secondary objective in the proposal because PDFs are inherently harder to extract structured data from. We first tried pdf-parse (a JavaScript library), but the text extraction was unreliable for the multi-column layout in Carleton audit PDFs. Text would come out jumbled or with columns interleaved.
 
-What worked was `pdftotext` (from the Poppler library) with the `-layout` flag, which preserves the spatial arrangement of text on the page. The backend writes the uploaded PDF to a temp file, runs `pdftotext` as a child process, reads the output, and parses it with regex. Temp files are cleaned up immediately after, even if an error occurs.
+What worked was `pdftotext` (from the Poppler library) with the `-layout` flag, which preserves the spatial arrangement of text on the page. The backend writes the uploaded PDF to a temp file, runs `pdftotext` as a child process, reads the output, and then passes that text to a custom line-by-line parser. Temp files are cleaned up immediately after, even if an error occurs.
 
-The PDF parser matches course lines like `"21FA   CHEM 1101   0.50   A+"` using:
-
-```
-/^\s*(\d{2}(?:FA|WN|SU))\s+([A-Z]{3,4})\s+(\d{4})\s+([\d.]+)\s+([A-Z+\-]+)/gm
-```
-
-This pattern looks for course lines that follow the usual audit format. It pulls out the term, subject code, course number, credit value, and grade. That gives the parser the exact pieces it needs from each course entry without having to process the whole line manually.
+The current PDF parser is not just one large regex. It scans the extracted text line by line, detects header fields, requirement blocks, and course rows, and keeps track of parser state as it moves through the audit. It still uses regex for recognizing specific line formats, but the overall parser is state-machine driven rather than raw-text matching alone.
 
 It handles repeated courses (student retook a course) by keeping the most recent grade, and drops courses with F, UNS, or NR grades.
 
+The hardest part of audit extraction was that not all information appears in a single clean, machine-readable format. In HTML audits, most data lives in predictable tags and classes, which made regex extraction feasible. In PDFs, the same information is flattened into positioned text, so columns can interleave, spacing can vary, and section headers may break the sequence of course rows. It was especially hard when:
+
+- the audit used a multi-column layout and `pdf-parse` mixed text from both columns together,
+- repeated-course entries appeared in separate parts of the audit,
+- requirement sections included narrative text that looked similar to course rows,
+- grades such as `CUR`, `TR`, or `SAT` needed different handling from standard letter grades,
+- elective requirement blocks described categories rather than concrete course codes.
+
+Those cases are why PDF parsing remained less robust than HTML parsing and why we treated PDF support as secondary until `pdftotext -layout` gave us a stable enough text representation.
+
 === Design Decision: `pdftotext` vs. JavaScript Library
 
-Using a system-level CLI tool instead of a JavaScript library was not what we planned. But Poppler's text extraction is significantly better than the JS alternatives we tried, and it handles multi-column layouts correctly. The downside is a system dependency: `pdftotext` has to be installed on the host machine, which hurts portability. For a local development tool, that was an acceptable tradeoff. For production, we would either bundle it in a Docker container or revisit the JS libraries.
+Using a system-level CLI tool instead of a JavaScript library was not what we planned. But Poppler's text extraction was much better than the JS alternatives we tried, and it handled multi-column layouts correctly. The downside is a system dependency: `pdftotext` has to be installed on the host machine, which hurts portability. For a local development tool, that tradeoff was acceptable. For production, we would either bundle it in a Docker container or revisit the JS libraries.
 
 == Backend API
 
 The Express backend has four groups of endpoints:
 
 #figure(
-  table(
-    columns: (auto, auto, auto),
+  text(size: 9pt)[#table(
+    columns: (0.55fr, 1.3fr, 1.5fr),
     align: (left, left, left),
     [*Method*], [*Endpoint*], [*Description*],
     [GET], [`/api/courses/search?q=&limit=`], [Search courses by code or title],
@@ -591,35 +664,84 @@ The Express backend has four groups of endpoints:
     [POST], [`/api/audit/upload`], [Upload and save audit data],
     [POST], [`/api/audit/parse`], [Parse audit without saving (preview)],
     [POST], [`/api/audit/suggest-courses`], [Suggest courses from remaining requirements],
-  ),
+    [POST], [`/api/auth/login`], [Create authenticated local session],
+    [GET], [`/api/admin/electives`], [List elective categories and course options],
+    [PUT], [`/api/admin/courses/:courseId/prerequisites`], [Edit prerequisite data in admin UI],
+  )],
   caption: [REST API Endpoints],
 )
 
-The server runs on port 3001 with CORS configured for the frontend dev server. File uploads use the Multer middleware with a 10 MB limit and file type validation (HTML and PDF only). All route handlers catch errors and return appropriate HTTP codes (400 for bad input, 404 for missing resources, 500 for server errors) instead of letting unhandled exceptions crash the process.
+The server runs on port 3001 with CORS configured for the frontend dev server. File uploads use the Multer middleware with a 10 MB limit and file type validation. The current frontend accepts HTML and PDF uploads, while the backend parser also allows plain-text input for parser/testing workflows. Route handlers return appropriate HTTP codes (400 for bad input, 404 for missing resources, 500 for server errors) instead of letting unhandled exceptions crash the process.
 
-Appendix B includes example API requests and responses for the schedule generation endpoint.
+Appendix A includes example API requests and responses for the schedule generation endpoint.
 
 == Frontend Interface
 
-The frontend is a three-step wizard:
+The current frontend starts with authentication and then exposes a three-step planning wizard, plus a separate admin page for data management.
+
+The user flow is linear by design because schedule generation only makes sense after the system has enough input data. Before a student can use the generator, the system needs either: (1) an academic audit file (`.html` or `.pdf`) so it can infer completed courses and remaining requirements, or (2) a manual course selection if the student skips the audit step.
+
+#figure(
+  text(size: 10pt)[
+    ```
+    Student opens app
+         |
+         v
+    Sign in
+         |
+         v
+    Upload audit (.html or .pdf) OR skip import
+         |
+         v
+    Parse academic history
+         |
+         v
+    Confirm extracted student data
+         |
+         v
+    Search/select courses and electives
+         |
+         v
+    Generate schedules
+         |
+         v
+    Browse timetable + copy CRNs
+    ```
+  ],
+  caption: [High-Level User Flow Before and During Schedule Generation],
+)
+
+=== Login Page
+
+The current version of the application opens on a login page backed by the `/api/auth/login` endpoint. This is a lightweight JWT-based flow intended for the local application context. It is enough to gate access to the scheduling and admin interfaces, but it is not meant to be presented as a production-ready authentication system.
 
 === Page 1: Academic History Import
 
-The first page lets users upload an academic audit (HTML or PDF) or skip ahead to manual course selection. When a file is uploaded, it goes to the `/api/audit/parse` endpoint, and the page shows the extracted info: student name, ID, program, completed courses, current courses, and remaining requirements. The user confirms the parsed data before moving on. If parsing fails or the user does not have an audit file, they can proceed without it, and prerequisite indicators are hidden.
+The first page lets users upload an academic audit (HTML or PDF) or skip ahead to manual course selection. When a file is uploaded, it goes to the `/api/audit/parse` endpoint. If parsing succeeds, the app stores the extracted student info, completed courses, current courses, remaining requirements, and elective requirements in frontend state and moves to the next page. If parsing fails or the user does not have an audit file, they can proceed without it, and prerequisite indicators are hidden.
+
+The technologies active in this step are the React upload form on the frontend, Multer on the Express backend for multipart file handling, and the parser dispatch logic that chooses HTML or PDF processing based on file type. The preview parse route also queries PostgreSQL through Prisma for elective-category lookup data used to compute remaining requirements and elective options.
 
 === Page 2: Course Selection
 
-This page has a search bar (backed by `/api/courses/search`) with 300ms debounce to avoid hammering the API on every keystroke. Users can also add courses from their remaining requirements list, which comes from the audit parsing step. Each selected course shows its prerequisite status: green if met, amber if not, hidden if there is no audit data. Elective categories (like "Computer Science Elective" or "Complementary Studies") show up as selectable tokens. Selecting one tells the system to auto-pick an appropriate course during schedule generation.
+This page has a search bar (backed by `/api/courses/search`) with 300ms debounce to avoid hammering the API on every keystroke. Users can also add courses from their remaining requirements list, which comes from the audit parsing step. Each selected course shows its prerequisite status: green if met, amber if not, hidden if there is no audit data. Elective categories (like "Computer Science Elective" or "Complementary Studies") show up as selectable tokens. Selecting one creates an elective slot token, and the system resolves that token into concrete course choices using the elective category catalog, term availability, and prerequisite status.
+
+The technologies active here are React state management for the selected courses, shadcn/ui components for the search and token interface, the `/api/courses/search` and `/api/students/:studentId/validate` endpoints on Express, and Prisma queries against the course and prerequisite tables.
 
 === Page 3: Schedule Review
 
-Generated schedules appear in a weekly timetable grid. Courses are color-coded, and each block shows the course code, section code, time, and location. You flip between schedules with prev/next buttons ("Schedule 1 of 50"). A sidebar lists all sections in the current schedule with their CRNs, and each CRN can be copied to the clipboard for entry into Carleton Central.
+Generated schedules appear in a weekly timetable grid. Courses are color-coded, and each block shows the course code, section code, time, and location. You flip between schedules with prev/next buttons that show the current schedule number out of the total returned. A sidebar lists all sections in the current schedule with their CRNs, and each CRN can be copied to the clipboard for entry into Carleton Central.
 
-If elective categories were selected, the sidebar also has an elective panel where you can browse available courses for each category, see which ones have sections and met prerequisites, and swap electives. Swapping regenerates the schedules.
+The technologies active in this final step are the backtracking generator on the backend, the prerequisite validator for warning badges, the REST response serialization, and the React timetable UI that maps returned section times into a visual weekly grid.
+
+If elective categories were selected, the sidebar also has an elective panel where you can browse available courses for each category, see which ones have sections and met prerequisites, and swap electives. Swapping regenerates the schedules, so electives are part of the actual schedule-generation workflow rather than a placeholder suggestion feature.
+
+=== Admin Page
+
+The current frontend also includes an admin interface. It provides separate tabs for section-data uploads, course and prerequisite editing, and elective-category management. This page exists mainly to support maintaining the local dataset and correcting prerequisite or elective mappings without editing the database manually.
 
 === UI Technology
 
-The frontend uses 48 shadcn/ui components (built on Radix UI) for the UI elements, TailwindCSS v4 for styling, and Lucide icons. Application state (current step, parsed audit data, selected courses, generated schedules, elective selections) lives in the top-level `App.tsx` component and gets passed down as props, following React's one-way data flow.
+The frontend uses shadcn/ui components built on Radix UI for many of the UI elements, TailwindCSS v4 for styling, and Lucide icons. Application state (current step, parsed audit data, selected courses, generated schedules, elective selections) lives in the top-level `App.tsx` component and gets passed down as props, following React's one-way data flow.
 
 
 // =============================================================================
@@ -630,7 +752,9 @@ The frontend uses 48 shadcn/ui components (built on Radix UI) for the UI element
 
 == Testing Approach
 
-We did not use an automated test framework. No Jest, no Vitest. This is probably the biggest shortcoming of the project, and Chapter 6 discusses it. All testing was done manually during development.
+We did not use an automated test framework. No Jest, no Vitest. This is probably the biggest weakness in the project, and Chapter 6 comes back to it. All testing was done manually during development.
+
+Because academic audits contain personally identifiable information and real course histories, our audit-parsing tests were done in the minimum responsible way. We only tested with audits voluntarily provided by team members, and we did not build or keep a large stored corpus of real student audits. That limited our test coverage, but it was the more responsible choice for a local student project without a formal data-governance process.
 
 === Manual Functional Testing
 
@@ -645,7 +769,7 @@ We tested each feature by hand against known inputs:
 - Year-standing requirements (e.g., fourth-year standing).
 - Courses with no prerequisites (should always pass).
 
-The CLI tool was invaluable for this. We could test dozens of scenarios in a few minutes without touching the browser.
+The CLI tool mattered a lot here. We could test dozens of scenarios in a few minutes without touching the browser.
 
 *Schedule Generation*: We tested with:
 - Single-course inputs (trivial case: should return all sections).
@@ -654,7 +778,19 @@ The CLI tool was invaluable for this. We could test dozens of scenarios in a few
 - Stress tests with 6--8 courses for performance and the 50-schedule cap.
 - Edge cases: courses with no available sections, sections at identical times.
 
+We also tested behavior across different student profiles. One useful case was a student with relatively few mandatory courses but many elective choices. That kind of input can produce a much larger number of valid timetables than a tightly constrained engineering term, so it was a good way to expose performance issues and verify that the 50-schedule cap worked as intended. Another useful case was a very constrained student profile where many selected courses shared overlapping lecture times, because that quickly exposed false positives or false negatives in conflict detection.
+
+During this testing we hit several bugs that shaped the final version of the code:
+
+- course combinations that were valid individually but contained an internal lecture/lab overlap,
+- duplicate-looking schedules caused by different section-group ordering,
+- prerequisite warnings not matching the final selected elective after a swap,
+- repeated-course audit entries keeping the wrong grade instead of the most recent one,
+- PDF parsing failures when text extraction merged both columns together.
+
 *Audit Parsing*: We tested the HTML parser with real academic audits from team members. The PDF parser was tested with the same audits saved as PDFs. We manually compared the outputs to verify that courses, grades, and student info were extracted correctly.
+
+This was intentionally limited testing because of privacy and confidentiality. If broader access to anonymized audits had been possible, the next step would have been to build a curated test corpus covering multiple degree programs, students with transfer credits, repeated courses, incomplete grades, large elective blocks, and formatting variation across different audit exports. That would have let us turn the parser into a more systematic regression-tested component.
 
 *Frontend Integration*: We tested the full flow end-to-end in the browser: upload audit, select courses, generate schedules, browse timetables, copy CRNs.
 
@@ -665,7 +801,9 @@ The project includes a command-line interface (`cli/` directory) that lets you t
 - Parsing an audit file and printing the extracted data.
 - Running the schedule generator for a set of courses and printing results.
 
-This was one of the better decisions we made. Having immediate feedback on algorithm behavior without the overhead of the full web stack saved a lot of time.
+This was one of the decisions that paid off the most. Having immediate feedback on algorithm behavior without the overhead of the full web stack saved a lot of time.
+
+It also mattered for iteration speed. Because both the prerequisite evaluator and the schedule generator were written from scratch, we needed a fast way to run the same scenarios repeatedly while refining the algorithms. The CLI made that possible.
 
 == Requirements Verification
 
@@ -679,7 +817,7 @@ This was one of the better decisions we made. Having immediate feedback on algor
     [FR1: Audit Parsing], [Tested with team members' actual audits (HTML and PDF)], [Pass --- correct extraction of courses, grades, and student info],
     [FR2: Prerequisite Validation], [CLI testing with known prerequisite trees], [Pass --- correctly evaluates AND, OR, COURSE, YEAR_STANDING nodes],
     [FR3: Manual Course Entry], [UI testing: search, select, remove courses], [Pass --- courses can be searched, added, and removed],
-    [FR4: Elective Recommendation], [Tested suggest-courses endpoint with audit data], [Partial --- suggestions returned but not fully integrated with UX],
+    [FR4: Elective Recommendation], [Tested audit-derived elective categories, token selection, automatic resolution, and swap/regeneration workflow], [Pass --- elective categories are integrated into course selection and schedule review],
     [FR5: Schedule Generation], [Tested with 1--8 course combinations], [Pass --- all valid schedules generated, no false conflicts],
     [FR6: Preference Ranking], [N/A], [Not implemented],
     [FR7: Timetable View], [Visual inspection of generated schedules in browser], [Pass --- correct time placement and color coding],
@@ -707,7 +845,7 @@ We also never did the User Acceptance Testing with student volunteers that the p
 
 = Reflections
 
-This chapter is a straightforward look at the project: what worked, what did not, and what we would change if we had to do it again.
+This chapter looks at the project plainly: what worked, what did not, and what we would change if we had to do it again.
 
 == Achievement of Original Objectives
 
@@ -721,7 +859,7 @@ The proposal said we would build an application that automates requirement analy
 
 + *Preference-based ranking*: Not implemented. Users browse unranked schedules manually.
 
-The elective recommendation feature (FR4) was only partly done. The backend can suggest courses from remaining requirements, and the frontend shows elective categories. But that workflow was added late and it still feels rougher than the rest of the application.
+The elective feature (FR4) ended up more complete than we first expected. The parser extracts elective requirements from the audit, the course-selection page lets users add elective-category slots, the scheduler resolves those slots into concrete courses, and the schedule-review page supports swapping electives and regenerating schedules. There is still room to improve the breadth of elective catalogs and the polish of the admin tooling, but the core elective workflow is implemented.
 
 == What Changed and Why
 
@@ -729,9 +867,9 @@ Quite a bit changed between the proposal and the final system:
 
 *Technology stack*: The biggest change was going from Next.js to React+Vite+Express. Section 3.2.1 covers the details. The short version is that we needed the split so four people could work without constantly stepping on each other, and that part worked.
 
-*Audit parsing approach*: The proposal said Cheerio for HTML and a JavaScript library for PDF. We ended up using regex for HTML and `pdftotext` for PDF. Neither was the plan, but both were driven by what actually worked when we tried parsing real audit files. The JS PDF libraries produced garbled output. The HTML was regular enough that regex worked fine, so that is what we used.
+*Audit parsing approach*: The proposal said Cheerio for HTML and a JavaScript library for PDF. The current system uses a Cheerio-based HTML parser and `pdftotext -layout` plus a custom PDF-text parser. The older regex-based HTML parser still exists in the repository as legacy code, but it is not the main ingest path used by the current API routes.
 
-*UI library*: The proposal mentioned Material-UI or Ant Design. The final version used Radix UI/shadcn instead. That was mostly a preference call and it did not change the core functionality.
+*UI library*: The proposal mentioned Material-UI or Ant Design. The final version used Radix UI/shadcn instead. That was mostly a preference call and did not change the core functionality.
 
 *Deployment*: The proposal said we would deploy to Vercel. We never did. Partly because the frontend/backend split made Vercel less convenient (it is optimized for Next.js), and partly because deployment was not a priority given everything else that still needed doing. This means NFR6 (HTTPS) was not met.
 
@@ -763,7 +901,7 @@ The Smart Scheduler works. You can upload an audit, it figures out what you have
 
 But the project has gaps. No automated tests. Two features that never made it past the proposal. No formal usability evaluation. These are not from lack of effort. We underestimated how much work the core features would take and did not leave enough margin for everything else.
 
-What we got out of this project was not just the prototype. We also learned a lot from the process around it: making design decisions with tradeoffs, changing plans when our assumptions were wrong, coordinating work across a team, and being honest when things did not go the way we expected. We wanted the report to capture that part too.
+What we got out of this project was not just the prototype. We also learned a lot from the process around it: making design decisions with tradeoffs, changing plans when our assumptions were wrong, coordinating work across a team, and being honest when things did not go the way we expected. That part mattered too, and we wanted the report to show it.
 
 
 // =============================================================================
@@ -800,23 +938,7 @@ What we got out of this project was not just the prototype. We also learned a lo
 
 #set heading(numbering: "A.1")
 
-= Appendix A: Original Project Proposal <appendix-a>
-
-The original project proposal (G67_SmartScheduler.pdf, October 17, 2025) is included in full after this appendix page. It defines the initial functional and non-functional requirements, the proposed technology stack, the system architecture, the project timeline, and the risk assessment.
-
-Key sections of the proposal that are referenced throughout this report include:
-
-- *Section 3.1*: Functional Requirements (FR1--FR9)
-- *Section 3.2*: Non-Functional Requirements (NFR1--NFR6)
-- *Section 3.3*: Success Metrics
-- *Section 4.2*: Original Technology Stack (Next.js 14, Cheerio, Material-UI, Vercel)
-- *Section 8.1*: Phased Timeline
-- *Section 9.0*: Risks and Mitigation Strategies
-
-The following pages reproduce the original proposal as submitted.
-
-
-= Appendix B: API Reference <appendix-b>
+= Appendix A: API Reference <appendix-a>
 
 The complete REST API is documented in Section 4.4. The base URL is `http://localhost:3001/api`. All endpoints return JSON responses. Error responses follow the format:
 
@@ -874,7 +996,7 @@ POST /api/schedules/generate
 }
 ```
 
-= Appendix C: Database Statistics <appendix-c>
+= Appendix B: Database Statistics <appendix-b>
 
 #table(
   columns: (auto, auto),
@@ -888,3 +1010,72 @@ POST /api/schedules/generate
   [Maximum prerequisite tree depth], [4 levels],
   [Average sections per course], [~4.2],
 )
+
+= Appendix C: Original Project Proposal <appendix-c>
+
+The following pages reproduce the original project proposal (`G67_SmartScheduler.pdf`, October 17, 2025) as submitted.
+
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 1, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 2, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 3, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 4, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 5, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 6, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 7, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 8, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 9, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 10, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 11, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 12, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 13, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 14, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 15, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 16, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 17, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 18, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 19, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 20, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 21, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 22, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 23, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 24, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 25, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 26, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 27, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 28, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 29, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 30, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 31, width: 100%)
+#pagebreak()
+#image("G67_SmartScheduler.pdf", page: 32, width: 100%)
