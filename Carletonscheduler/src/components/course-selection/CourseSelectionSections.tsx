@@ -3,7 +3,8 @@ import { ChevronDown, Search, X, Minus, Plus, Check, ArrowRight, Loader2, BookOp
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card';
-import type { Course, PrerequisiteValidationResult } from '../../utils/courseData';
+import type { Course } from '../../utils/courseData';
+import type { PrerequisiteValidationResult } from '@shared/prerequisite-evaluator';
 import type { ElectiveRequirement } from '../../types/electives';
 import { getTermLabel } from '../../utils/termUtils';
 import { HalfTermCourseTag } from '../HalfTermCourseTag';
@@ -664,7 +665,7 @@ function FallbackRemainingCourseList({
 }
 
 interface SearchPanelProps {
-  searchRef: RefObject<HTMLDivElement | null>;
+  searchRef: RefObject<HTMLDivElement>;
   searchQuery: string;
   searchResults: Course[];
   showResults: boolean;

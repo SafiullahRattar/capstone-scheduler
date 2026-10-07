@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            Carletonscheduler/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix Carletonscheduler ci
+
+      # Unit tests, server and client type checks, and the client build.
+      # None of these need a database.
+      - name: Check
+        run: npm run check

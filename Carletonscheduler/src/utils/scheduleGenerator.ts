@@ -12,7 +12,8 @@ export interface Section {
   id?: string;
   crn: string;
   sectionCode: string;
-  type: 'Lecture' | 'Tutorial' | 'Lab';
+  /** Carleton section type code, e.g. LEC, LAB, TUT, IND. */
+  type: string;
   instructor: string;
   timeSlots: TimeSlot[];
   capacity: number;
@@ -237,7 +238,7 @@ function mapApiSectionToFrontend(apiSection: ApiSection): Section {
     id: apiSection.id,
     crn: apiSection.crn || '',
     sectionCode: apiSection.sectionCode,
-    type: apiSection.sectionType as 'Lecture' | 'Tutorial' | 'Lab',
+    type: apiSection.sectionType,
     instructor: apiSection.instructor || 'TBA',
     timeSlots,
     capacity: apiSection.capacity || 0,
