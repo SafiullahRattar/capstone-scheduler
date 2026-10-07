@@ -17,7 +17,7 @@
     "audits:generate": "tsx scripts/generate-test-audits.ts",
     "user:create": "tsx scripts/create-user.ts",
     "db:import-timetable": "tsx scripts/import-timetable.ts",
-    "test:unit": "node --import tsx --test tests/**/*.test.ts",
+    "test:unit": "node --import tsx --test tests/*.test.ts",
     "test": "npm run test:unit",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && npm --prefix Carletonscheduler run typecheck",
     "check": "npm test && npm run typecheck && npm --prefix Carletonscheduler run build",
