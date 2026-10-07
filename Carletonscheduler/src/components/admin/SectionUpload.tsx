@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { Button } from '../ui/button';
-import { API_BASE_URL } from '../../config/constants';
+import { API_BASE_URL, authenticatedFetch } from '../../config/constants';
 
 interface TermData {
   code: string;
@@ -39,7 +39,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
 
   const fetchTerms = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/sections/terms`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/sections/terms`);
       if (response.ok) {
         const data = await response.json();
         setTerms(data.terms || []);
@@ -123,7 +123,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
         params.append('term', selectedTerm);
       }
 
-      const response = await fetch(`${API_BASE_URL}/admin/sections/upload?${params}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/sections/upload?${params}`, {
         method: 'POST',
         body: formData
       });
@@ -152,7 +152,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/sections/term/${termCode}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/sections/term/${termCode}`, {
         method: 'DELETE'
       });
 
@@ -166,31 +166,31 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
   };
 
   return (
-    <div style={{ padding: '32px' }}>
+    <div className="admin-section">
       {/* Upload Section */}
       <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '8px' }}>
           Upload Section Data
         </h2>
-        <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px' }}>
+        <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginBottom: '24px' }}>
           Upload a tab-separated file containing course section data from Carleton's timetable
         </p>
 
         {/* Upload Mode Selection */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--foreground)', display: 'block', marginBottom: '8px' }}>
             Upload Mode
           </label>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <label
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 padding: '12px 16px',
-                background: uploadMode === 'add_term' ? '#fef2f2' : '#f8fafc',
+                background: uploadMode === 'add_term' ? 'var(--primary-soft)' : 'var(--surface)',
                 border: '1px solid',
-                borderColor: uploadMode === 'add_term' ? '#fecaca' : '#e2e8f0',
+                borderColor: uploadMode === 'add_term' ? 'var(--primary-border)' : 'var(--border)',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 transition: 'all 150ms'
@@ -201,11 +201,11 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                 name="mode"
                 checked={uploadMode === 'add_term'}
                 onChange={() => setUploadMode('add_term')}
-                style={{ accentColor: '#bf112b' }}
+                style={{ accentColor: 'var(--primary)' }}
               />
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>Add/Update Term</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>Replace sections for a specific term</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>Add/Update Term</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>Replace sections for a specific term</div>
               </div>
             </label>
             <label
@@ -214,9 +214,9 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '12px 16px',
-                background: uploadMode === 'replace_all' ? '#fef2f2' : '#f8fafc',
+                background: uploadMode === 'replace_all' ? 'var(--primary-soft)' : 'var(--surface)',
                 border: '1px solid',
-                borderColor: uploadMode === 'replace_all' ? '#fecaca' : '#e2e8f0',
+                borderColor: uploadMode === 'replace_all' ? 'var(--primary-border)' : 'var(--border)',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 transition: 'all 150ms'
@@ -227,11 +227,11 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                 name="mode"
                 checked={uploadMode === 'replace_all'}
                 onChange={() => setUploadMode('replace_all')}
-                style={{ accentColor: '#bf112b' }}
+                style={{ accentColor: 'var(--primary)' }}
               />
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>Replace All</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>Delete all existing sections first</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>Replace All</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>Delete all existing sections first</div>
               </div>
             </label>
           </div>
@@ -240,7 +240,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
         {/* Term Selection (for add_term mode) */}
         {uploadMode === 'add_term' && (
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', display: 'block', marginBottom: '8px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--foreground)', display: 'block', marginBottom: '8px' }}>
               Target Term
             </label>
             <div style={{ position: 'relative', maxWidth: '280px' }}>
@@ -252,8 +252,8 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                   padding: '10px 14px',
                   fontSize: '14px',
                   textAlign: 'left',
-                  background: '#fff',
-                  border: '1px solid #e2e8f0',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -261,7 +261,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                   justifyContent: 'space-between'
                 }}
               >
-                <span style={{ color: selectedTerm ? '#111' : '#94a3b8' }}>
+                <span style={{ color: selectedTerm ? 'var(--foreground)' : 'var(--muted-foreground)' }}>
                   {selectedTerm ? `${formatTermCode(selectedTerm)} (${selectedTerm})` : 'Select or enter term code'}
                 </span>
                 <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -275,8 +275,8 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                     left: 0,
                     right: 0,
                     marginTop: '4px',
-                    background: '#fff',
-                    border: '1px solid #e2e8f0',
+                    background: 'var(--popover)',
+                    border: '1px solid var(--border)',
                     borderRadius: '8px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     zIndex: 20,
@@ -285,7 +285,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                   }}
                 >
                   {/* Manual entry at top */}
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
                     <input
                       type="text"
                       placeholder="Type term code, e.g. 202730"
@@ -293,7 +293,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                         width: '100%',
                         padding: '8px 10px',
                         fontSize: '13px',
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid var(--border)',
                         borderRadius: '6px'
                       }}
                       onKeyDown={e => {
@@ -323,16 +323,16 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                             background: 'transparent',
                             border: 'none',
                             cursor: 'pointer',
-                            color: '#111',
+                            color: 'var(--foreground)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                           }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-hover)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                          <span>{formatTermCode(term.code)} <span style={{ color: '#94a3b8' }}>({term.code})</span></span>
-                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>{term.sectionCount.toLocaleString()}</span>
+                          <span>{formatTermCode(term.code)} <span style={{ color: 'var(--muted-foreground)' }}>({term.code})</span></span>
+                          <span style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>{term.sectionCount.toLocaleString()}</span>
                         </button>
                       ))}
                     </>
@@ -340,7 +340,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                 </div>
               )}
             </div>
-            <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '6px' }}>
               Format: YYYYTT (e.g., 202730 for Fall 2027)
             </p>
           </div>
@@ -351,12 +351,12 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
           style={{
             position: 'relative',
             border: '2px dashed',
-            borderColor: dragActive ? '#bf112b' : selectedFile ? '#10b981' : '#e2e8f0',
+            borderColor: dragActive ? 'var(--primary-text)' : selectedFile ? 'var(--success-border)' : 'var(--border)',
             borderRadius: '12px',
             padding: selectedFile ? '20px' : '40px 24px',
             textAlign: 'center',
             transition: 'all 150ms',
-            background: dragActive ? '#fef2f2' : selectedFile ? '#f0fdf4' : '#fafafa',
+            background: dragActive ? 'var(--primary-soft)' : selectedFile ? 'var(--success-soft)' : 'var(--surface)',
           }}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -382,20 +382,20 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
           
           {selectedFile ? (
             <div>
-              <p style={{ fontSize: '14px', fontWeight: 500, color: '#111', marginBottom: '4px' }}>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)', marginBottom: '4px' }}>
                 {selectedFile.name}
               </p>
-              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginBottom: '16px' }}>
                 {(selectedFile.size / 1024).toFixed(1)} KB
               </p>
               
               {uploadError && (
                 <p style={{ 
                   fontSize: '13px', 
-                  color: '#dc2626', 
+                  color: 'var(--danger)',
                   marginBottom: '16px',
                   padding: '8px 12px',
-                  background: '#fef2f2',
+                  background: 'var(--danger-soft)',
                   borderRadius: '6px',
                   display: 'inline-block'
                 }}>
@@ -407,14 +407,14 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                 <div style={{ 
                   marginBottom: '16px',
                   padding: '12px 16px',
-                  background: uploadResult.errors > 0 ? '#fef3c7' : '#ecfdf5',
+                  background: uploadResult.errors > 0 ? 'var(--warning-soft)' : 'var(--success-soft)',
                   borderRadius: '8px',
                   textAlign: 'left'
                 }}>
-                  <p style={{ fontSize: '14px', fontWeight: 500, color: uploadResult.errors > 0 ? '#92400e' : '#065f46' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: uploadResult.errors > 0 ? 'var(--warning)' : 'var(--success)' }}>
                     Import completed
                   </p>
-                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
                     {uploadResult.imported.toLocaleString()} sections imported
                     {uploadResult.errors > 0 && `, ${uploadResult.errors} errors`}
                   </p>
@@ -433,7 +433,7 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                   }}
                   style={{
                     fontSize: '14px',
-                    color: '#64748b',
+                    color: 'var(--muted-foreground)',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer'
@@ -446,13 +446,13 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
             </div>
           ) : (
             <>
-              <p style={{ fontSize: '15px', fontWeight: 500, color: '#111', marginBottom: '6px' }}>
+              <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--foreground)', marginBottom: '6px' }}>
                 Drop your section data file here
               </p>
-              <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+              <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>
                 or click to browse
               </p>
-              <p style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '16px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '16px' }}>
                 Tab-separated values (.txt, .tsv, .csv)
               </p>
             </>
@@ -461,16 +461,16 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
 
         {/* Format Help */}
         <details style={{ marginTop: '16px' }}>
-          <summary style={{ fontSize: '13px', color: '#64748b', cursor: 'pointer' }}>
+          <summary style={{ fontSize: '13px', color: 'var(--muted-foreground)', cursor: 'pointer' }}>
             Expected file format
           </summary>
           <div style={{ 
             marginTop: '8px', 
             padding: '12px 16px', 
-            background: '#f8fafc', 
+            background: 'var(--surface)',
             borderRadius: '8px',
             fontSize: '12px',
-            color: '#64748b',
+            color: 'var(--muted-foreground)',
             fontFamily: 'monospace',
             overflow: 'auto'
           }}>
@@ -484,24 +484,24 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
 
       {/* Existing Terms */}
       <div>
-        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '8px' }}>
           Existing Terms
         </h2>
-        <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>
+        <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginBottom: '20px' }}>
           Manage section data by term
         </p>
 
         {loadingTerms ? (
-          <p style={{ fontSize: '14px', color: '#94a3b8' }}>Loading...</p>
+          <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>Loading...</p>
         ) : terms.length === 0 ? (
           <div style={{ 
             padding: '40px',
             textAlign: 'center',
-            background: '#f8fafc',
+            background: 'var(--surface)',
             borderRadius: '12px',
-            border: '1px solid #f1f5f9'
+            border: '1px solid var(--border)'
           }}>
-            <p style={{ fontSize: '14px', color: '#64748b' }}>No section data uploaded yet</p>
+            <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>No section data uploaded yet</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -513,16 +513,16 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '16px 20px',
-                  background: '#f8fafc',
+                  background: 'var(--surface)',
                   borderRadius: '10px',
-                  border: '1px solid #f1f5f9'
+                  border: '1px solid var(--border)'
                 }}
               >
                 <div>
-                  <p style={{ fontSize: '15px', fontWeight: 500, color: '#111' }}>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--foreground)' }}>
                     {formatTermCode(term.code)}
                   </p>
-                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
                     {term.sectionCount.toLocaleString()} sections
                   </p>
                 </div>
@@ -534,16 +534,16 @@ export function SectionUpload({ onUploadComplete }: SectionUploadProps) {
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    color: '#94a3b8',
+                    color: 'var(--muted-foreground)',
                     transition: 'all 150ms'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = '#fee2e2';
-                    e.currentTarget.style.color = '#dc2626';
+                    e.currentTarget.style.background = 'var(--danger-soft)';
+                    e.currentTarget.style.color = 'var(--danger)';
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = '#94a3b8';
+                    e.currentTarget.style.color = 'var(--muted-foreground)';
                   }}
                   title="Delete term"
                 >

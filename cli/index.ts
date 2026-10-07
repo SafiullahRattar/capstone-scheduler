@@ -38,8 +38,8 @@ Examples:
   sections SYSC4907
   validate SYSC4907 "SYSC1006,SYSC2006,SYSC4001"
   ingest safi-audit.txt
-  student 101245709
-  eligible 101245709
+  student 101000001
+  eligible 101000001
 `)
 }
 

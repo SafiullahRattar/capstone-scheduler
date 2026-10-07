@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { API_BASE_URL } from '../../config/constants';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
+import { API_BASE_URL, authenticatedFetch } from '../../config/constants';
 
 interface PrerequisiteNode {
   id: string;
@@ -48,6 +49,7 @@ export function CourseEditor() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCourse, setNewCourse] = useState({ id: '', title: '', credits: 0.5 });
   const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Debounce search query
   useEffect(() => {
@@ -71,7 +73,7 @@ export function CourseEditor() {
           params.append('search', debouncedSearch);
         }
 
-        const response = await fetch(`${API_BASE_URL}/admin/courses?${params}`);
+        const response = await authenticatedFetch(`${API_BASE_URL}/admin/courses?${params}`);
         if (response.ok) {
           const data = await response.json();
           setCourses(data.courses);
@@ -98,7 +100,7 @@ export function CourseEditor() {
         params.append('search', debouncedSearch);
       }
 
-      const response = await fetch(`${API_BASE_URL}/admin/courses?${params}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/courses?${params}`);
       if (response.ok) {
         const data = await response.json();
         setCourses(data.courses);
@@ -121,13 +123,15 @@ export function CourseEditor() {
   };
 
   const handleCreateCourse = async () => {
+    if (isCreating) return;
     if (!newCourse.id.trim()) {
       setCreateError('Course ID is required');
       return;
     }
 
+    setIsCreating(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/courses`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/courses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,6 +154,8 @@ export function CourseEditor() {
       refetchCourses();
     } catch (error) {
       setCreateError('Failed to create course');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -161,7 +167,7 @@ export function CourseEditor() {
       // Convert tree to expression (simplified)
       const expression = buildExpressionFromNodes(editingPrereqs);
 
-      const response = await fetch(`${API_BASE_URL}/admin/courses/${selectedCourse.id}/prerequisites`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/courses/${selectedCourse.id}/prerequisites`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -260,18 +266,11 @@ export function CourseEditor() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '600px' }}>
+    <div className="course-editor">
       {/* Course List Sidebar */}
-      <div 
-        style={{ 
-          width: '360px', 
-          borderRight: '1px solid #e2e8f0',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
+      <div className="editor-course-list">
         {/* Search & Create */}
-        <div style={{ padding: '20px', borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <Search 
@@ -298,7 +297,7 @@ export function CourseEditor() {
               <Plus className="w-4 h-4 mr-1" /> New
             </Button>
           </div>
-          <p style={{ fontSize: '12px', color: '#94a3b8' }}>
+          <p style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>
             {pagination.total.toLocaleString()} courses
           </p>
         </div>
@@ -307,11 +306,11 @@ export function CourseEditor() {
         <div style={{ flex: 1, overflow: 'auto' }}>
           {loading ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
-              <p style={{ fontSize: '14px', color: '#94a3b8' }}>Loading...</p>
+              <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>Loading...</p>
             </div>
           ) : courses.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
-              <p style={{ fontSize: '14px', color: '#64748b' }}>No courses found</p>
+              <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>No courses found</p>
             </div>
           ) : (
             <div>
@@ -323,15 +322,15 @@ export function CourseEditor() {
                     width: '100%',
                     padding: '14px 20px',
                     textAlign: 'left',
-                    background: selectedCourse?.id === course.id ? '#f8fafc' : 'transparent',
+                    background: selectedCourse?.id === course.id ? 'var(--primary-soft)' : 'transparent',
                     border: 'none',
-                    borderBottom: '1px solid #f1f5f9',
+                    borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
                     transition: 'background 150ms'
                   }}
                   onMouseEnter={e => {
                     if (selectedCourse?.id !== course.id) {
-                      e.currentTarget.style.background = '#fafafa';
+                      e.currentTarget.style.background = 'var(--surface-hover)';
                     }
                   }}
                   onMouseLeave={e => {
@@ -341,14 +340,14 @@ export function CourseEditor() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
                       {course.id}
                     </span>
                     {course.prerequisiteNodes.length > 0 && (
                       <span style={{ 
                         fontSize: '11px', 
-                        color: '#64748b',
-                        background: '#f1f5f9',
+                        color: 'var(--muted-foreground)',
+                        background: 'var(--surface-hover)',
                         padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
@@ -359,7 +358,7 @@ export function CourseEditor() {
                   {course.title !== course.id && (
                     <p style={{ 
                       fontSize: '13px', 
-                      color: '#64748b', 
+                      color: 'var(--muted-foreground)',
                       marginTop: '2px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -379,7 +378,7 @@ export function CourseEditor() {
           <div 
             style={{ 
               padding: '12px 20px', 
-              borderTop: '1px solid #f1f5f9',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
@@ -391,8 +390,8 @@ export function CourseEditor() {
               style={{
                 padding: '6px 12px',
                 fontSize: '13px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '6px',
                 cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer',
                 opacity: pagination.page <= 1 ? 0.5 : 1
@@ -400,7 +399,7 @@ export function CourseEditor() {
             >
               Previous
             </button>
-            <span style={{ fontSize: '13px', color: '#64748b' }}>
+            <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', textAlign: 'center' }}>
               Page {pagination.page} of {pagination.pages}
             </span>
             <button
@@ -409,8 +408,8 @@ export function CourseEditor() {
               style={{
                 padding: '6px 12px',
                 fontSize: '13px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '6px',
                 cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer',
                 opacity: pagination.page >= pagination.pages ? 0.5 : 1
@@ -423,7 +422,7 @@ export function CourseEditor() {
       </div>
 
       {/* Course Editor Panel */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {!selectedCourse ? (
           <div style={{ 
             flex: 1, 
@@ -433,10 +432,10 @@ export function CourseEditor() {
             padding: '40px'
           }}>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '15px', color: '#64748b' }}>
+              <p style={{ fontSize: '15px', color: 'var(--muted-foreground)' }}>
                 Select a course to edit its prerequisites
               </p>
-              <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
                 Or create a new course
               </p>
             </div>
@@ -444,24 +443,24 @@ export function CourseEditor() {
         ) : (
           <>
             {/* Course Header */}
-            <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
                 <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#111' }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--foreground)' }}>
                     {selectedCourse.id}
                   </h2>
                   {selectedCourse.title !== selectedCourse.id && (
-                    <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
                       {selectedCourse.title}
                     </p>
                   )}
                   <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                     {selectedCourse.credits && (
-                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
                         {selectedCourse.credits} credits
                       </span>
                     )}
-                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
                       {selectedCourse.sectionCount} sections
                     </span>
                   </div>
@@ -474,7 +473,7 @@ export function CourseEditor() {
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    color: '#94a3b8'
+                    color: 'var(--muted-foreground)'
                   }}
                 >
                   <X className="w-5 h-5" />
@@ -483,12 +482,12 @@ export function CourseEditor() {
             </div>
 
             {/* Prerequisite Editor */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
+            <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
               <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '8px' }}>
                   Prerequisites
                 </h3>
-                <p style={{ fontSize: '13px', color: '#64748b' }}>
+                <p style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
                   Build a prerequisite tree using AND/OR logic
                 </p>
               </div>
@@ -498,11 +497,12 @@ export function CourseEditor() {
                 <div style={{ 
                   marginBottom: '20px',
                   padding: '12px 16px',
-                  background: '#f8fafc',
+                  background: 'var(--surface)',
                   borderRadius: '8px',
                   fontSize: '13px',
-                  color: '#64748b',
-                  fontFamily: 'monospace'
+                  color: 'var(--muted-foreground)',
+                  fontFamily: 'monospace',
+                  overflowWrap: 'anywhere'
                 }}>
                   {selectedCourse.prerequisiteExpression}
                 </div>
@@ -514,11 +514,11 @@ export function CourseEditor() {
                   <div style={{ 
                     padding: '32px',
                     textAlign: 'center',
-                    background: '#fafafa',
+                    background: 'var(--surface)',
                     borderRadius: '12px',
-                    border: '2px dashed #e2e8f0'
+                    border: '2px dashed var(--border)'
                   }}>
-                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginBottom: '16px' }}>
                       No prerequisites defined
                     </p>
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -548,9 +548,9 @@ export function CourseEditor() {
                         style={{
                           padding: '8px 12px',
                           fontSize: '13px',
-                          color: '#64748b',
+                          color: 'var(--muted-foreground)',
                           background: 'transparent',
-                          border: '1px dashed #e2e8f0',
+                          border: '1px dashed var(--border)',
                           borderRadius: '8px',
                           cursor: 'pointer',
                           marginRight: '8px'
@@ -563,9 +563,9 @@ export function CourseEditor() {
                         style={{
                           padding: '8px 12px',
                           fontSize: '13px',
-                          color: '#64748b',
+                          color: 'var(--muted-foreground)',
                           background: 'transparent',
-                          border: '1px dashed #e2e8f0',
+                          border: '1px dashed var(--border)',
                           borderRadius: '8px',
                           cursor: 'pointer'
                         }}
@@ -581,14 +581,16 @@ export function CourseEditor() {
             {/* Save Bar */}
             {hasChanges() && (
               <div style={{ 
-                padding: '16px 32px', 
-                borderTop: '1px solid #f1f5f9',
-                background: '#fafafa',
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--surface)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
               }}>
-                <p style={{ fontSize: '13px', color: '#64748b' }}>
+                <p style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
                   You have unsaved changes
                 </p>
                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -614,38 +616,19 @@ export function CourseEditor() {
       </div>
 
       {/* Create Course Modal */}
-      {showCreateModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50
-          }}
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: '16px',
-              padding: '32px',
-              width: '100%',
-              maxWidth: '420px'
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#111', marginBottom: '20px' }}>
-              Create New Course
-            </h2>
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="scheduler-popover editor-dialog">
+          <DialogTitle>Create course</DialogTitle>
+          <DialogDescription>Add a course to the catalogue. Prerequisites can be edited after creation.</DialogDescription>
+          <form onSubmit={event => { event.preventDefault(); handleCreateCourse(); }}>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              <label htmlFor="new-course-code" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--foreground)', display: 'block', marginBottom: '6px' }}>
                 Course ID
               </label>
               <Input
+                id="new-course-code"
+                autoFocus
                 type="text"
                 placeholder="e.g., SYSC4907"
                 value={newCourse.id}
@@ -655,10 +638,11 @@ export function CourseEditor() {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              <label htmlFor="new-course-title" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--foreground)', display: 'block', marginBottom: '6px' }}>
                 Title
               </label>
               <Input
+                id="new-course-title"
                 type="text"
                 placeholder="e.g., Engineering Project"
                 value={newCourse.title}
@@ -668,10 +652,11 @@ export function CourseEditor() {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', display: 'block', marginBottom: '6px' }}>
+              <label htmlFor="new-course-credits" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--foreground)', display: 'block', marginBottom: '6px' }}>
                 Credits
               </label>
               <select
+                id="new-course-credits"
                 value={newCourse.credits}
                 onChange={(e) => setNewCourse(prev => ({ ...prev, credits: parseFloat(e.target.value) }))}
                 style={{
@@ -679,9 +664,9 @@ export function CourseEditor() {
                   height: '42px',
                   padding: '0 12px',
                   fontSize: '14px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
-                  background: '#fff'
+                  background: 'var(--surface)'
                 }}
               >
                 <option value={0.25}>0.25</option>
@@ -693,10 +678,10 @@ export function CourseEditor() {
             {createError && (
               <p style={{ 
                 fontSize: '13px', 
-                color: '#dc2626', 
+                color: 'var(--danger)',
                 marginBottom: '16px',
                 padding: '8px 12px',
-                background: '#fef2f2',
+                background: 'var(--danger-soft)',
                 borderRadius: '6px'
               }}>
                 {createError}
@@ -704,16 +689,16 @@ export function CourseEditor() {
             )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateCourse}>
-                Create Course
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? 'Creating…' : 'Create course'}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -755,13 +740,13 @@ function PrerequisiteNodeEditor({
           alignItems: 'center',
           gap: '8px',
           padding: '8px 12px',
-          background: '#f0fdf4',
+          background: 'var(--success-soft)',
           borderRadius: '6px',
-          border: '1px solid #bbf7d0',
+          border: '1px solid var(--success-border)',
           marginLeft: depth > 0 ? '24px' : 0
         }}
       >
-        <span style={{ fontSize: '14px', fontWeight: 500, color: '#166534' }}>
+        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--success)' }}>
           {node.requiredCourseId}
         </span>
         <button
@@ -772,11 +757,11 @@ function PrerequisiteNodeEditor({
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: '#94a3b8',
+            color: 'var(--muted-foreground)',
             borderRadius: '4px'
           }}
-          onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
-          onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-foreground)'}
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -788,9 +773,9 @@ function PrerequisiteNodeEditor({
     <div
       style={{
         border: '1px solid',
-        borderColor: node.nodeType === 'AND' ? '#dbeafe' : '#fce7f3',
+        borderColor: node.nodeType === 'AND' ? 'var(--info-border)' : 'var(--primary-border)',
         borderRadius: '10px',
-        background: node.nodeType === 'AND' ? '#f8faff' : '#fdf4f8',
+        background: node.nodeType === 'AND' ? 'var(--info-soft)' : 'var(--primary-soft)',
         marginLeft: depth > 0 ? '24px' : 0
       }}
     >
@@ -814,8 +799,8 @@ function PrerequisiteNodeEditor({
           style={{
             fontSize: '12px',
             fontWeight: 600,
-            color: node.nodeType === 'AND' ? '#1d4ed8' : '#be185d',
-            background: node.nodeType === 'AND' ? '#dbeafe' : '#fce7f3',
+            color: node.nodeType === 'AND' ? 'var(--info)' : 'var(--primary-text)',
+            background: node.nodeType === 'AND' ? 'var(--info-soft)' : 'var(--primary-soft)',
             padding: '2px 8px',
             borderRadius: '4px',
             textTransform: 'uppercase'
@@ -823,7 +808,7 @@ function PrerequisiteNodeEditor({
         >
           {node.nodeType}
         </span>
-        <span style={{ fontSize: '13px', color: '#64748b' }}>
+        <span style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
           {children.length} {children.length === 1 ? 'item' : 'items'}
         </span>
         <button
@@ -834,11 +819,11 @@ function PrerequisiteNodeEditor({
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: '#94a3b8',
+            color: 'var(--muted-foreground)',
             borderRadius: '4px'
           }}
-          onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
-          onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-foreground)'}
         >
           <X className="w-4 h-4" />
         </button>
@@ -878,7 +863,7 @@ function PrerequisiteNodeEditor({
                   onClick={() => { setShowCourseInput(false); setCourseInputValue(''); }}
                   style={{
                     padding: '8px',
-                    background: '#f1f5f9',
+                    background: 'var(--surface-hover)',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer'
@@ -888,15 +873,15 @@ function PrerequisiteNodeEditor({
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: '8px', marginLeft: depth > 0 ? '24px' : 0, marginTop: '4px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: depth > 0 ? '24px' : 0, marginTop: '4px' }}>
                 <button
                   onClick={() => setShowCourseInput(true)}
                   style={{
                     padding: '6px 10px',
                     fontSize: '12px',
-                    color: '#64748b',
+                    color: 'var(--muted-foreground)',
                     background: 'transparent',
-                    border: '1px dashed #d1d5db',
+                    border: '1px dashed var(--border)',
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}
@@ -908,9 +893,9 @@ function PrerequisiteNodeEditor({
                   style={{
                     padding: '6px 10px',
                     fontSize: '12px',
-                    color: '#64748b',
+                    color: 'var(--muted-foreground)',
                     background: 'transparent',
-                    border: '1px dashed #d1d5db',
+                    border: '1px dashed var(--border)',
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}
@@ -922,9 +907,9 @@ function PrerequisiteNodeEditor({
                   style={{
                     padding: '6px 10px',
                     fontSize: '12px',
-                    color: '#64748b',
+                    color: 'var(--muted-foreground)',
                     background: 'transparent',
-                    border: '1px dashed #d1d5db',
+                    border: '1px dashed var(--border)',
                     borderRadius: '6px',
                     cursor: 'pointer'
                   }}

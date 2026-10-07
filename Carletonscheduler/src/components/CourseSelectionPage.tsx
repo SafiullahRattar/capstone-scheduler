@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { X, BookOpen, GraduationCap, ArrowRight, Loader2, Search } from 'lucide-react';
+import { Button } from './ui/button';
 import { searchCourses, getCourseByCode, type Course } from '../utils/courseData';
 import type { ElectiveRequirement } from '../types/electives';
-import { getVisibleTerms, getTermLabel, getTermShortLabel } from '../utils/termUtils';
-import { buildElectiveToken, getElectiveSlotCount, getElectiveTokenCategory, getElectiveTokenIndex, getMissingElectiveTokenNumbers } from '../utils/electiveUtils';
+import type { AuditRequirement, RequirementChoices } from '../types/audit';
+import { AuditRequirementTree } from './course-selection/AuditRequirementTree';
+import { getRegistrationTerms, getTermLabel } from '../utils/termUtils';
+import { buildElectiveToken, getElectiveSlotCount, getElectiveTokenCategory, getElectiveTokenIndex } from '../utils/electiveUtils';
 import {
   validatePrerequisitesFromTree,
   type PrerequisiteValidationResult,
@@ -11,19 +14,23 @@ import {
 } from '@shared/prerequisite-evaluator';
 import { fetchElectiveCatalog } from '../utils/electiveCatalog';
 import { mergeElectiveRequirements } from '../utils/electiveRequirements';
+import { TermTabs } from './TermTabs';
+import { PrerequisiteOverrideDialog } from './PrerequisiteOverrideDialog';
+import { describePrerequisiteIssues } from '@shared/prerequisite-reasons';
 import {
-  AuditSummaryCard,
   CourseSelectionHeader,
   GenerateScheduleSidebar,
   ManualElectivePicker,
   SearchPanel,
   SelectedCoursesPanel,
-  TermSelectionTabs,
 } from './course-selection/CourseSelectionSections';
 
 const DEBOUNCE_MS = 300;
 
 interface CourseSelectionPageProps {
+  priorScheduledCourses: string[];
+  prerequisiteOverrides: string[];
+  onPrerequisiteOverridesChange: Dispatch<SetStateAction<string[]>>;
   hasAuditData: boolean;
   completedCourses: string[];
   currentCourses: Array<{ courseId: string; term: string }>;
@@ -35,13 +42,25 @@ interface CourseSelectionPageProps {
     studentId: string;
     program: string;
   };
-  onGenerateSchedules: (courses: string[], termOverride?: string) => void;
-  onStartOver: () => void;
+  onGenerateSchedules: (courses: string[], termOverride?: string) => Promise<void>;
   activeTerm: string;
-  onTermChange: (term: string) => void;
+  onChangeTerm: (term: string) => void;
+  /** Courses planned in other terms, mapped to that term. */
+  plannedInOtherTerms?: Record<string, string>;
+  /** Elective slots already planned in other terms, by category. */
+  otherTermElectiveCounts?: Record<string, { count: number; term: string }>;
+  selectedCourses: string[];
+  onSelectionChange: Dispatch<SetStateAction<string[]>>;
+  auditRequirements: AuditRequirement[];
+  requirementChoices: RequirementChoices;
+  onRequirementChoicesChange: Dispatch<SetStateAction<RequirementChoices>>;
+  courseGrades: Record<string, string>;
 }
 
 export function CourseSelectionPage({
+  priorScheduledCourses,
+  prerequisiteOverrides,
+  onPrerequisiteOverridesChange,
   hasAuditData,
   completedCourses,
   currentCourses,
@@ -50,28 +69,50 @@ export function CourseSelectionPage({
   onElectiveRequirementsChange,
   studentInfo,
   onGenerateSchedules,
-  onStartOver,
   activeTerm,
-  onTermChange
+  onChangeTerm,
+  plannedInOtherTerms = {},
+  otherTermElectiveCounts = {},
+  selectedCourses,
+  onSelectionChange: setSelectedCourses,
+  auditRequirements,
+  requirementChoices,
+  onRequirementChoicesChange: setRequirementChoices,
+  courseGrades,
 }: CourseSelectionPageProps) {
   const [catalogElectiveRequirements, setCatalogElectiveRequirements] = useState<ElectiveRequirement[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Course[]>([]);
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [catalogView, setCatalogView] = useState<'requirements' | 'electives' | 'search'>(hasAuditData ? 'requirements' : 'search');
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [courseDetails, setCourseDetails] = useState<Map<string, Course>>(new Map());
   const [showResults, setShowResults] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [prerequisiteValidation, setPrerequisiteValidation] = useState<Record<string, PrerequisiteValidationResult>>({});
-  const [completedOpen, setCompletedOpen] = useState(false);
-  const [enrolledOpen, setEnrolledOpen] = useState(false);
-  const [remainingOpen, setRemainingOpen] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pendingOverride, setPendingOverride] = useState<{ course: Course; requirementId?: string; issues: string[] } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const availableElectiveRequirements = mergeElectiveRequirements(electiveRequirements, catalogElectiveRequirements);
+
+  useEffect(() => {
+    const missing = selectedCourses.filter(code => !code.startsWith('ELECTIVE:') && !courseDetails.has(code));
+    if (!missing.length) return;
+    let cancelled = false;
+    Promise.all(missing.map(getCourseByCode)).then(courses => {
+      if (cancelled) return;
+      setCourseDetails(prev => {
+        const next = new Map(prev);
+        courses.forEach(course => { if (course) next.set(course.code, course); });
+        return next;
+      });
+    });
+    return () => { cancelled = true; };
+  }, [selectedCourses, courseDetails]);
+
+  useEffect(() => { setGenerationError(null); }, [selectedCourses, activeTerm]);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +135,6 @@ export function CourseSelectionPage({
   useEffect(() => {
     if (remainingCourses.length > 0) {
       const fetchAllRemaining = async () => {
-        setIsLoadingDetails(true);
         const coursePromises = remainingCourses.map(code => getCourseByCode(code));
         const courses = await Promise.all(coursePromises);
         
@@ -107,7 +147,6 @@ export function CourseSelectionPage({
           });
           return newMap;
         });
-        setIsLoadingDetails(false);
       };
       fetchAllRemaining();
     }
@@ -116,21 +155,12 @@ export function CourseSelectionPage({
   const CURRENT_TERM = activeTerm;
 
   // Derive visible terms from the system clock
-  const visibleTerms = getVisibleTerms();
+  const visibleTerms = getRegistrationTerms();
+  if (!visibleTerms.some(term => term.code === activeTerm)) {
+    visibleTerms.unshift({ code: activeTerm, role: 'previous' });
+  }
 
   const getSemesterName = (termCode: string) => getTermLabel(termCode);
-  const getSemesterShortName = (termCode: string) => getTermShortLabel(termCode);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowResults(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -162,6 +192,13 @@ export function CourseSelectionPage({
     setIsSearching(false);
   }, [CURRENT_TERM]);
 
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      setIsSearching(true);
+      performSearch(searchQuery);
+    }
+  }, [performSearch]);
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     
@@ -186,68 +223,77 @@ export function CourseSelectionPage({
     }, DEBOUNCE_MS);
   };
 
-  const addCourse = async (courseCode: string) => {
-    if (!selectedCourses.includes(courseCode)) {
-      setSelectedCourses([...selectedCourses, courseCode]);
-      // Don't fetch details for elective category tokens
-      if (!courseCode.startsWith('ELECTIVE:')) {
-        const course = await getCourseByCode(courseCode);
-        if (course) {
-          setCourseDetails(new Map(courseDetails.set(courseCode, course)));
-
-          // Auto-Switch Guard (Prompt 4.3): if the course is NOT offered in the
-          // current activeTerm but IS available in another visible term, pivot the
-          // UI to that term automatically.
-          if (course.terms && course.terms.length > 0 && !course.terms.includes(CURRENT_TERM)) {
-            const visibleCodes = visibleTerms.map(vt => vt.code);
-            const matchingVisibleTerm = course.terms.find(t => visibleCodes.includes(t));
-            if (matchingVisibleTerm) {
-              onTermChange(matchingVisibleTerm);
-              setToastMessage(`Switching view to ${getTermLabel(matchingVisibleTerm)} to match your selection.`);
-            }
-          }
-        }
-      }
-    }
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowResults(false);
+  const commitCourse = (courseCode: string, requirementId?: string) => {
+    setSelectedCourses(previous => previous.includes(courseCode) ? previous : [...previous, courseCode]);
+    if (requirementId) setRequirementChoices(previous => ({ ...previous, [requirementId]: Array.from(new Set([...(previous[requirementId] || []), courseCode])) }));
   };
 
-  const addAllCourses = async (courseCodes: string[]) => {
-    // Prompt 4.4: Only add courses offered in the currently active tab
-    const filteredCodes = courseCodes.filter(code => {
-      if (code.startsWith('ELECTIVE:')) return true; // Always include elective tokens
-      const details = courseDetails.get(code);
-      if (!details || !details.terms) return false;
-      return details.terms.includes(CURRENT_TERM);
-    });
-    const toAdd = filteredCodes.filter(c => !selectedCourses.includes(c));
-    if (toAdd.length === 0) return;
-    
-    setSelectedCourses(prev => [...prev, ...toAdd]);
-    
-    // Only fetch details for non-elective-token courses
-    const realCourses = toAdd.filter(c => !c.startsWith('ELECTIVE:'));
-    const coursePromises = realCourses.map(code => getCourseByCode(code));
-    const courses = await Promise.all(coursePromises);
-    
-    setCourseDetails(prev => {
-      const newMap = new Map(prev);
-      courses.forEach((course, index) => {
-        if (course) {
-          newMap.set(realCourses[index], course);
-        }
-      });
-      return newMap;
-    });
+  const addCourse = async (courseCode: string, requirementId?: string) => {
+    if (selectedCourses.includes(courseCode)) { commitCourse(courseCode, requirementId); return; }
+    if (plannedInOtherTerms[courseCode]) {
+      setToastMessage(`${courseCode} is already selected for ${getTermLabel(plannedInOtherTerms[courseCode])}.`);
+      return;
+    }
+    // Don't fetch details for elective category tokens
+    if (courseCode.startsWith('ELECTIVE:')) { commitCourse(courseCode, requirementId); return; }
+    const course = await getCourseByCode(courseCode);
+    if (!course) return;
+    setCourseDetails(previous => new Map(previous).set(courseCode, course));
+    if (hasAuditData && !prerequisiteOverrides.includes(courseCode)) {
+      const validation = validatePrerequisitesFromTree(course.prerequisiteExpression, course.prerequisiteTree || [], { completedCourses, plannedCourses: priorScheduledCourses, courseGrades, currentYear: 'FOURTH_YEAR', hasSpecialPermission: false });
+      if (!validation.isValid) {
+        setPendingOverride({ course, requirementId, issues: describePrerequisiteIssues(validation) });
+        return;
+      }
+    }
+    commitCourse(courseCode, requirementId);
+
+    // Each term has its own plan, so point out a better term instead of switching away.
+    if (course.terms && course.terms.length > 0 && !course.terms.includes(CURRENT_TERM)) {
+      const visibleCodes = visibleTerms.map(vt => vt.code);
+      const matchingVisibleTerm = course.terms.find(t => visibleCodes.includes(t));
+      if (matchingVisibleTerm) {
+        setToastMessage(`${courseCode} has no ${getTermLabel(CURRENT_TERM)} sections. It's offered in ${getTermLabel(matchingVisibleTerm)}.`);
+      }
+    }
   };
 
   const removeCourse = (courseCode: string) => {
-    setSelectedCourses(selectedCourses.filter(code => code !== courseCode));
+    setSelectedCourses(previous => previous.filter(code => code !== courseCode));
+    onPrerequisiteOverridesChange(previous => previous.filter(code => code !== courseCode));
+  };
+
+  const chooseRequirementCourse = async (requirementId: string, code: string) => {
+    await addCourse(code, requirementId);
+  };
+
+  const unchooseRequirementCourse = (requirementId: string, code: string) => {
+    setRequirementChoices(previous => ({ ...previous, [requirementId]: (previous[requirementId] || []).filter(item => item !== code) }));
+    if (!Object.entries(requirementChoices).some(([id, codes]) => id !== requirementId && codes.includes(code))) removeCourse(code);
+  };
+
+  const includeAuditElective = (requirementId: string, elective: ElectiveRequirement, courseCount: number) => {
+    const slotsLeft = getElectiveSlotCount(elective) - (otherTermElectiveCounts[elective.category]?.count || 0);
+    if (slotsLeft <= 0) return;
+    const count = Math.min(Math.max(1, courseCount), slotsLeft);
+    const tokens = Array.from({ length: count }, (_, index) => buildElectiveToken(elective.category, index + 1));
+    setSelectedCourses(previous => [...previous.filter(code => getElectiveTokenCategory(code) !== elective.category), ...tokens]);
+    setRequirementChoices(previous => ({ ...previous, [requirementId]: tokens }));
+    onElectiveRequirementsChange(mergeElectiveRequirements(electiveRequirements, [elective]));
+  };
+
+  const removeAuditElective = (category: string) => {
+    setSelectedCourses(previous => previous.filter(code => getElectiveTokenCategory(code) !== category));
   };
 
   const addElectiveCategory = (category: string) => {
+    const requirement = availableElectiveRequirements.find(item => item.category === category);
+    const otherTerm = otherTermElectiveCounts[category];
+    const usedHere = selectedCourses.filter(code => getElectiveTokenCategory(code) === category).length;
+    if (requirement && requirement.creditsNeeded > 0 && otherTerm && usedHere + otherTerm.count >= getElectiveSlotCount(requirement)) {
+      setToastMessage(`${requirement.label} is already fully planned, including ${getTermLabel(otherTerm.term)}.`);
+      return;
+    }
     const existingIndices = selectedCourses
       .filter((code) => getElectiveTokenCategory(code) === category)
       .map((code) => getElectiveTokenIndex(code))
@@ -286,6 +332,8 @@ export function CourseSelectionPage({
       try {
         const transcript: StudentTranscript = {
           completedCourses: completedCourses.map(courseId => courseId.toUpperCase()),
+          plannedCourses: priorScheduledCourses,
+          courseGrades,
           currentYear: 'FOURTH_YEAR',
           hasSpecialPermission: false,
         };
@@ -319,7 +367,7 @@ export function CourseSelectionPage({
     return () => {
       isCancelled = true;
     };
-  }, [hasAuditData, remainingCourses, selectedCourses, completedCourses, courseDetails]);
+  }, [hasAuditData, remainingCourses, selectedCourses, completedCourses, courseDetails, courseGrades, priorScheduledCourses.join('|')]);
 
   const areAllPrerequisitesMet = (courseCode: string): boolean => {
     if (!hasAuditData) return true;
@@ -328,190 +376,118 @@ export function CourseSelectionPage({
     return validation.isValid;
   };
 
-  const getMissingPrerequisites = (courseCode: string): string[] => {
-    const validation = prerequisiteValidation[courseCode];
-    return validation?.missingCourses || [];
-  };
-
-  const handleGenerateSchedules = () => {
+  const handleGenerateSchedules = async () => {
+    if (isBuilding) return;
+    setGenerationError(null);
     // Separate elective tokens from regular courses
     const electiveTokens = selectedCourses.filter(code => code.startsWith('ELECTIVE:'));
     const regularCourses = selectedCourses.filter(code => !code.startsWith('ELECTIVE:'));
     
     const coursesWithSections = regularCourses.filter(code => {
       const course = courseDetails.get(code);
-      return course && course.hasSections !== false;
+      return course && course.hasSections !== false && course.terms?.includes(CURRENT_TERM);
     });
     
     if (coursesWithSections.length === 0 && electiveTokens.length === 0) {
-      alert('None of the selected courses have sections available in the database.\n\nPlease select different courses or check back later.');
+      setGenerationError(`No sections are loaded for these courses in ${getTermLabel(CURRENT_TERM)}. Choose another term or course.`);
       return;
     }
     
     const skippedRegular = regularCourses.filter(code => !coursesWithSections.includes(code));
     if (skippedRegular.length > 0) {
-      alert(`The following courses will be skipped (no sections available):\n${skippedRegular.join(', ')}\n\nGenerating schedule with ${coursesWithSections.length} courses${electiveTokens.length > 0 ? ` + ${electiveTokens.length} elective category(s)` : ''}.`);
+      setGenerationError(`${skippedRegular.join(', ')} ${skippedRegular.length === 1 ? 'has' : 'have'} no sections in ${getTermLabel(CURRENT_TERM)}. Remove ${skippedRegular.length === 1 ? 'it' : 'them'} or change terms.`);
+      return;
     }
     
     // Pass both regular courses and elective tokens to App.tsx
-    onGenerateSchedules([...coursesWithSections, ...electiveTokens], CURRENT_TERM);
-  };
-
-  const handleAutoFillSelection = async () => {
-    setIsGenerating(true);
+    setIsBuilding(true);
     try {
-      const unresolvedCodes = remainingCourses.filter(code => !courseDetails.has(code));
-      if (unresolvedCodes.length > 0) {
-        const fetchedCourses = await Promise.all(unresolvedCodes.map(code => getCourseByCode(code)));
-        setCourseDetails(prev => {
-          const newMap = new Map(prev);
-          fetchedCourses.forEach(course => {
-            if (course) {
-              newMap.set(course.code, course);
-            }
-          });
-          return newMap;
-        });
-      }
-
-      const detailsMap = new Map(courseDetails);
-      if (unresolvedCodes.length > 0) {
-        const fetchedCourses = await Promise.all(unresolvedCodes.map(code => getCourseByCode(code)));
-        fetchedCourses.forEach(course => {
-          if (course) {
-            detailsMap.set(course.code, course);
-          }
-        });
-      }
-
-      const transcript: StudentTranscript = {
-        completedCourses: completedCourses.map(courseId => courseId.toUpperCase()),
-        currentYear: 'FOURTH_YEAR',
-        hasSpecialPermission: false,
-      };
-      const validationResults = hasAuditData
-        ? Object.fromEntries(
-            remainingCourses.map((courseId) => {
-              const course = detailsMap.get(courseId);
-              return [
-                courseId,
-                validatePrerequisitesFromTree(
-                  course?.prerequisiteExpression,
-                  course?.prerequisiteTree || [],
-                  transcript
-                ),
-              ] as const;
-            })
-          )
-        : {};
-
-      const maxCourses = 6;
-      const autoSelected: string[] = [];
-
-      for (const code of remainingCourses) {
-        if (autoSelected.length >= maxCourses) break;
-        const details = detailsMap.get(code);
-        if (!details) continue;
-        const isOfferedNow = details.terms?.includes(CURRENT_TERM);
-        if (!isOfferedNow) continue;
-        if (hasAuditData && validationResults[code] && !validationResults[code].isValid) continue;
-        autoSelected.push(code);
-      }
-
-      if (autoSelected.length < maxCourses) {
-        for (const elective of electiveRequirements) {
-          if (autoSelected.length >= maxCourses) break;
-          const slotCount = getElectiveSlotCount(elective);
-          for (const tokenNumber of getMissingElectiveTokenNumbers([], elective.category, slotCount)) {
-            if (autoSelected.length >= maxCourses) break;
-            autoSelected.push(buildElectiveToken(elective.category, tokenNumber));
-          }
-        }
-      }
-
-      setSelectedCourses(autoSelected);
+      await onGenerateSchedules([...coursesWithSections, ...electiveTokens], CURRENT_TERM);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Could not generate schedules. Please try again.');
     } finally {
-      setIsGenerating(false);
+      setIsBuilding(false);
     }
   };
 
   const coursesWithSectionsCount = selectedCourses.filter(code => {
     if (code.startsWith('ELECTIVE:')) return true; // Elective tokens always count
     const course = courseDetails.get(code);
-    return course && course.hasSections !== false;
+    return course && course.hasSections !== false && course.terms?.includes(CURRENT_TERM);
   }).length;
 
   return (
-    <div className="min-h-screen" style={{ background: '#f8fafc' }}>
-      <main className="max-w-5xl mx-auto" style={{ padding: '40px 24px 64px' }}>
-        <CourseSelectionHeader onStartOver={onStartOver} />
-        <TermSelectionTabs
-          visibleTerms={visibleTerms}
-          currentTerm={CURRENT_TERM}
-          onTermChange={onTermChange}
-          getTermLabel={getTermLabel}
-        />
-        <AuditSummaryCard
-          hasAuditData={hasAuditData}
-          studentInfo={studentInfo}
-          completedCourses={completedCourses}
-          currentCourses={currentCourses}
-          remainingCourses={remainingCourses}
-          electiveRequirements={electiveRequirements}
-          selectedCourses={selectedCourses}
-          courseDetails={courseDetails}
-          currentTerm={CURRENT_TERM}
-          completedOpen={completedOpen}
-          enrolledOpen={enrolledOpen}
-          remainingOpen={remainingOpen}
-          isLoadingDetails={isLoadingDetails}
-          isGenerating={isGenerating}
-          onToggleCompleted={() => setCompletedOpen(!completedOpen)}
-          onToggleEnrolled={() => setEnrolledOpen(!enrolledOpen)}
-          onToggleRemaining={() => setRemainingOpen(!remainingOpen)}
-          onGenerateSmartSchedule={handleAutoFillSelection}
-          onAddCourse={addCourse}
-          onAddAllCourses={addAllCourses}
-          onRemoveCourse={removeCourse}
-          onClearSelected={() => setSelectedCourses([])}
-          areAllPrerequisitesMet={areAllPrerequisitesMet}
-          getMissingPrerequisites={getMissingPrerequisites}
-          getTermLabel={getSemesterName}
-          getTermShortLabel={getSemesterShortName}
-        />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px' }}>
-          <div className="space-y-4">
-            <SearchPanel
+    <div className="scheduler-page">
+      <main className="page-container planner-container">
+        <div className="planner-toolbar">
+        <CourseSelectionHeader />
+        <TermTabs activeTerm={CURRENT_TERM} onChangeTerm={onChangeTerm} disabled={isBuilding} label="Courses term" />
+        </div>
+        <div className="course-layout">
+          <div className="course-discovery">
+            {hasAuditData && <div className="catalog-navigation" aria-label="Course sources">
+              <button aria-pressed={catalogView === 'requirements'} onClick={() => setCatalogView('requirements')}><GraduationCap size={16} /> Degree map</button>
+              <button aria-pressed={catalogView === 'search'} onClick={() => setCatalogView('search')}><Search size={16} /> Search catalogue</button>
+              <button aria-pressed={catalogView === 'electives'} onClick={() => setCatalogView('electives')}><BookOpen size={16} /> Electives</button>
+            </div>}
+            {(!hasAuditData || catalogView === 'search') && <SearchPanel
               searchRef={searchRef}
               searchQuery={searchQuery}
               searchResults={searchResults}
               showResults={showResults}
               isSearching={isSearching}
               selectedCourses={selectedCourses}
+              plannedInOtherTerms={plannedInOtherTerms}
               currentTerm={CURRENT_TERM}
               onSearch={handleSearch}
-              onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowResults(true)}
+              onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
               onAddCourse={addCourse}
               getTermLabel={getSemesterName}
-            />
-            <ManualElectivePicker
+            />}
+            {hasAuditData && (catalogView === 'requirements' || catalogView === 'electives') && <AuditRequirementTree
+              program={studentInfo?.program}
+              requirements={auditRequirements}
+              completedCourses={completedCourses}
+              currentCourses={currentCourses}
+              remainingCourses={remainingCourses}
+              electives={availableElectiveRequirements}
+              courseDetails={courseDetails}
+              courseGrades={courseGrades}
+              priorScheduledCourses={priorScheduledCourses}
+              prerequisiteOverrides={prerequisiteOverrides}
+              selectedCourses={selectedCourses}
+              choices={requirementChoices}
+              activeTerm={activeTerm}
+              onChoose={chooseRequirementCourse}
+              onUnchoose={unchooseRequirementCourse}
+              plannedInOtherTerms={plannedInOtherTerms}
+              otherTermElectiveCounts={otherTermElectiveCounts}
+              onIncludeElective={includeAuditElective}
+              onRemoveElective={removeAuditElective}
+              electivesOnly={catalogView === 'electives'}
+            />}
+            {!hasAuditData && <ManualElectivePicker
               electiveRequirements={availableElectiveRequirements}
               selectedCourses={selectedCourses}
+              otherTermElectiveCounts={otherTermElectiveCounts}
               onAddElectiveCategory={addElectiveCategory}
-            />
+              onRemoveCourse={removeCourse}
+            />}
+          </div>
+          <aside className="selection-column" id="selected-courses" aria-label="Your course plan">
             <SelectedCoursesPanel
               selectedCourses={selectedCourses}
               completedCourses={completedCourses}
               courseDetails={courseDetails}
               electiveRequirements={availableElectiveRequirements}
               hasAuditData={hasAuditData}
+              prerequisiteOverrides={prerequisiteOverrides}
               onRemoveCourse={removeCourse}
               areAllPrerequisitesMet={areAllPrerequisitesMet}
               prerequisiteValidation={prerequisiteValidation}
-            />
-          </div>
-
+              currentTerm={CURRENT_TERM}
+              onClear={() => { setSelectedCourses([]); onPrerequisiteOverridesChange([]); }}
+            >
           <GenerateScheduleSidebar
             selectedCourses={selectedCourses}
             coursesWithSectionsCount={coursesWithSectionsCount}
@@ -519,9 +495,27 @@ export function CourseSelectionPage({
             hasAuditData={hasAuditData}
             onGenerateSchedules={handleGenerateSchedules}
             getTermLabel={getTermLabel}
+            isGenerating={isBuilding}
+            error={generationError}
           />
+            </SelectedCoursesPanel>
+          </aside>
+        </div>
+        <div className="mobile-planbar">
+          {generationError && <p role="alert" className="mobile-plan-error">{generationError}</p>}
+          <button onClick={() => document.getElementById('selected-courses')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{selectedCourses.length} selected <span>View plan</span></button>
+          <Button onClick={handleGenerateSchedules} disabled={selectedCourses.length === 0 || isBuilding}>
+            {isBuilding ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} {isBuilding ? 'Finding schedules' : 'Find schedules'}
+          </Button>
         </div>
       </main>
+      <PrerequisiteOverrideDialog course={pendingOverride?.course.code || null} issues={pendingOverride?.issues || []} onCancel={() => setPendingOverride(null)} onConfirm={() => {
+        if (!pendingOverride) return;
+        const { course, requirementId } = pendingOverride;
+        onPrerequisiteOverridesChange(previous => Array.from(new Set([...previous, course.code])));
+        commitCourse(course.code, requirementId);
+        setPendingOverride(null);
+      }} />
 
       {/* Toast notification */}
       {toastMessage && (
@@ -529,7 +523,7 @@ export function CourseSelectionPage({
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3"
           style={{
             padding: '14px 20px',
-            background: '#111',
+            background: 'var(--popover)',
             color: '#fff',
             borderRadius: '10px',
             boxShadow: '0 8px 24px rgba(0,0,0,0.2)',

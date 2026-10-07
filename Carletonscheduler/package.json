@@ -1,5 +1,5 @@
 {
-      "name": "Login Page",
+      "name": "carleton-smart-scheduler-client",
       "version": "0.1.0",
       "private": true,
       "dependencies": {

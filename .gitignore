@@ -33,3 +33,13 @@ dist/
 *.swo
 docs/
 PRESENTATION.md
+
+# Local student data and generated project material
+/*[Aa]udit*.pdf
+/*[Aa]udit*.txt
+/*-audit.html
+/final_report*
+/G67*
+/*presentation*
+/.agents/
+/skills-lock.json

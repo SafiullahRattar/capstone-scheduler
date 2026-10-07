@@ -37,6 +37,37 @@ test('passes course prerequisite when completed', () => {
   assert.equal(result.expressionEvaluated, 'COMP1006')
 })
 
+test('earlier scheduled prerequisites satisfy planning eligibility without inventing completion or grades', () => {
+  const nodes: PrerequisiteNodeData[] = [{ id: 'course', nodeType: 'COURSE', requiredCourseId: 'ECOR1045', requiredYear: null, requiredGrade: 'C-', parentId: null }]
+  const student = transcript({ plannedCourses: ['ECOR1045'] })
+  const result = validatePrerequisitesFromTree('ECOR1045[C-]', nodes, student)
+  assert.equal(result.isValid, true)
+  assert.deepEqual(result.plannedPrerequisites, ['ECOR1045'])
+  assert.deepEqual(result.missingCourses, [])
+  assert.deepEqual(student.completedCourses, [])
+  assert.equal(student.courseGrades, undefined)
+  const removed = validatePrerequisitesFromTree('ECOR1045[C-]', nodes, transcript())
+  assert.equal(removed.isValid, false)
+  assert.deepEqual(removed.missingCourses, ['ECOR1045'])
+})
+
+test('planned prerequisite tracking follows the satisfied AND/OR branches and preserves unmet permission', () => {
+  const nodes: PrerequisiteNodeData[] = [
+    { id: 'root', nodeType: 'AND', requiredCourseId: null, requiredYear: null, requiredGrade: null, parentId: null },
+    { id: 'either', nodeType: 'OR', requiredCourseId: null, requiredYear: null, requiredGrade: null, parentId: 'root' },
+    { id: 'planned', nodeType: 'COURSE', requiredCourseId: 'ECOR1045', requiredYear: null, requiredGrade: null, parentId: 'either' },
+    { id: 'other', nodeType: 'COURSE', requiredCourseId: 'ECOR1053', requiredYear: null, requiredGrade: null, parentId: 'either' },
+    { id: 'permission', nodeType: 'PERMISSION', requiredCourseId: null, requiredYear: null, requiredGrade: null, parentId: 'root' },
+  ]
+  const blocked = validatePrerequisitesFromTree('(ECOR1045 || ECOR1053) && PERMISSION', nodes, transcript({ plannedCourses: ['ECOR1045'] }))
+  assert.equal(blocked.isValid, false)
+  assert.equal(blocked.needsPermission, true)
+  assert.deepEqual(blocked.missingCourses, [])
+  const allowed = validatePrerequisitesFromTree('(ECOR1045 || ECOR1053) && PERMISSION', nodes, transcript({ plannedCourses: ['ECOR1045'], hasSpecialPermission: true }))
+  assert.equal(allowed.isValid, true)
+  assert.deepEqual(allowed.plannedPrerequisites, ['ECOR1045'])
+})
+
 test('fails AND prerequisite when one child is missing', () => {
   const nodes: PrerequisiteNodeData[] = [
     { id: 'root', nodeType: 'AND', requiredCourseId: null, requiredYear: null, requiredGrade: null, parentId: null },

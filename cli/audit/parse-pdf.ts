@@ -62,7 +62,7 @@ function extractHeader(lines: string[]): HeaderInfo {
   let name = ''
   let program = ''
 
-  // Line 1: "Prepared: …          101245709"
+  // Line 1: "Prepared: ...          101000001"
   // Student ID is the 9-digit number, typically at the end of line 1
   for (let i = 0; i < Math.min(lines.length, 5); i++) {
     const idMatch = lines[i].match(/\b(\d{9})\b/)
@@ -149,6 +149,7 @@ interface ParseState {
     hasNeeds: boolean
   } | null
   inSetAside: boolean
+  groupTitle?: string
 }
 
 function flushRequirement(state: ParseState): void {
@@ -161,7 +162,8 @@ function flushRequirement(state: ParseState): void {
 
   // Extract course codes from title
   const coursePattern = /[A-Z]{3,4}\s*(?:\d{4}|\d{1}XXX)/g
-  const courseCodes = (title.match(coursePattern) || []).map((c: string) =>
+  // "(formerly ALSS 1000)" names an old code for the same course, not another requirement.
+  const courseCodes = (title.replace(/\(formerly[^)]*\)/gi, '').match(coursePattern) || []).map((c: string) =>
     c.replace(/\s+/g, ''),
   )
 
@@ -194,6 +196,7 @@ function flushRequirement(state: ParseState): void {
     creditsCompleted: req.creditsCompleted,
     creditsInProgress: req.creditsInProgress,
     courseOptions,
+    ...(state.groupTitle ? { groupTitle: state.groupTitle } : {}),
   })
 }
 
@@ -203,6 +206,7 @@ function processCourse(
   courseId: string,
   grade: string,
   fullLine: string,
+  credits: number,
 ): void {
   const isCurrent =
     grade === 'CUR' ||
@@ -225,7 +229,7 @@ function processCourse(
     grade !== 'NR'
   ) {
     // PDF is chronological — later entry overwrites (keeps latest grade)
-    state.completedCourses.set(courseId, { courseId, grade })
+    state.completedCourses.set(courseId, { courseId, grade, ...(Number.isFinite(credits) && credits >= 0 ? { credits } : {}) })
   }
 }
 
@@ -265,9 +269,11 @@ export function parsePDF(content: string): StudentAuditData {
     }
 
     // Section headers reset inSetAside if we hit a new real section
-    if (SECTION_HEADER.test(line) && !COURSES_SET_ASIDE.test(line)) {
+    const sectionHeader = line.match(SECTION_HEADER)
+    if (sectionHeader && !COURSES_SET_ASIDE.test(line)) {
       flushRequirement(state)
       state.inSetAside = false
+      state.groupTitle = sectionHeader[1].trim()
       continue
     }
 
@@ -344,7 +350,7 @@ export function parsePDF(content: string): StudentAuditData {
       const term = courseMatch[1]
       const courseId = courseMatch[2] + courseMatch[3]
       const grade = courseMatch[5]
-      processCourse(state, term, courseId, grade, line)
+      processCourse(state, term, courseId, grade, line, parseFloat(courseMatch[4]))
       continue
     }
   }

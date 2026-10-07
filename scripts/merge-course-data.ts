@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import path from 'path'
 
 interface CourseData {
   title: string
@@ -24,14 +25,16 @@ async function main() {
   
   // Load the course titles data
   console.log('[LOAD] Loading course titles from course_titles.json...')
-  const courseTitlesContent = await fs.readFile('/home/safi/schoolwork/sysc4907/course_titles.json', 'utf-8')
+  const courseTitlesPath = path.join(process.cwd(), 'course_titles.json')
+  const prerequisitesPath = path.join(process.cwd(), 'course_prerequisites_simple.json')
+  const courseTitlesContent = await fs.readFile(courseTitlesPath, 'utf-8')
   const courseTitlesData: CourseTitlesFile = JSON.parse(courseTitlesContent)
   
   console.log(`[LOAD] Found ${Object.keys(courseTitlesData.courses).length} course titles`)
   
   // Load the prerequisites data
   console.log('[LOAD] Loading prerequisites from course_prerequisites_simple.json...')
-  const prerequisitesContent = await fs.readFile('/home/safi/schoolwork/sysc4907/course_prerequisites_simple.json', 'utf-8')
+  const prerequisitesContent = await fs.readFile(prerequisitesPath, 'utf-8')
   const prerequisitesData: Record<string, PrerequisiteEntry> = JSON.parse(prerequisitesContent)
   
   console.log(`[LOAD] Found ${Object.keys(prerequisitesData).length} courses with prerequisites`)
@@ -65,7 +68,7 @@ async function main() {
   // Save the enhanced prerequisites data
   console.log('[SAVE] Saving enhanced course_prerequisites_simple.json...')
   const enhancedContent = JSON.stringify(prerequisitesData, null, 2)
-  await fs.writeFile('/home/safi/schoolwork/sysc4907/course_prerequisites_simple.json', enhancedContent)
+  await fs.writeFile(prerequisitesPath, enhancedContent)
   
   console.log('[SUCCESS] Course data merge completed!')
   console.log('[INFO] course_prerequisites_simple.json now includes title, credits, and description fields')

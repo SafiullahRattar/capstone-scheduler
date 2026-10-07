@@ -14,8 +14,11 @@
 import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
 import { validatePrerequisites, StudentTranscript } from '../../cli/prerequisite-validator'
+import { authenticateToken, requireRole } from '../middleware/auth'
 
 const router = Router()
+
+router.use(authenticateToken, requireRole('ADMIN'))
 
 /**
  * GET /api/students/:studentId
@@ -139,7 +142,6 @@ router.post('/:studentId/validate', async (req: Request, res: Response) => {
  * Complexity: O(n * m) where n = total courses, m = avg prerequisite tree depth
  * 
  * Optimization: Could be cached and updated incrementally as student completes courses
- * Defense point: Discuss trade-offs between computation time and freshness
  */
 router.get('/:studentId/eligible', async (req: Request, res: Response) => {
   try {

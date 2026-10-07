@@ -69,10 +69,7 @@ const parsers: Record<AuditFormat, AuditParser> = {
   'pdf-text': parsePDF,
 }
 
-/**
- * Allow hot-swapping a parser at runtime (useful for tests and the
- * prompt-by-prompt migration).
- */
+/** Allow a parser to be replaced at runtime for tests. */
 export function registerParser(format: AuditFormat, parser: AuditParser): void {
   parsers[format] = parser
 }

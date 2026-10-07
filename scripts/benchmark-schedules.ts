@@ -73,7 +73,7 @@ async function timeScenario(term: string, scenario: Scenario, runs: number, incl
 
   for (let i = 0; i < runs; i++) {
     const start = performance.now()
-    const schedules = await generateSchedulesForCourses(prisma, {
+    const { schedules } = await generateSchedulesForCourses(prisma, {
       courseIds: scenario.courseIds,
       term,
       maxSchedules: 100,

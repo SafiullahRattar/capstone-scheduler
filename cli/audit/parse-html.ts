@@ -75,12 +75,17 @@ function extractNameAndProgram(
   let rawName = ''
   let rawProgram = ''
 
-  if (bachelorIdx > 0) {
+  // Live audits can leave the name out of the title (an empty commented-out div),
+  // so the program line may come first.
+  if (bachelorIdx >= 0) {
     rawName = ownText.slice(0, bachelorIdx).trim()
     rawProgram = ownText.slice(bachelorIdx).trim()
   } else {
     // Fallback: take the whole thing as name
     rawName = ownText
+  }
+  if (!rawName) {
+    rawName = $('#headerInfo span').first().text().replace(/\s+/g, ' ').trim()
   }
 
   // Flip "Last, First" → "First Last"
@@ -163,6 +168,9 @@ function extractRequirements(
 
   $('div.subrequirement').each((_i, el) => {
     const $sub = $(el)
+    const groupHeading = $sub.closest('div.requirement').find('.reqTitle').first().clone()
+    groupHeading.find('br').replaceWith(' ')
+    const groupTitle = groupHeading.text().replace(/\s+/g, ' ').trim()
 
     // ── Credits required from attribute ──
     const rqdHoursAttr =
@@ -215,7 +223,8 @@ function extractRequirements(
     // ── Course codes from title ──
     // Matches patterns like "SYSC 4907", "COMP 3005", "ELEC 2XXX"
     const coursePattern = /[A-Z]{3,4}\s*(?:\d{4}|\d{1}XXX)/g
-    const courseCodes = (title.match(coursePattern) || []).map((c: string) =>
+    // "(formerly ALSS 1000)" names an old code for the same course, not another requirement.
+    const courseCodes = (title.replace(/\(formerly[^)]*\)/gi, '').match(coursePattern) || []).map((c: string) =>
       c.replace(/\s+/g, ''),
     )
 
@@ -241,6 +250,7 @@ function extractRequirements(
       creditsCompleted,
       creditsInProgress,
       courseOptions,
+      ...(groupTitle ? { groupTitle } : {}),
     })
   })
 
@@ -274,6 +284,7 @@ function extractCourses($: cheerio.CheerioAPI): CourseExtractionResult {
     const term = $row.find('td.term').text().trim()
     const rawCourse = $row.find('td.course').text().trim()
     const grade = $row.find('td.grade').text().trim()
+    const credits = parseFloat($row.find('td.credit').text().trim())
 
     if (!rawCourse) return
 
@@ -287,7 +298,7 @@ function extractCourses($: cheerio.CheerioAPI): CourseExtractionResult {
       }
     } else if (grade && grade !== 'DEF' && grade !== 'UNS' && grade !== 'F' && grade !== 'X' && grade !== 'NR') {
       // Overwrite previous entry if exists (keep latest grade — DOM is chronological)
-      completedMap.set(courseId, { courseId, grade })
+      completedMap.set(courseId, { courseId, grade, ...(Number.isFinite(credits) && credits >= 0 ? { credits } : {}) })
     }
   })
 

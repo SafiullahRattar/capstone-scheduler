@@ -56,6 +56,17 @@ export interface VisibleTerm {
   role: 'previous' | 'current' | 'upcoming';
 }
 
+/** The current term and the next two terms: one Fall, Winter, and Summer. */
+export function getRegistrationTerms(today: Date = new Date()): VisibleTerm[] {
+  const current = activeTerm(today);
+  const next = nextTerm(current);
+  return [
+    { code: current, role: 'current' },
+    { code: next, role: 'upcoming' },
+    { code: nextTerm(next), role: 'upcoming' },
+  ];
+}
+
 /**
  * Return a rolling window of visible terms.
  *

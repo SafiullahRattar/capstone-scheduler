@@ -1,111 +1,140 @@
-# Smart Scheduler - Carleton Engineering Course Scheduler
+# Carleton Smart Scheduler
 
-A full-stack web application for Carleton University engineering students to validate prerequisites, generate conflict-free timetables, and plan their academic schedule.
+Smart Scheduler was built for a Carleton engineering capstone project. It reads
+an academic audit, checks course prerequisites, and generates schedules from
+locally loaded course and section data. The application has a React/Vite client,
+an Express API, a PostgreSQL database managed through Prisma, and command-line
+tools for importing data.
 
-## Project Status
+The project handles the main audit-import, course-selection, schedule-generation,
+and administration flows. It has not been deployed, and it should be treated as
+a course project rather than a production advising service.
 
-✅ **Completed**: Database schema with Prisma ORM  
-✅ **Completed**: Prerequisite validation with tree-based algorithm  
-✅ **Completed**: REST API backend with Express  
-✅ **Completed**: Schedule generation algorithm (backtracking CSP solver)  
-✅ **Completed**: Academic audit parser  
-✅ **Completed**: React frontend UI (from Figma)  
-🔄 **In Progress**: Frontend-backend integration  
-✅ **Completed**: Comprehensive technical documentation  
+Raw academic audits and reports containing student information are excluded from
+this portfolio repository. The original course repository remains private.
 
-## Prerequisites
+## Team and contributions
 
-- Node.js (v18 or later)
-- PostgreSQL database
-- pnpm (recommended) or npm
+Group G67 consisted of Anas Ayoubi, Hakeem Khan, Pietro Adamvoski, and Safiullah
+Rattar.
 
-## Quick Start
+Pietro worked primarily on the PostgreSQL and Prisma data model, including the
+tree representation used for prerequisite rules. He also contributed to the
+prerequisite evaluator, project integration, and documentation.
 
-### 1. Install Dependencies
+## Requirements
+
+- Node.js 18 or newer
+- PostgreSQL
+- `pdftotext` from Poppler for PDF imports
+
+HTML audit imports do not require `pdftotext`.
+
+## Setup
+
+Install the API and client dependencies:
 
 ```bash
-pnpm install
+npm install
+npm --prefix Carletonscheduler install
 ```
 
-### 2. Set Up Database
-
-1. Create a PostgreSQL database named `smart_scheduler`
-2. Create a `.env` file with your database credentials:
+Set the database connection, JWT secret, and browser origin. These values can be
+kept in an ignored `.env` file and loaded into the shell before starting the
+application.
 
 ```env
-DATABASE_URL="postgresql://username:password@localhost:5432/smart_scheduler?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/smart_scheduler?schema=public"
+JWT_SECRET="replace-with-a-long-random-secret"
+CLIENT_URL="http://localhost:3002"
 ```
-
-### 3. Initialize Database
 
 ```bash
-pnpm run db:setup
-pnpm run db:seed
+set -a
+. ./.env
+set +a
 ```
 
-This will populate the database with 348 Carleton courses and their prerequisites.
-
-### 4. Start the CLI
+Create the schema and load the course and timetable data:
 
 ```bash
-pnpm run cli
+npm run db:setup
+npm run db:seed
 ```
 
-## CLI Commands
-
-- `search <term>` - Search for courses (e.g., `search SYSC`, `search 4907`)
-- `prereq <course>` - Show prerequisites (e.g., `prereq SYSC4907`)
-- `validate <course> <completed>` - Check if prerequisites are met
-- `stats` - Show database statistics
-- `help` - Show all commands
-- `exit` - Exit the CLI
-
-### Example Session:
+For local demonstrations, copy the Fall 2025 and Winter 2026 timetable snapshots
+into simulated Fall 2026, Winter 2027, and Summer 2027 terms:
 
 ```bash
-smart-scheduler> stats
-📊 Database Statistics:
-📚 Courses: 348
-📋 Prerequisites: 322
-🎓 Programs: 0
-📅 Sections: 0
-
-smart-scheduler> search SYSC4907
-🔍 Found 1 course(s) matching "SYSC4907":
-📖 SYSC4907 - SYSC4907
-   Prerequisites: SYSC4001 and fourth-year status in Engineering.
-
-smart-scheduler> prereq SYSC3110
-📖 SYSC3110 - SYSC3110
-📋 Prerequisites: SYSC2100 and SYSC2006.
+npm run db:simulate-terms
 ```
 
-## Database Schema
+These sample terms reuse the original course offerings, sections, CRNs, and
+meeting times. Meeting dates, if present, are shifted forward one year. Summer
+2027 reuses the Winter snapshot because only Fall and Winter source terms exist. They are
+simulated data, not updated Carleton timetable information. The command can be
+rerun without duplicating its samples; run it again after `db:seed`, which
+rebuilds the section data.
 
-The system uses PostgreSQL with Prisma ORM:
+Create a user account. Set `USER_ROLE=ADMIN` only for someone who needs access
+to the administration routes.
 
-- **courses** - Course catalog (348 courses)
-- **prerequisites** - Prerequisite expressions (322 requirements)
-- **sections** - Course sections with schedules (for future timetable integration)
-- **programs** - Engineering program requirements (planned)
-- **student_records** - Student academic records (for testing)
+```bash
+USER_EMAIL="student@example.com" \
+USER_PASSWORD="a-long-unique-password" \
+USER_NAME="Student" \
+USER_ROLE="STUDENT" \
+npm run user:create
+```
 
-## Data Sources
+Start the API and client together:
 
-- **Prerequisites**: Parsed from official Carleton course calendar
-- **Courses**: 348 engineering courses across all departments
-- **Timetables**: Pending integration with supervisor's data files
+```bash
+npm run dev
+```
 
-## Development Commands
+The client runs at `http://localhost:3002`, and the API runs at
+`http://localhost:3001`.
 
-- `pnpm run db:reset` - Reset database (destructive!)
-- `npx prisma studio` - Open database GUI in browser
-- `npx prisma db push` - Apply schema changes
+## Checks
 
-## Project Architecture
+```bash
+npm run test:unit
+npm run server:build
+npm --prefix Carletonscheduler run build
+npm run validate:data
+```
 
-This project follows the Smart Scheduler proposal (G67) requirements:
-- Minimal database schema focused on core functionality
-- Real course data from official sources
-- CLI interface for testing and validation
-- Extensible design for future web interface
+The unit tests focus on prerequisite evaluation and password hashing. API,
+parser, and browser-level integration coverage is still limited.
+
+To run the schedule-generation benchmark against the configured database and
+seeded section data:
+
+```bash
+npm run benchmark:schedules
+```
+
+## Current limits
+
+Audit parsing depends on the layout of Carleton's exported HTML and PDF files.
+HTML gives more reliable results because PDF extraction can lose layout
+information. The parser processes uploaded audits in memory, and the application
+does not retain the raw files. An administrator can store the resulting student
+and course-completion records in PostgreSQL.
+
+Users are stored in the database with scrypt password hashes. The API uses JWTs
+for authenticated requests and checks the administrator role on restricted
+routes. Registration, password reset, token revocation, and rate limiting have
+not been implemented.
+
+Course prerequisites and timetable sections are snapshots and will become stale.
+The frontend API address is configured for local development in
+`Carletonscheduler/src/config/constants.ts`. Database setup currently uses
+`prisma db push` instead of versioned migrations.
+
+## Data sources
+
+Course descriptions and prerequisite rules came from Carleton University course
+pages. Timetable data must be supplied locally in the format used by `Sched.csv`.
+This project is not affiliated with or endorsed by Carleton University.

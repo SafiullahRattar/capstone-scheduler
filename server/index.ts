@@ -13,11 +13,6 @@
  * 3. Single Responsibility Principle: Each endpoint handles one specific operation
  * 4. Open/Closed Principle: Extensible without modifying existing code
  * 
- * For a capstone project defense, this demonstrates:
- * - Understanding of REST API design
- * - Proper error handling and validation
- * - Security considerations (CORS, input sanitization)
- * - Scalable architecture that can grow with requirements
  */
 
 import express, { Request, Response, NextFunction } from 'express'
@@ -53,7 +48,7 @@ if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma
 // Middleware Configuration
 // CORS: Allow frontend (React) to make requests from different origin
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: process.env.CLIENT_URL || 'http://localhost:3002',
   credentials: true
 }))
 

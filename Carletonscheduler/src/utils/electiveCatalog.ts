@@ -15,7 +15,7 @@ interface ApiElectiveResponse {
 
 export async function fetchElectiveCatalog(): Promise<ElectiveRequirement[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/electives`);
+    const response = await fetch(`${API_BASE_URL}/courses/electives`);
     if (!response.ok) {
       return [];
     }

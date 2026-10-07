@@ -1,4 +1,5 @@
 import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
+import { normalizeDeliveryMode, type DeliveryMode } from './deliveryMode';
 import type { TimeSlot } from './scheduleGenerator';
 import type { PrerequisiteNodeData, PrerequisiteValidationResult } from '@shared/prerequisite-evaluator';
 
@@ -38,6 +39,7 @@ export interface CourseSection {
   capacity?: number | null;
   enrolled?: number | null;
   status?: string | null;
+  deliveryMode: DeliveryMode;
   meetings: CourseMeeting[];
   timeSlots: TimeSlot[];
 }
@@ -84,7 +86,7 @@ setInterval(cleanCache, 60 * 1000);
  * - Cancels any in-flight requests when a new search starts
  */
 export async function searchCourses(query: string, term?: string): Promise<Course[]> {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = query.trim().toLowerCase().replace(/^([a-z]{3,4})\s+(\d{4})$/, '$1$2');
   const normalizedTerm = term?.trim() || '';
   
   // Check minimum query length
@@ -149,7 +151,7 @@ export async function searchCourses(query: string, term?: string): Promise<Cours
  * - Returns cached result if available
  */
 export async function getCourseByCode(code: string): Promise<Course | undefined> {
-  const normalizedCode = code.trim().toUpperCase();
+  const normalizedCode = code.trim().toUpperCase().replace(/\s+/g, '');
   
   // Check cache first
   const cached = courseCache.get(normalizedCode);
@@ -208,7 +210,7 @@ export async function getCourseByCode(code: string): Promise<Course | undefined>
   }
 }
 
-export async function getCourseSections(code: string, term: string): Promise<CourseSection[]> {
+export async function getCourseSections(code: string, term = ''): Promise<CourseSection[]> {
   const normalizedCode = code.trim().toUpperCase();
   const cacheKey = `${normalizedCode}:${term}`;
 
@@ -219,7 +221,7 @@ export async function getCourseSections(code: string, term: string): Promise<Cou
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/courses/${encodeURIComponent(normalizedCode)}/sections?term=${encodeURIComponent(term)}`
+      `${API_BASE_URL}/courses/${encodeURIComponent(normalizedCode)}/sections${term ? `?term=${encodeURIComponent(term)}` : ''}`
     );
 
     if (!response.ok) {
@@ -238,6 +240,7 @@ export async function getCourseSections(code: string, term: string): Promise<Cou
       capacity: section.capacity ?? null,
       enrolled: section.enrolled ?? null,
       status: section.status ?? null,
+      deliveryMode: normalizeDeliveryMode(section.deliveryMode),
       meetings: section.meetings || [],
       timeSlots: (section.meetings || []).flatMap((meeting: any) =>
         expandMeetingDays(meeting.days, meeting.startTime, meeting.endTime)

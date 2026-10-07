@@ -17,6 +17,7 @@ export interface RequirementInfo {
   creditsCompleted: number
   creditsInProgress: number
   courseOptions: string[] // List of courses that satisfy this requirement
+  groupTitle?: string
 }
 
 export interface StudentAuditData {
@@ -143,7 +144,7 @@ function isGenericRequirementTitle(title: string): boolean {
 }
 
 function extractCourseCodes(title: string): string[] {
-  return (title.match(COURSE_CODE_PATTERN) || [])
+  return (title.replace(/\(formerly[^)]*\)/gi, '').match(COURSE_CODE_PATTERN) || [])
     .map(code => code.replace(/\s+/g, ''))
 }
 

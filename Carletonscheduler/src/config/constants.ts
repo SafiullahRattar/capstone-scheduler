@@ -1,5 +1,12 @@
 export const API_BASE_URL = 'http://localhost:3001/api';
 
+export function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  const token = localStorage.getItem('auth_token');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return fetch(input, { ...init, headers });
+}
+
 export const BRAND_COLORS = {
   PRIMARY: '#bf112b',
   PRIMARY_HOVER: '#a00f25',
@@ -21,14 +28,14 @@ export const TIMETABLE_CONFIG = {
 } as const;
 
 export const COURSE_COLORS = [
-  { bg: '#fee2e2', border: '#fca5a5', text: '#7f1d1d' },
-  { bg: '#dbeafe', border: '#93c5fd', text: '#1e3a8a' },
-  { bg: '#d1fae5', border: '#6ee7b7', text: '#064e3b' },
-  { bg: '#fef3c7', border: '#fcd34d', text: '#78350f' },
-  { bg: '#ede9fe', border: '#c4b5fd', text: '#4c1d95' },
-  { bg: '#cffafe', border: '#67e8f9', text: '#164e63' },
-  { bg: '#fce7f3', border: '#f9a8d4', text: '#831843' },
-  { bg: '#ffedd5', border: '#fdba74', text: '#7c2d12' },
+  { bg: '#59342d', border: '#e9957f', text: '#ffe8df' },
+  { bg: '#233d5b', border: '#7aafea', text: '#dcecff' },
+  { bg: '#21473d', border: '#67cbaa', text: '#d1fae5' },
+  { bg: '#51422a', border: '#dcbd76', text: '#fff0cc' },
+  { bg: '#3e315a', border: '#b099df', text: '#eee5ff' },
+  { bg: '#21434c', border: '#68bfce', text: '#d6f8ff' },
+  { bg: '#512e49', border: '#d792c5', text: '#ffe0f6' },
+  { bg: '#513827', border: '#e3a574', text: '#ffe8d6' },
 ] as const;
 
 export type CourseColor = typeof COURSE_COLORS[number];

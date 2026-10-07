@@ -54,14 +54,14 @@
     target: 'esnext',
     outDir: 'build',
   },
-  server: {
-    port: 3000,
+   server: {
+     port: 3002,
     open: true,
     fs: {
       allow: [path.resolve(__dirname, '..')],
     },
   },
-  preview: {
-    port: 3000,
+   preview: {
+     port: 3002,
   },
 });

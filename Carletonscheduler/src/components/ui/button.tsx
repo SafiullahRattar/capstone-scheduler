@@ -40,7 +40,9 @@ function Button({
   const Comp = asChild ? Slot : "button";
   return (
     <Comp
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, className }), "scheduler-button")}
+      data-variant={variant || "default"}
+      data-size={size || "default"}
       {...props}
     />
   );

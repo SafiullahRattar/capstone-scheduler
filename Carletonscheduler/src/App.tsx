@@ -1,14 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AcademicHistoryImport } from './components/AcademicHistoryImport';
 import { CourseSelectionPage } from './components/CourseSelectionPage';
 import { ScheduleReviewPage } from './components/ScheduleReviewPage';
 import { LoginPage } from './components/LoginPage';
+import { AppShell } from './components/AppShell';
 import { AdminPage } from './components/admin';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
-import { API_BASE_URL } from './config/constants';
-import { getDefaultActiveTerm } from './utils/termUtils';
+import { API_BASE_URL, authenticatedFetch } from './config/constants';
+import { getDefaultActiveTerm, getTermLabel } from './utils/termUtils';
 import type { ElectiveRequirement } from './types/electives';
-import { collectRequestedElectiveCounts, getSelectionUnitCredits } from './utils/electiveUtils';
+import { normalizeDeliveryMode, type DeliveryPreference } from './utils/deliveryMode';
+import type { AuditRequirement, RequirementChoices } from './types/audit';
+import { collectRequestedElectiveCounts, getElectiveTokenCategory, getSelectionUnitCredits } from './utils/electiveUtils';
 import { fetchElectiveCatalog } from './utils/electiveCatalog';
 import { mergeElectiveRequirements } from './utils/electiveRequirements';
 
@@ -26,16 +29,52 @@ interface CurrentCourse {
 }
 
 interface ParsedAuditData {
-  completedCourses: Array<{ courseId: string; grade?: string }>;
+  completedCourses: Array<{ courseId: string; grade?: string; credits?: number }>;
   currentCourses: CurrentCourse[];
   remainingCourses: string[];
   electiveRequirements?: ElectiveRequirement[];
+  requirements?: AuditRequirement[];
   studentName?: string;
   studentId?: string;
   program?: string;
 }
 
+// A term's plan while another term is active.
+interface TermPlan {
+  prerequisiteOverrides?: string[];
+  chosenCourses: string[];
+  requirementChoices: RequirementChoices;
+  generatedSchedules: GeneratedSchedule[];
+  selectedElectives: Record<string, string[]>;
+  selectedElectiveCredits: Record<string, number>;
+  generatedCourses: string[];
+  deliveryFallbacks: string[];
+}
+
+const EMPTY_TERM_PLAN: TermPlan = {
+  prerequisiteOverrides: [],
+  chosenCourses: [],
+  requirementChoices: {},
+  generatedSchedules: [],
+  selectedElectives: {},
+  selectedElectiveCredits: {},
+  generatedCourses: [],
+  deliveryFallbacks: [],
+};
+
+// Schedules saved before delivery modes existed have none; treat them as in person.
+function withDeliveryModes(schedules: GeneratedSchedule[]): GeneratedSchedule[] {
+  return schedules.map(schedule => ({
+    ...schedule,
+    selections: schedule.selections.map(selection => ({
+      ...selection,
+      section: { ...selection.section, deliveryMode: normalizeDeliveryMode(selection.section.deliveryMode) },
+    })),
+  }));
+}
+
 interface AppState {
+  prerequisiteOverrides?: string[];
   currentPage: AppPage;
   hasAuditData: boolean;
   completedCourses: string[];
@@ -47,6 +86,16 @@ interface AppState {
   selectedElectives: Record<string, string[]>; // category -> selected course codes
   selectedElectiveCredits: Record<string, number>; // category -> requested elective credits from selection page
   activeTerm: string;
+  chosenCourses: string[];
+  hasEnteredPlanner: boolean;
+  auditRequirements: AuditRequirement[];
+  requirementChoices: RequirementChoices;
+  courseGrades: Record<string, string>;
+  completedCourseCredits?: Record<string, number>;
+  deliveryPreference?: DeliveryPreference;
+  generatedCourses?: string[];
+  deliveryFallbacks?: string[];
+  termPlans?: Record<string, TermPlan>;
 }
 
 const STORAGE_KEY = 'scheduler-state';
@@ -60,6 +109,7 @@ const pageToPath: Record<AppPage, string> = {
 
 const pathToPage: Record<string, AppPage> = {
   '/': 'import',
+  '/term': 'course-selection',
   '/courses': 'course-selection',
   '/schedules': 'schedule-review',
   '/admin': 'admin'
@@ -68,6 +118,14 @@ const pathToPage: Record<string, AppPage> = {
 function getInitialPage(): AppPage {
   const path = window.location.pathname;
   return pathToPage[path] || 'import';
+}
+
+function getAllowedPage(page: AppPage | 'term-selection', hasEntered: boolean, hasSchedules: boolean): AppPage {
+  if (page === 'import' || page === 'admin') return page;
+  if (!hasEntered) return 'import';
+  if (page === 'term-selection') return 'course-selection';
+  if (page === 'schedule-review' && !hasSchedules) return 'course-selection';
+  return page;
 }
 
 function loadState(): Partial<AppState> | null {
@@ -101,27 +159,16 @@ function clearState() {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('auth_token'));
   const [user, setUser] = useState<any>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(isAuthenticated);
 
   const initialPage = getInitialPage();
   
-  // If URL is explicitly '/', clear state and start fresh
-  if (initialPage === 'import') {
-    clearState();
-  }
+  const savedState = loadState();
   
-  const savedState = initialPage === 'import' ? null : loadState();
-  
-  // Admin page doesn't require any saved state - allow direct access
-  // Other pages need saved state to function properly
-  const hasRequiredData = savedState && (
-    (initialPage === 'course-selection') ||
-    (initialPage === 'schedule-review' && (savedState.generatedSchedules?.length ?? 0) > 0)
-  );
+  const [hasEnteredPlanner, setHasEnteredPlanner] = useState(savedState?.hasEnteredPlanner === true);
   
   const [currentPage, setCurrentPage] = useState<AppPage>(
-    initialPage === 'admin' ? 'admin' :
-    hasRequiredData ? initialPage : 
-    (initialPage === 'import' ? 'import' : (savedState?.currentPage || 'import'))
+    getAllowedPage(initialPage, hasEnteredPlanner, (savedState?.generatedSchedules?.length ?? 0) > 0)
   );
   const [hasAuditData, setHasAuditData] = useState(savedState?.hasAuditData || false);
   const [completedCourses, setCompletedCourses] = useState<string[]>(savedState?.completedCourses || []);
@@ -129,10 +176,61 @@ export default function App() {
   const [remainingCourses, setRemainingCourses] = useState<string[]>(savedState?.remainingCourses || []);
   const [electiveRequirements, setElectiveRequirements] = useState<ElectiveRequirement[]>(savedState?.electiveRequirements || []);
   const [studentInfo, setStudentInfo] = useState<StudentInfo | undefined>(savedState?.studentInfo);
-  const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(savedState?.generatedSchedules || []);
+  const [generatedSchedules, setGeneratedSchedules] = useState<GeneratedSchedule[]>(() => withDeliveryModes(savedState?.generatedSchedules || []));
   const [selectedElectives, setSelectedElectives] = useState<Record<string, string[]>>(savedState?.selectedElectives || {});
   const [selectedElectiveCredits, setSelectedElectiveCredits] = useState<Record<string, number>>(savedState?.selectedElectiveCredits || {});
   const [activeTerm, setActiveTerm] = useState<string>(savedState?.activeTerm || getDefaultActiveTerm());
+  const [chosenCourses, setChosenCourses] = useState<string[]>(savedState?.chosenCourses || []);
+  const [prerequisiteOverrides, setPrerequisiteOverrides] = useState<string[]>(savedState?.prerequisiteOverrides || []);
+  const [auditRequirements, setAuditRequirements] = useState<AuditRequirement[]>(savedState?.auditRequirements || []);
+  const [requirementChoices, setRequirementChoices] = useState<RequirementChoices>(savedState?.requirementChoices || {});
+  const [courseGrades, setCourseGrades] = useState<Record<string, string>>(savedState?.courseGrades || {});
+  const [completedCourseCredits, setCompletedCourseCredits] = useState<Record<string, number>>(savedState?.completedCourseCredits || {});
+  const [deliveryPreference, setDeliveryPreference] = useState<DeliveryPreference>(savedState?.deliveryPreference || 'any');
+  // Courses the current schedules were generated from, so they can be regenerated with a new delivery preference.
+  const [generatedCourses, setGeneratedCourses] = useState<string[]>(savedState?.generatedCourses || []);
+  const [deliveryFallbacks, setDeliveryFallbacks] = useState<string[]>(savedState?.deliveryFallbacks || []);
+  // Plans for every term except the active one, which lives in the state above.
+  const [termPlans, setTermPlans] = useState<Record<string, TermPlan>>(() => Object.fromEntries(
+    Object.entries(savedState?.termPlans || {}).map(([term, plan]) => [term, { ...plan, generatedSchedules: withDeliveryModes(plan.generatedSchedules) }])
+  ));
+  const previousPlan = useRef([...chosenCourses].sort().join('|'));
+
+  useEffect(() => {
+    const plan = [...chosenCourses].sort().join('|');
+    if (plan === previousPlan.current) return;
+    previousPlan.current = plan;
+    setGeneratedSchedules([]);
+    setSelectedElectives({});
+    setSelectedElectiveCredits({});
+  }, [chosenCourses]);
+
+  // Removing a course from the plan also removes its requirement associations.
+  useEffect(() => {
+    setRequirementChoices(previous => {
+      const next = Object.fromEntries(Object.entries(previous).map(([id, codes]) => [id, codes.filter(code => chosenCourses.includes(code))]));
+      return Object.keys(previous).some(id => previous[id].length !== next[id].length) ? next : previous;
+    });
+  }, [chosenCourses]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsCheckingSession(false);
+      return;
+    }
+
+    authenticatedFetch(`${API_BASE_URL}/auth/me`)
+      .then(async response => {
+        if (!response.ok) throw new Error('Invalid session');
+        setUser(await response.json());
+      })
+      .catch(() => {
+        localStorage.removeItem('auth_token');
+        setIsAuthenticated(false);
+        setUser(null);
+      })
+      .finally(() => setIsCheckingSession(false));
+  }, [isAuthenticated]);
 
   // Navigate to a page and update URL
   const navigateTo = useCallback((page: AppPage, replace = false) => {
@@ -159,9 +257,20 @@ export default function App() {
       selectedElectives,
       selectedElectiveCredits,
       activeTerm,
+      chosenCourses,
+      prerequisiteOverrides,
+      hasEnteredPlanner,
+      auditRequirements,
+      requirementChoices,
+      courseGrades,
+      completedCourseCredits,
+      deliveryPreference,
+      generatedCourses,
+      deliveryFallbacks,
+      termPlans,
     };
     saveState(state);
-  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, selectedElectiveCredits, activeTerm]);
+  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, selectedElectiveCredits, activeTerm, chosenCourses, prerequisiteOverrides, hasEnteredPlanner, auditRequirements, requirementChoices, courseGrades, completedCourseCredits, deliveryPreference, generatedCourses, deliveryFallbacks, termPlans]);
 
   // Sync URL with current page on mount
   useEffect(() => {
@@ -175,57 +284,109 @@ export default function App() {
   // Handle browser back/forward
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      if (event.state?.page) {
-        setCurrentPage(event.state.page);
+      const page: AppPage = event.state?.page || pathToPage[window.location.pathname] || 'import';
+      const allowedPage = getAllowedPage(page, hasEnteredPlanner, generatedSchedules.length > 0);
+      if (page !== allowedPage) {
+        navigateTo(allowedPage, true);
       } else {
-        // Fallback: parse URL
-        const page = pathToPage[window.location.pathname] || 'import';
         setCurrentPage(page);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [hasEnteredPlanner, generatedSchedules.length, navigateTo]);
 
   const handleStartOver = () => {
+    setHasEnteredPlanner(false);
     setHasAuditData(false);
     setCompletedCourses([]);
     setCurrentCourses([]);
     setRemainingCourses([]);
     setElectiveRequirements([]);
+    setAuditRequirements([]);
+    setRequirementChoices({});
+    setCourseGrades({});
+    setCompletedCourseCredits({});
+    setGeneratedCourses([]);
+    setDeliveryFallbacks([]);
     setStudentInfo(undefined);
     setGeneratedSchedules([]);
     setSelectedElectives({});
     setSelectedElectiveCredits({});
+    setChosenCourses([]);
+    setPrerequisiteOverrides([]);
+    setTermPlans({});
     setActiveTerm(getDefaultActiveTerm());
     clearState();
     navigateTo('import');
   };
 
   const handleManualEntry = () => {
-    setHasAuditData(true);
-    setCompletedCourses([
-      'ECOR 1010', 'ECOR 1042', 'ECOR 1043', 'ECOR 1044', 
-      'ECOR 1045', 'MATH 1004', 'MATH 1104', 'COMP 1405'
-    ]);
+    setHasEnteredPlanner(true);
     navigateTo('course-selection');
   };
+
+  // Saves the active term's plan and restores the target term's plan, or starts it blank.
+  const handleTermChange = (term: string) => {
+    if (term === activeTerm) return;
+    const current: TermPlan = { chosenCourses, prerequisiteOverrides, requirementChoices, generatedSchedules, selectedElectives, selectedElectiveCredits, generatedCourses, deliveryFallbacks };
+    const next = termPlans[term] || EMPTY_TERM_PLAN;
+    const { [term]: _restored, ...others } = termPlans;
+    const hasPlan = current.chosenCourses.length > 0 || current.generatedSchedules.length > 0;
+    setTermPlans(hasPlan ? { ...others, [activeTerm]: current } : others);
+
+    // Restoring a plan must not trip the "plan changed" reset of generated schedules.
+    previousPlan.current = [...next.chosenCourses].sort().join('|');
+    setActiveTerm(term);
+    setChosenCourses(next.chosenCourses);
+    setPrerequisiteOverrides(next.prerequisiteOverrides || []);
+    setRequirementChoices(next.requirementChoices);
+    setGeneratedSchedules(next.generatedSchedules);
+    setSelectedElectives(next.selectedElectives);
+    setSelectedElectiveCredits(next.selectedElectiveCredits);
+    setGeneratedCourses(next.generatedCourses);
+    setDeliveryFallbacks(next.deliveryFallbacks);
+  };
+
+  const handleScheduleTermChange = (term: string) => {
+    if (term === activeTerm) return;
+    const next = termPlans[term];
+    handleTermChange(term);
+    if (!next?.generatedSchedules.length) setGeneratedSchedules([{ id: 1, selections: [], hasUnmetPrerequisites: false, prerequisiteInfo: {} }]);
+  };
+
+  // Courses already planned in other terms, mapped to the term they're planned for.
+  const plannedInOtherTerms: Record<string, string> = {};
+  const otherTermElectiveCounts: Record<string, { count: number; term: string }> = {};
+  for (const [term, plan] of Object.entries(termPlans)) {
+    for (const code of plan.chosenCourses) {
+      const category = getElectiveTokenCategory(code);
+      if (category) {
+        otherTermElectiveCounts[category] = { count: (otherTermElectiveCounts[category]?.count || 0) + 1, term };
+      } else {
+        plannedInOtherTerms[code] = term;
+      }
+    }
+    for (const code of Object.values(plan.selectedElectives).flat()) plannedInOtherTerms[code] = term;
+  }
+  const priorScheduledCourses = Array.from(new Set(Object.entries(termPlans)
+    .filter(([term]) => Number(term) < Number(activeTerm))
+    .flatMap(([, plan]) => plan.generatedSchedules[0]?.selections.map(selection => selection.courseCode) || [])));
 
   const handleUploadComplete = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/audit/parse`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/audit/parse`, {
         method: 'POST',
         body: formData
       });
 
       if (!response.ok) {
         const error = await response.json();
-        alert(`Failed to parse audit file: ${error.message || 'Unknown error'}. Please try manual entry.`);
-        return;
+        throw new Error(error.message || error.error || 'The audit could not be read. Try another file or browse courses without an audit.');
       }
 
       const data: ParsedAuditData = await response.json();
@@ -241,10 +402,21 @@ export default function App() {
       setCurrentCourses(data.currentCourses || []);
       setRemainingCourses(data.remainingCourses || []);
       setElectiveRequirements(data.electiveRequirements || []);
+      setAuditRequirements(data.requirements || []);
+      setRequirementChoices({});
+      setCourseGrades(Object.fromEntries(data.completedCourses.flatMap(course => course.grade ? [[course.courseId, course.grade]] : [])));
+      setCompletedCourseCredits(Object.fromEntries(data.completedCourses.flatMap(course => course.credits !== undefined ? [[course.courseId, course.credits]] : [])));
+      setChosenCourses([]);
+      setPrerequisiteOverrides([]);
+      setTermPlans({});
+      setGeneratedSchedules([]);
+      setHasEnteredPlanner(true);
+      setSelectedElectives({});
+      setSelectedElectiveCredits({});
       navigateTo('course-selection');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Error uploading file: ${message}. Please try manual entry.`);
+      throw new Error(message);
     }
   };
 
@@ -284,34 +456,56 @@ export default function App() {
       setSelectedElectiveCredits(requestedCredits);
 
       if (regularCourses.length === 0 && Object.keys(requestedCredits).length === 0) {
-        alert('Select at least one course or elective category before generating schedules.');
-        return;
+        throw new Error('Add a course or elective to your plan before generating schedules.');
       }
 
-      if (regularCourses.length === 0) {
-        setGeneratedSchedules([{
-          id: 1,
-          selections: [],
-          hasUnmetPrerequisites: false,
-          prerequisiteInfo: {},
-        }]);
-        navigateTo('schedule-review');
-        return;
-      }
-
-      const schedules = await generateSchedules(regularCourses, completedCourses, termToUse);
-
-      if (schedules.length === 0) {
-        alert('No schedules could be generated. The selected courses may have time conflicts or no available sections.');
-        return;
-      }
-
-      setGeneratedSchedules(schedules);
+      // Planned courses become buttons in the builder, not automatic calendar entries.
+      setActiveTerm(termToUse);
+      setGeneratedCourses([]);
+      setDeliveryFallbacks([]);
+      setGeneratedSchedules([{ id: 1, selections: [], hasUnmetPrerequisites: false, prerequisiteInfo: {} }]);
       navigateTo('schedule-review');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to generate schedules: ${message}`);
+      throw new Error(message);
     }
+  };
+
+  const updateScheduledCourses = async (courses: string[], nextElectives?: Record<string, string[]>) => {
+    const courseIds = Array.from(new Set(courses)).sort();
+    const elsewhere = courseIds.find(code => plannedInOtherTerms[code]);
+    if (elsewhere) throw new Error(`${elsewhere} is already selected for ${getTermLabel(plannedInOtherTerms[elsewhere])}. Remove it from that term before selecting it here.`);
+    const electiveState = nextElectives || Object.fromEntries(Object.entries(selectedElectives).map(([category, picks]) => [category, picks.filter(code => courseIds.includes(code))]));
+    if (courseIds.length === 0) {
+      setGeneratedSchedules([{ id: 1, selections: [], hasUnmetPrerequisites: false, prerequisiteInfo: {} }]);
+      setGeneratedCourses([]);
+      setDeliveryFallbacks([]);
+      setSelectedElectives(electiveState);
+      return;
+    }
+    const { schedules, deliveryFallbacks: fallbacks } = await generateSchedules(courseIds, completedCourses, activeTerm, deliveryPreference, {}, priorScheduledCourses, courseGrades);
+    if (!schedules.length) throw new Error('No complete section combination fits all selected courses. Remove a course to make room.');
+    setGeneratedSchedules(schedules);
+    setGeneratedCourses(courseIds);
+    setDeliveryFallbacks(fallbacks);
+    setSelectedElectives(electiveState);
+  };
+
+  const handleDeliveryPreferenceChange = async (preference: DeliveryPreference) => {
+    const courses = generatedCourses.length > 0
+      ? generatedCourses
+      : Array.from(new Set(generatedSchedules[0]?.selections.map(selection => selection.courseCode) || []));
+    if (courses.length === 0) {
+      setDeliveryPreference(preference);
+      return;
+    }
+    const { schedules, deliveryFallbacks: fallbacks } = await generateSchedules(courses, completedCourses, activeTerm, preference, {}, priorScheduledCourses, courseGrades);
+    if (schedules.length === 0) {
+      throw new Error(`No conflict-free schedule works with ${preference === 'online' ? 'online' : 'in-person'} sections. Try another delivery option.`);
+    }
+    setDeliveryPreference(preference);
+    setGeneratedSchedules(schedules);
+    setDeliveryFallbacks(fallbacks);
   };
 
   const handleBackToCourseSelection = () => {
@@ -321,6 +515,7 @@ export default function App() {
   const handleLoginSuccess = (token: string, userData: any) => {
     setIsAuthenticated(true);
     setUser(userData);
+    setIsCheckingSession(false);
   };
 
   const handleLogout = () => {
@@ -330,59 +525,64 @@ export default function App() {
     handleStartOver();
   };
 
+  if (isCheckingSession) return null;
+
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <div className="relative min-h-screen">
-      <div className="absolute top-4 right-4 z-50">
-        <button 
-          onClick={handleLogout}
-          className="text-sm font-medium text-gray-500 hover:text-[#E5173F] transition-colors bg-white/80 px-3 py-1 rounded-full border border-gray-200 shadow-sm"
-        >
-          Sign Out
-        </button>
-      </div>
+    <AppShell
+      currentPage={currentPage}
+      user={user}
+      onLogout={handleLogout}
+      onAdmin={() => navigateTo('admin')}
+      onReturn={() => navigateTo(getAllowedPage('course-selection', hasEnteredPlanner, generatedSchedules.length > 0))}
+      onNavigate={navigateTo}
+      hasSchedules={generatedSchedules.length > 0}
+      hasAuditData={hasAuditData}
+      onImportAudit={() => navigateTo('import')}
+    >
 
       {currentPage === 'schedule-review' && (
         <ScheduleReviewPage
+          key={activeTerm}
           schedules={generatedSchedules}
+          priorScheduledCourses={priorScheduledCourses}
+          prerequisiteOverrides={prerequisiteOverrides}
+          onPrerequisiteOverridesChange={setPrerequisiteOverrides}
           onBack={handleBackToCourseSelection}
           electiveRequirements={electiveRequirements}
           selectedElectives={selectedElectives}
           selectedElectiveCredits={selectedElectiveCredits}
           activeTerm={activeTerm}
+          onChangeTerm={handleScheduleTermChange}
+          deliveryPreference={deliveryPreference}
+          deliveryFallbacks={deliveryFallbacks}
+          plannedInOtherTerms={plannedInOtherTerms}
+          plannedCoreCourses={chosenCourses.filter(code => !code.startsWith('ELECTIVE:'))}
+          onScheduledCoursesChange={updateScheduledCourses}
+          onDeliveryPreferenceChange={handleDeliveryPreferenceChange}
           onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
-            setSelectedElectives(prev => ({ ...prev, [category]: courseCodes }));
-            // Re-generate schedules with the new electives swapped in
-            try {
-              if (allSelectedCourses.length === 0) {
-                setGeneratedSchedules([{
-                  id: 1,
-                  selections: [],
-                  hasUnmetPrerequisites: false,
-                  prerequisiteInfo: {},
-                }]);
-                return;
-              }
-
-              const schedules = await generateSchedules(allSelectedCourses, completedCourses, activeTerm);
-              if (schedules.length > 0) {
-                setGeneratedSchedules(schedules);
-              }
-            } catch (error) {
-              const message = error instanceof Error ? error.message : 'Unknown error';
-              alert(`Failed to regenerate schedules: ${message}`);
-            }
+            await updateScheduledCourses(allSelectedCourses, { ...selectedElectives, [category]: courseCodes });
           }}
           completedCourses={completedCourses}
+          hasAuditData={hasAuditData}
+          auditRequirements={auditRequirements}
+          remainingCourses={remainingCourses}
+          currentCourses={currentCourses}
+          courseGrades={courseGrades}
+          completedCourseCredits={completedCourseCredits}
         />
       )}
 
       {currentPage === 'course-selection' && (
         <CourseSelectionPage
+          key={activeTerm}
           hasAuditData={hasAuditData}
+          prerequisiteOverrides={prerequisiteOverrides}
+          priorScheduledCourses={priorScheduledCourses}
+          onPrerequisiteOverridesChange={setPrerequisiteOverrides}
           completedCourses={completedCourses}
           currentCourses={currentCourses}
           remainingCourses={remainingCourses}
@@ -390,9 +590,16 @@ export default function App() {
           onElectiveRequirementsChange={setElectiveRequirements}
           studentInfo={studentInfo}
           onGenerateSchedules={handleGenerateSchedules}
-          onStartOver={handleStartOver}
           activeTerm={activeTerm}
-          onTermChange={setActiveTerm}
+          onChangeTerm={handleTermChange}
+          plannedInOtherTerms={plannedInOtherTerms}
+          otherTermElectiveCounts={otherTermElectiveCounts}
+          selectedCourses={chosenCourses}
+          onSelectionChange={setChosenCourses}
+          auditRequirements={auditRequirements}
+          requirementChoices={requirementChoices}
+          onRequirementChoicesChange={setRequirementChoices}
+          courseGrades={courseGrades}
         />
       )}
 
@@ -403,9 +610,14 @@ export default function App() {
         />
       )}
 
-      {currentPage === 'admin' && (
+
+      {currentPage === 'admin' && user?.role === 'ADMIN' && (
         <AdminPage />
       )}
-    </div>
+
+      {currentPage === 'admin' && user?.role !== 'ADMIN' && (
+        <div className="flex min-h-screen items-center justify-center">Administrator access required.</div>
+      )}
+    </AppShell>
   );
 }

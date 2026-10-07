@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
 import { ensureSectionMeetingsTable, insertSectionMeetings } from '../server/lib/section-meetings'
+import { parseDeliveryMode } from '../shared/delivery-mode'
 
 const prisma = new PrismaClient()
 
@@ -20,6 +21,7 @@ interface TimetableRecord {
   capacity: number
   enrolled: number
   status: string
+  deliveryMode: string | null
 }
 
 function parseTimetableLine(line: string): TimetableRecord | null {
@@ -44,7 +46,8 @@ function parseTimetableLine(line: string): TimetableRecord | null {
     endDate,
     capacity,
     enrolled,
-    status
+    status,
+    deliveryMode
   ] = parts
 
   return {
@@ -61,7 +64,9 @@ function parseTimetableLine(line: string): TimetableRecord | null {
     endDate,
     capacity: parseInt(capacity) || 0,
     enrolled: parseInt(enrolled) || 0,
-    status
+    status,
+    // Optional 15th column: delivery mode (e.g. "Online - Asynchronous", "Hybrid")
+    deliveryMode: parseDeliveryMode(deliveryMode)
   }
 }
 
@@ -115,7 +120,8 @@ async function main() {
           term: record.term,
           capacity: record.capacity,
           enrolled: record.enrolled,
-          status: record.status
+          status: record.status,
+          deliveryMode: record.deliveryMode
         }
       })
 

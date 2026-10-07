@@ -31,6 +31,8 @@ export interface RequirementInfo {
    * Elective tokens are expanded later by elective-mappings.ts.
    */
   courseOptions: string[]
+  /** Parent audit heading, such as FIRST YEAR or FOURTH YEAR. */
+  groupTitle?: string
 }
 
 // ──────────────────────────────────────────────
@@ -40,6 +42,7 @@ export interface RequirementInfo {
 export interface CompletedCourse {
   courseId: string   // e.g. "SYSC4001"
   grade: string      // e.g. "A+", "B-", "CUR" is never here
+  credits?: number  // Earned value recorded in this audit, not today's catalogue.
 }
 
 export interface CurrentCourse {
@@ -51,8 +54,7 @@ export interface CurrentCourse {
  * The canonical output of both parsers.
  *
  * Every field must be populated identically regardless of whether the
- * input was an HTML file or a PDF-to-text file.  The parity check
- * (Prompt 4) enforces this.
+ * input was an HTML file or a PDF-to-text file.
  */
 export interface StudentAuditData {
   studentId: string                 // 9-digit Carleton student ID

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
-import { API_BASE_URL } from '../../config/constants';
+import { API_BASE_URL, authenticatedFetch } from '../../config/constants';
 
 interface ElectiveCategory {
   name: string;
@@ -27,7 +27,7 @@ export function ElectiveManager() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/electives`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/electives`);
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
@@ -49,7 +49,7 @@ export function ElectiveManager() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/electives/${categoryId}/courses`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/electives/${categoryId}/courses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ courseId: newCourseId.trim() })
@@ -80,7 +80,7 @@ export function ElectiveManager() {
     setActionLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/electives/${categoryId}/courses/${courseId}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/electives/${categoryId}/courses/${courseId}`, {
         method: 'DELETE'
       });
 
@@ -102,13 +102,13 @@ export function ElectiveManager() {
   );
 
   return (
-    <div style={{ padding: '32px' }}>
+    <div className="admin-section">
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '8px' }}>
           Elective Categories
         </h2>
-        <p style={{ fontSize: '14px', color: '#64748b' }}>
+        <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>
           Manage which courses belong to each elective category for degree audit matching
         </p>
       </div>
@@ -123,7 +123,7 @@ export function ElectiveManager() {
               left: '12px', 
               top: '50%', 
               transform: 'translateY(-50%)',
-              color: '#94a3b8'
+              color: 'var(--muted-foreground)'
             }} 
           />
           <input
@@ -135,7 +135,7 @@ export function ElectiveManager() {
               width: '100%',
               padding: '10px 12px 10px 38px',
               fontSize: '14px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--border)',
               borderRadius: '8px',
               outline: 'none'
             }}
@@ -145,16 +145,16 @@ export function ElectiveManager() {
 
       {/* Categories List */}
       {loading ? (
-        <p style={{ fontSize: '14px', color: '#94a3b8', padding: '20px' }}>Loading...</p>
+        <p style={{ fontSize: '14px', color: 'var(--muted-foreground)', padding: '20px' }}>Loading...</p>
       ) : filteredCategories.length === 0 ? (
         <div style={{ 
           padding: '48px',
           textAlign: 'center',
-          background: '#f8fafc',
+          background: 'var(--surface)',
           borderRadius: '12px',
-          border: '1px solid #f1f5f9'
+          border: '1px solid var(--border)'
         }}>
-          <p style={{ fontSize: '14px', color: '#64748b' }}>
+          <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>
             {searchQuery ? 'No categories match your search' : 'No elective categories found'}
           </p>
         </div>
@@ -168,41 +168,44 @@ export function ElectiveManager() {
               <div
                 key={category.name}
                 style={{
-                  background: '#fff',
+                  background: 'var(--surface)',
                   borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border)',
                   overflow: 'hidden'
                 }}
               >
                 {/* Category Header */}
-                <div
+                <button
+                  aria-expanded={isExpanded}
                   style={{
+                    width: '100%',
+                    textAlign: 'left',
                     display: 'flex',
                     alignItems: 'center',
                     padding: '16px 20px',
                     cursor: 'pointer',
-                    background: isExpanded ? '#f8fafc' : 'transparent'
+                    background: isExpanded ? 'var(--surface-hover)' : 'transparent'
                   }}
                   onClick={() => setExpandedCategory(isExpanded ? null : category.name)}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: '#64748b', marginRight: '12px' }} />
+                    <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted-foreground)', marginRight: '12px' }} />
                   ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: '#64748b', marginRight: '12px' }} />
+                    <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted-foreground)', marginRight: '12px' }} />
                   )}
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '15px', fontWeight: 500, color: '#111' }}>
+                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--foreground)' }}>
                       {category.label}
                     </p>
-                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                    <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
                       {category.name} · {category.courseCount} course{category.courseCount !== 1 ? 's' : ''}
                     </p>
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <div style={{ padding: '0 20px 20px', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border)' }}>
                     {/* Add Course */}
                     <div style={{ padding: '16px 0' }}>
                       {isAdding ? (
@@ -224,9 +227,10 @@ export function ElectiveManager() {
                               flex: 1,
                               padding: '8px 12px',
                               fontSize: '14px',
-                              border: '1px solid #e2e8f0',
+                              border: '1px solid var(--border)',
                               borderRadius: '6px',
-                              maxWidth: '200px'
+                              maxWidth: '200px',
+                              minWidth: 0
                             }}
                             autoFocus
                           />
@@ -248,7 +252,7 @@ export function ElectiveManager() {
                               background: 'transparent',
                               border: 'none',
                               cursor: 'pointer',
-                              color: '#64748b'
+                              color: 'var(--muted-foreground)'
                             }}
                           >
                             Cancel
@@ -262,7 +266,7 @@ export function ElectiveManager() {
                           }}
                           style={{
                             fontSize: '13px',
-                            color: '#bf112b',
+                            color: 'var(--primary-text)',
                             background: 'transparent',
                             border: 'none',
                             cursor: 'pointer',
@@ -273,13 +277,13 @@ export function ElectiveManager() {
                         </button>
                       )}
                       {error && addingCourse === category.name && (
-                        <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '8px' }}>{error}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--danger)', marginTop: '8px' }}>{error}</p>
                       )}
                     </div>
 
                     {/* Course List */}
                     {category.courses.length === 0 ? (
-                      <p style={{ fontSize: '13px', color: '#94a3b8', padding: '12px 0' }}>
+                      <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', padding: '12px 0' }}>
                         No courses in this category
                       </p>
                     ) : (
@@ -297,8 +301,8 @@ export function ElectiveManager() {
                               gap: '6px',
                               padding: '6px 10px',
                               fontSize: '13px',
-                              color: '#334155',
-                              background: '#f1f5f9',
+                              color: 'var(--foreground)',
+                              background: 'var(--surface-hover)',
                               borderRadius: '6px'
                             }}
                           >
@@ -311,12 +315,12 @@ export function ElectiveManager() {
                                 background: 'transparent',
                                 border: 'none',
                                 cursor: 'pointer',
-                                color: '#94a3b8',
+                                color: 'var(--muted-foreground)',
                                 display: 'flex',
                                 alignItems: 'center'
                               }}
-                              onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
-                              onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                              onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+                              onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-foreground)'}
                               title="Remove from category"
                             >
                               <X className="w-3 h-3" />

@@ -15,8 +15,26 @@
 import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
 import { fetchSectionMeetings } from '../lib/section-meetings'
+import { normalizeDeliveryMode } from '../../shared/delivery-mode'
+import { listElectiveCategoryDefinitions } from '../lib/electives'
 
 const router = Router()
+
+router.get('/electives', async (_req: Request, res: Response) => {
+  try {
+    const categories = await listElectiveCategoryDefinitions(prisma)
+    res.json({
+      categories: categories.map(category => ({
+        name: category.id,
+        label: category.label,
+        selectionUnitCredits: category.selectionUnitCredits,
+        courses: category.courses
+      }))
+    })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch elective categories' })
+  }
+})
 
 /**
  * GET /api/courses/search
@@ -264,6 +282,7 @@ router.get('/:courseId/sections', async (req: Request, res: Response) => {
         capacity: section.capacity,
         enrolled: section.enrolled,
         status: section.status,
+        deliveryMode: normalizeDeliveryMode(section.deliveryMode),
         meetings: (meetingsBySection.get(section.id) || []).map(meeting => ({
           days: meeting.days,
           startTime: meeting.startTime,

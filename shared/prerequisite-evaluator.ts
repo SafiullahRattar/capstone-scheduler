@@ -10,12 +10,17 @@ export interface PrerequisiteNodeData {
 
 export interface StudentTranscript {
   completedCourses: string[];
+  /** Courses actually scheduled in earlier terms; completion/grades are projected. */
+  plannedCourses?: string[];
   courseGrades?: { [courseId: string]: string };
   currentYear: 'FIRST_YEAR' | 'SECOND_YEAR' | 'THIRD_YEAR' | 'FOURTH_YEAR';
   hasSpecialPermission?: boolean;
 }
 
 export interface PrerequisiteValidationResult {
+  /** Human-readable requirement tree; preserves alternatives and grouped requirements. */
+  requirementExplanation?: string;
+  plannedPrerequisites?: string[];
   isValid: boolean;
   reason?: string;
   missingCourses?: string[];
@@ -26,6 +31,7 @@ export interface PrerequisiteValidationResult {
 }
 
 interface EvaluationResult {
+  plannedPrerequisites?: string[];
   isValid: boolean;
   reason?: string;
   missingItems?: string[];
@@ -55,6 +61,19 @@ function meetsGradeRequirement(actualGrade: string | undefined, requiredGrade: s
   return actualValue >= requiredValue;
 }
 
+function explainRequirement(node: PrerequisiteNodeData, nodes: PrerequisiteNodeData[], parentType?: string): string {
+  if (node.nodeType === 'AND' || node.nodeType === 'OR') {
+    const children = nodes.filter(child => child.parentId === node.id);
+    const text = children.map(child => explainRequirement(child, nodes, node.nodeType)).join(` ${node.nodeType} `);
+    return parentType && parentType !== node.nodeType && children.length > 1 ? `(${text})` : text;
+  }
+  if (node.nodeType === 'COURSE') return `${node.requiredCourseId || 'Unknown course'}${node.requiredGrade ? ` (${node.requiredGrade} or better)` : ''}`;
+  if (node.nodeType === 'PERMISSION') return 'department permission';
+  if (node.nodeType === 'YEAR_STANDING') return `${node.requiredYear?.toLowerCase().replace('_', '-')} standing`;
+  if (node.nodeType === 'OTHER_REQUIREMENT') return 'admission requirements';
+  return node.nodeType.toLowerCase().replaceAll('_', ' ');
+}
+
 function evaluatePrerequisiteNode(
   node: PrerequisiteNodeData,
   transcript: StudentTranscript,
@@ -72,10 +91,11 @@ function evaluatePrerequisiteNode(
           reason: `Missing requirements: ${unsatisfied.map(result => result.reason).join(', ')}`,
           missingItems: unsatisfied.flatMap(result => result.missingItems || []),
           gradeIssues: unsatisfied.flatMap(result => result.gradeIssues || []),
+          plannedPrerequisites: results.flatMap(result => result.plannedPrerequisites || []),
         };
       }
 
-      return { isValid: true, missingItems: [], gradeIssues: [] };
+      return { isValid: true, missingItems: [], gradeIssues: [], plannedPrerequisites: results.flatMap(result => result.plannedPrerequisites || []) };
     }
 
     case 'OR': {
@@ -84,7 +104,7 @@ function evaluatePrerequisiteNode(
       const firstValid = results.find(result => result.isValid);
 
       if (firstValid) {
-        return { isValid: true, missingItems: [], gradeIssues: [] };
+        return { isValid: true, missingItems: [], gradeIssues: [], plannedPrerequisites: firstValid.plannedPrerequisites || [] };
       }
 
       return {
@@ -101,7 +121,9 @@ function evaluatePrerequisiteNode(
       }
 
       const hasCourse = transcript.completedCourses.includes(node.requiredCourseId);
+      const planned = transcript.plannedCourses?.includes(node.requiredCourseId);
       if (!hasCourse) {
+        if (planned) return { isValid: true, missingItems: [], gradeIssues: [], plannedPrerequisites: [node.requiredCourseId] };
         return {
           isValid: false,
           reason: `Missing course ${node.requiredCourseId}`,
@@ -115,6 +137,7 @@ function evaluatePrerequisiteNode(
         const meetsGrade = meetsGradeRequirement(actualGrade, node.requiredGrade);
 
         if (!meetsGrade) {
+          if (planned) return { isValid: true, missingItems: [], gradeIssues: [], plannedPrerequisites: [node.requiredCourseId] };
           const gradeIssue = `${node.requiredCourseId} grade ${actualGrade || 'unknown'} does not meet requirement ${node.requiredGrade}`;
           return {
             isValid: false,
@@ -210,6 +233,8 @@ export function validatePrerequisitesFromTree(
 
   return {
     isValid: result.isValid,
+    requirementExplanation: nodes.some(node => node.nodeType === 'OR') ? explainRequirement(rootNode, nodes) : undefined,
+    plannedPrerequisites: Array.from(new Set(result.plannedPrerequisites || [])),
     reason: result.reason,
     missingCourses: result.missingItems?.filter(item =>
       item !== 'PERMISSION' &&

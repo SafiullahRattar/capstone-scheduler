@@ -122,10 +122,7 @@ async function main() {
     courses: allCourses
   }
   
-  await fs.writeFile(
-    '/home/safi/schoolwork/sysc4907/course_titles.json',
-    JSON.stringify(jsonOutput, null, 2)
-  )
+  await fs.writeFile('course_titles.json', JSON.stringify(jsonOutput, null, 2))
   
   console.log(`\n[SUCCESS] Course title extraction completed!`)
   console.log(`[STATS] Total courses found: ${totalCourses}`)

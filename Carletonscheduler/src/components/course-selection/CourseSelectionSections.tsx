@@ -1,10 +1,12 @@
-import { type RefObject } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { type RefObject, type ReactNode } from 'react';
+import { ChevronDown, Search, X, Minus, Plus, Check, ArrowRight, Loader2, BookOpen, CalendarDays } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card';
 import type { Course, PrerequisiteValidationResult } from '../../utils/courseData';
 import type { ElectiveRequirement } from '../../types/electives';
+import { getTermLabel } from '../../utils/termUtils';
+import { HalfTermCourseTag } from '../HalfTermCourseTag';
 import {
   buildElectiveToken,
   getElectiveSlotCount,
@@ -13,11 +15,6 @@ import {
   getSelectedElectiveTokenCount,
   getSelectionUnitCredits,
 } from '../../utils/electiveUtils';
-
-interface VisibleTerm {
-  code: string;
-  role: 'previous' | 'current' | 'upcoming';
-}
 
 interface StudentInfo {
   name: string;
@@ -30,75 +27,39 @@ interface CurrentCourse {
   term: string;
 }
 
-interface CourseSelectionHeaderProps {
-  onStartOver: () => void;
-}
-
-export function CourseSelectionHeader({ onStartOver }: CourseSelectionHeaderProps) {
+export function CourseSelectionHeader() {
   return (
-    <div className="mb-8">
+    <div className="page-heading">
       <div className="flex items-center justify-between mb-1">
         <h1 style={{ 
           fontSize: '28px', 
-          fontWeight: 600, 
-          color: '#111', 
+          fontWeight: 800,
+          color: 'var(--foreground)',
           letterSpacing: '-0.02em',
           lineHeight: 1.2 
         }}>
-          Course Selection
+          Plan your term
         </h1>
-        <button
-          onClick={onStartOver}
-          className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-          style={{ fontWeight: 500 }}
-        >
-          Start over
-        </button>
       </div>
-      <p style={{ fontSize: '15px', color: '#64748b', lineHeight: 1.5 }}>
-        Choose courses for your upcoming term
+      <p style={{ fontSize: '15px', color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
+        Find courses and keep your term's selections together.
       </p>
     </div>
   );
 }
 
-interface TermSelectionTabsProps {
-  visibleTerms: VisibleTerm[];
+interface TermSwitchButtonProps {
   currentTerm: string;
-  onTermChange: (term: string) => void;
-  getTermLabel: (term: string) => string;
+  onChangeTerm: () => void;
 }
 
-export function TermSelectionTabs({
-  visibleTerms,
-  currentTerm,
-  onTermChange,
-  getTermLabel,
-}: TermSelectionTabsProps) {
+export function TermSwitchButton({ currentTerm, onChangeTerm }: TermSwitchButtonProps) {
   return (
-    <div 
-      className="flex items-center gap-1 mb-8 p-1 rounded-lg"
-      style={{ background: '#f1f5f9', width: 'fit-content' }}
-    >
-      {visibleTerms.map((vt) => {
-        const isActive = vt.code === currentTerm;
-        return (
-          <button
-            key={vt.code}
-            onClick={() => onTermChange(vt.code)}
-            className="px-4 py-2 rounded-md text-sm transition-all"
-            style={{
-              fontWeight: 500,
-              background: isActive ? '#fff' : 'transparent',
-              color: isActive ? '#111' : '#64748b',
-              boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            }}
-          >
-            {getTermLabel(vt.code)}
-          </button>
-        );
-      })}
-    </div>
+    <button className="term-switch-button" onClick={onChangeTerm} aria-label={`Planning ${getTermLabel(currentTerm)}. Change term`}>
+      <CalendarDays size={16} />
+      <strong>{getTermLabel(currentTerm)}</strong>
+      <span>Change term</span>
+    </button>
   );
 }
 
@@ -183,22 +144,18 @@ export function AuditSummaryCard({
   const coreCourses = remainingCourses.filter(code => !electiveCourseSet.has(code));
 
   return (
-    <div
+    <div className="glass-panel"
       style={{ 
-        marginBottom: '32px', 
-        padding: '24px',
-        background: '#fff',
-        borderRadius: '12px',
-        border: '1px solid #e2e8f0'
+        padding: '20px',
       }}
     >
       {/* Student Info Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6" style={{ gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111', marginBottom: '4px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '4px' }}>
             {studentInfo.name}
           </h2>
-          <p style={{ fontSize: '14px', color: '#64748b' }}>
+          <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>
             {studentInfo.program}
           </p>
         </div>
@@ -214,10 +171,7 @@ export function AuditSummaryCard({
       </div>
 
       {/* Progress Stats */}
-      <div 
-        className="flex gap-8 mb-6 pb-6"
-        style={{ borderBottom: '1px solid #f1f5f9' }}
-      >
+      <div className="audit-progress">
         <ProgressStat label="Completed" value={completedCourses.length} />
         <ProgressStat label="In Progress" value={currentCourses.length} />
         <ProgressStat label="Remaining" value={remainingCourses.length} />
@@ -225,6 +179,8 @@ export function AuditSummaryCard({
 
       {/* Collapsible Sections */}
       <div className="space-y-4">
+        <details className="audit-history">
+          <summary>Academic history <span>{completedCourses.length} completed · {currentCourses.length} in progress</span></summary>
         <CollapsibleSection
           title="Completed"
           count={completedCourses.length}
@@ -238,8 +194,8 @@ export function AuditSummaryCard({
                 style={{
                   padding: '4px 10px',
                   fontSize: '13px',
-                  color: '#64748b',
-                  background: '#f8fafc',
+                  color: 'var(--muted-foreground)',
+                  background: 'var(--surface)',
                   borderRadius: '4px'
                 }}
               >
@@ -263,8 +219,8 @@ export function AuditSummaryCard({
                   style={{
                     padding: '4px 10px',
                     fontSize: '13px',
-                    color: '#64748b',
-                    background: '#f8fafc',
+                    color: 'var(--muted-foreground)',
+                    background: 'var(--surface)',
                     borderRadius: '4px'
                   }}
                 >
@@ -274,6 +230,7 @@ export function AuditSummaryCard({
             </div>
           </CollapsibleSection>
         )}
+        </details>
 
         {remainingCourses.length > 0 && (
           <CollapsibleSection
@@ -292,7 +249,7 @@ export function AuditSummaryCard({
                     style={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#bf112b',
+                      color: 'var(--primary-text)',
                     }}
                     className="hover:underline"
                   >
@@ -305,7 +262,7 @@ export function AuditSummaryCard({
                     style={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#64748b',
+                      color: 'var(--muted-foreground)',
                     }}
                     className="hover:underline"
                   >
@@ -320,7 +277,7 @@ export function AuditSummaryCard({
                   <h4 style={{ 
                     fontSize: '12px', 
                     fontWeight: 600, 
-                    color: '#94a3b8', 
+                    color: 'var(--muted-foreground)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     marginBottom: '12px'
@@ -348,7 +305,7 @@ export function AuditSummaryCard({
                   <h4 style={{ 
                     fontSize: '12px', 
                     fontWeight: 600, 
-                    color: '#94a3b8', 
+                    color: 'var(--muted-foreground)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     marginBottom: '12px'
@@ -359,6 +316,7 @@ export function AuditSummaryCard({
                     electiveRequirements={electiveRequirements}
                     selectedCourses={selectedCourses}
                     onAddCourse={onAddCourse}
+                    onRemoveCourse={onRemoveCourse}
                   />
                 </div>
               )}
@@ -378,10 +336,10 @@ export function AuditSummaryCard({
         {remainingCourses.length === 0 && (
           <div style={{ 
             padding: '16px',
-            background: '#f0fdf4',
+            background: 'var(--success-soft)',
             borderRadius: '8px',
             fontSize: '14px',
-            color: '#166534'
+            color: 'var(--success)'
           }}>
             All degree requirements completed or in progress
           </div>
@@ -394,10 +352,10 @@ export function AuditSummaryCard({
 function ProgressStat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div style={{ fontSize: '24px', fontWeight: 600, color: '#111', lineHeight: 1 }}>
+      <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--foreground)', lineHeight: 1 }}>
         {value}
       </div>
-      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+      <div style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '6px' }}>
         {label}
       </div>
     </div>
@@ -425,13 +383,13 @@ function CollapsibleSection({
         onClick={onToggle}
         className="w-full flex items-center justify-between py-2 text-left"
       >
-        <span style={{ fontSize: '14px', fontWeight: 500, color: '#334155' }}>
+        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
           {title}
-          <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '8px' }}>
+          <span style={{ color: 'var(--muted-foreground)', fontWeight: 400, marginLeft: '8px' }}>
             {count}
           </span>
           {loading && (
-            <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '8px', fontStyle: 'italic' }}>
+            <span style={{ color: 'var(--muted-foreground)', fontWeight: 400, marginLeft: '8px', fontStyle: 'italic' }}>
               Loading...
             </span>
           )}
@@ -488,6 +446,7 @@ function RemainingCoreCourseList({
 
         const courseChip = (
           <button
+            className="course-chip"
             onClick={() => {
               if (isSelected) onRemoveCourse(code);
               else if (canAdd) onAddCourse(code);
@@ -501,9 +460,9 @@ function RemainingCoreCourseList({
               border: '1px solid',
               transition: 'all 150ms',
               cursor: isClickable ? 'pointer' : 'default',
-              background: isSelected ? '#fef2f2' : canAdd ? '#fff' : '#fafafa',
-              color: isSelected ? '#991b1b' : canAdd ? '#111' : '#94a3b8',
-              borderColor: isSelected ? '#fecaca' : canAdd ? '#e2e8f0' : '#f1f5f9',
+              background: isSelected ? 'var(--primary-soft)' : 'var(--surface)',
+              color: isSelected ? 'var(--primary-text)' : canAdd ? 'var(--foreground)' : 'var(--muted-foreground)',
+              borderColor: isSelected ? 'var(--primary-border)' : 'var(--border)',
               opacity: !isClickable ? 0.7 : 1,
             }}
           >
@@ -532,25 +491,26 @@ function RemainingCoreCourseList({
           <HoverCard key={code} openDelay={200} closeDelay={100}>
             <HoverCardTrigger asChild>{courseChip}</HoverCardTrigger>
             <HoverCardContent
+              className="scheduler-popover"
               side="top"
               align="center"
               style={{
                 width: '240px',
                 padding: '12px',
-                background: '#fff',
-                border: '1px solid #e2e8f0',
+                background: 'var(--popover, #252630)',
+                border: '1px solid var(--border, #ffffff29)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
               }}
             >
-              <p style={{ fontSize: '13px', fontWeight: 500, color: '#111', marginBottom: '4px' }}>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--foreground, #f5f5f7)', marginBottom: '4px' }}>
                 {code}
               </p>
-              <p style={{ fontSize: '12px', color: '#64748b' }}>
+              <p style={{ fontSize: '12px', color: 'var(--muted-foreground, #b9bdc8)' }}>
                 {reason}
               </p>
               {hasTermData && !isOfferedNow && details!.terms!.length > 0 && (
-                <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--muted-foreground, #b9bdc8)', marginTop: '8px' }}>
                   Available: {details!.terms!.map(t => getTermShortLabel(t)).join(', ')}
                 </p>
               )}
@@ -562,14 +522,39 @@ function RemainingCoreCourseList({
   );
 }
 
+function ElectiveRemoveButton({ category, label, selectedCourses, onRemoveCourse }: {
+  category: string;
+  label: string;
+  selectedCourses: string[];
+  onRemoveCourse: (courseCode: string) => void;
+}) {
+  const token = selectedCourses.filter(code => getElectiveTokenCategory(code) === category).slice(-1)[0];
+  if (!token) return null;
+
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      className="elective-remove"
+      onClick={() => onRemoveCourse(token)}
+      aria-label={`Remove one ${label} elective`}
+      title={`Remove one ${label} elective`}
+    >
+      <Minus size={16} />
+    </Button>
+  );
+}
+
 function ElectiveRequirementList({
   electiveRequirements,
   selectedCourses,
   onAddCourse,
+  onRemoveCourse,
 }: {
   electiveRequirements: ElectiveRequirement[];
   selectedCourses: string[];
   onAddCourse: (courseCode: string) => void | Promise<void>;
+  onRemoveCourse: (courseCode: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -581,16 +566,14 @@ function ElectiveRequirementList({
         const isFullySelected = selectedCount >= slotCount;
 
         return (
+          <div key={elective.category} className="elective-category-row">
           <button
-            key={elective.category}
             onClick={() => !isFullySelected && onAddCourse(nextToken)}
             disabled={isFullySelected}
             className="w-full text-left"
             style={{
               padding: '12px 16px',
-              background: isFullySelected ? '#f8fafc' : '#fff',
-              border: '1px solid',
-              borderColor: isFullySelected ? '#f1f5f9' : '#e2e8f0',
+              border: 'none',
               borderRadius: '8px',
               cursor: isFullySelected ? 'default' : 'pointer',
               opacity: isFullySelected ? 0.7 : 1,
@@ -599,22 +582,24 @@ function ElectiveRequirementList({
           >
             <div className="flex items-center justify-between">
               <div>
-                <p style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
                   {elective.label}
                 </p>
-                <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
                   {elective.creditsNeeded} credits needed
                 </p>
               </div>
               <span style={{ 
                 fontSize: '13px', 
-                color: isFullySelected ? '#10b981' : '#64748b',
+                color: isFullySelected ? 'var(--success)' : 'var(--muted-foreground)',
                 fontWeight: 500
               }}>
                 {selectedCount}/{slotCount}
               </span>
             </div>
           </button>
+          <ElectiveRemoveButton category={elective.category} label={elective.label} selectedCourses={selectedCourses} onRemoveCourse={onRemoveCourse} />
+          </div>
         );
       })}
     </div>
@@ -640,7 +625,7 @@ function FallbackRemainingCourseList({
           style={{
             fontSize: '13px',
             fontWeight: 500,
-            color: '#bf112b',
+            color: 'var(--primary-text)',
             marginBottom: '12px',
           }}
           className="hover:underline"
@@ -662,9 +647,9 @@ function FallbackRemainingCourseList({
                 fontWeight: 500,
                 borderRadius: '6px',
                 border: '1px solid',
-                background: isSelected ? '#f8fafc' : '#fff',
-                color: isSelected ? '#94a3b8' : '#111',
-                borderColor: isSelected ? '#f1f5f9' : '#e2e8f0',
+                background: 'var(--surface)',
+                color: isSelected ? 'var(--muted-foreground)' : 'var(--foreground)',
+                borderColor: 'var(--border)',
                 cursor: isSelected ? 'default' : 'pointer',
                 opacity: isSelected ? 0.7 : 1,
               }}
@@ -685,6 +670,7 @@ interface SearchPanelProps {
   showResults: boolean;
   isSearching: boolean;
   selectedCourses: string[];
+  plannedInOtherTerms?: Record<string, string>;
   currentTerm: string;
   onSearch: (query: string) => void;
   onFocus: () => void;
@@ -699,6 +685,7 @@ export function SearchPanel({
   showResults,
   isSearching,
   selectedCourses,
+  plannedInOtherTerms = {},
   currentTerm,
   onSearch,
   onFocus,
@@ -712,16 +699,13 @@ export function SearchPanel({
   });
 
   return (
-    <div 
+    <div className="glass-panel course-search-panel"
       style={{ 
-        background: '#fff', 
-        borderRadius: '12px', 
-        border: '1px solid #e2e8f0',
         padding: '20px'
       }}
     >
-      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '16px' }}>
-        Search Courses
+      <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '16px' }}>
+        Find courses
       </h3>
       <div ref={searchRef} className="relative">
         <div className="relative">
@@ -731,19 +715,22 @@ export function SearchPanel({
           />
           <Input
             type="text"
+            aria-label="Search courses by code or name"
             placeholder="Course code or name..."
             value={searchQuery}
             onChange={(e) => onSearch(e.target.value)}
             onFocus={onFocus}
             style={{ 
               paddingLeft: '42px',
+              paddingRight: '42px',
               height: '44px',
               fontSize: '14px',
               borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              background: '#f8fafc'
+              border: '1px solid var(--border)',
+              background: 'var(--surface)'
             }}
           />
+          {searchQuery && !isSearching && <button className="search-clear" onClick={() => onSearch('')} aria-label="Clear course search"><X size={16} /></button>}
           {isSearching && (
             <div 
               className="absolute w-4 h-4 border-2 border-slate-200 rounded-full"
@@ -751,7 +738,7 @@ export function SearchPanel({
                 right: '14px', 
                 top: '50%', 
                 transform: 'translateY(-50%)',
-                borderTopColor: '#64748b',
+                borderTopColor: 'var(--muted-foreground)',
                 animation: 'spin 1s linear infinite'
               }}
             />
@@ -759,49 +746,40 @@ export function SearchPanel({
         </div>
 
         {showResults && searchResults.length > 0 && (
-          <div 
-            className="absolute w-full mt-2 overflow-y-auto"
-            style={{ 
-              zIndex: 20, 
-              maxHeight: '320px',
-              background: '#fff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
-            }}
-          >
+          <div className="course-results" aria-label="Course search results">
             {sortedResults.map((course, index) => {
               const isSelected = selectedCourses.includes(course.code);
+              const plannedTerm = plannedInOtherTerms[course.code];
               const isAvailable = course.terms?.includes(currentTerm);
-              
+
               return (
                 <button
                   key={course.code}
                   onClick={() => onAddCourse(course.code)}
-                  disabled={isSelected}
-                  className="w-full text-left transition-colors"
+                  disabled={isSelected || Boolean(plannedTerm)}
+                   className="course-result w-full text-left transition-colors"
                   style={{ 
                     padding: '14px 16px',
-                    borderBottom: index < sortedResults.length - 1 ? '1px solid #f1f5f9' : 'none',
-                    opacity: isSelected ? 0.5 : 1, 
-                    cursor: isSelected ? 'not-allowed' : 'pointer',
+                    borderBottom: index < sortedResults.length - 1 ? '1px solid var(--border)' : 'none',
+                    opacity: 1,
+                    cursor: isSelected || plannedTerm ? 'not-allowed' : 'pointer',
                     background: 'transparent'
                   }}
-                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#f8fafc'; }}
+                  onMouseEnter={(e) => { if (!isSelected && !plannedTerm) e.currentTarget.style.background = 'var(--surface-hover)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
                           {course.code}
                         </span>
                         {isAvailable && (
                           <span style={{ 
                             fontSize: '11px', 
                             fontWeight: 500,
-                            color: '#059669',
-                            background: '#ecfdf5',
+                            color: 'var(--success)',
+                            background: 'var(--success-soft)',
                             padding: '2px 6px',
                             borderRadius: '4px'
                           }}>
@@ -812,7 +790,7 @@ export function SearchPanel({
                       {course.name && course.name !== course.code && (
                         <p style={{ 
                           fontSize: '13px', 
-                          color: '#64748b', 
+                          color: 'var(--muted-foreground)',
                           marginTop: '2px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -821,15 +799,15 @@ export function SearchPanel({
                           {course.name}
                         </p>
                       )}
-                      <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
                         {course.credits} credits
+                        {' '}<HalfTermCourseTag code={course.code} credits={course.credits} />
                       </p>
+                      {plannedTerm && <p className="planned-other-term">Already selected for {getTermLabel(plannedTerm)}</p>}
                     </div>
-                    {isSelected && (
-                      <span style={{ fontSize: '12px', color: '#94a3b8', flexShrink: 0 }}>
-                        Added
+                    <span className={`course-result-action${isSelected || plannedTerm ? ' is-added' : ''}`}>
+                        {isSelected || plannedTerm ? <Check size={14} /> : <Plus size={14} />}{isSelected ? 'Added' : plannedTerm ? 'Planned' : 'Add'}
                       </span>
-                    )}
                   </div>
                 </button>
               );
@@ -838,22 +816,13 @@ export function SearchPanel({
         )}
 
         {showResults && searchQuery && searchResults.length === 0 && !isSearching && (
-          <div 
-            className="absolute w-full mt-2 text-center"
-            style={{ 
-              zIndex: 20, 
-              padding: '24px',
-              background: '#fff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
-            }}
-          >
-            <p style={{ fontSize: '14px', color: '#64748b' }}>
-              No courses found for "{searchQuery}"
+          <div className="search-empty" role="status">
+            <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>
+              No matches for “{searchQuery}” in {getTermLabel(currentTerm)}.
             </p>
           </div>
         )}
+        {!searchQuery && <p className="search-hint">Search by code or title. Results show sections in {getTermLabel(currentTerm)}.</p>}
       </div>
     </div>
   );
@@ -862,31 +831,32 @@ export function SearchPanel({
 export function ManualElectivePicker({
   electiveRequirements,
   selectedCourses,
+  otherTermElectiveCounts = {},
   onAddElectiveCategory,
+  onRemoveCourse,
 }: {
   electiveRequirements: ElectiveRequirement[];
   selectedCourses: string[];
+  otherTermElectiveCounts?: Record<string, { count: number; term: string }>;
   onAddElectiveCategory: (category: string) => void;
+  onRemoveCourse: (courseCode: string) => void;
 }) {
   if (electiveRequirements.length === 0) {
     return null;
   }
 
   return (
-    <div
+    <div className="glass-panel"
       style={{
-        background: '#fff',
-        borderRadius: '12px',
-        border: '1px solid #e2e8f0',
         padding: '20px'
       }}
     >
       <div style={{ marginBottom: '16px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '4px' }}>
-          Add Electives
+        <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '4px' }}>
+          Elective categories
         </h3>
-        <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-          Add elective categories manually even if your audit does not list them.
+        <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
+          Choose a category now; pick the specific course alongside your timetable.
         </p>
       </div>
 
@@ -894,14 +864,13 @@ export function ManualElectivePicker({
         {electiveRequirements.map((elective) => {
           const selectedCount = getSelectedElectiveTokenCount(selectedCourses, elective.category);
           return (
+            <div key={elective.category} className="elective-category-row">
             <button
-              key={elective.category}
               onClick={() => onAddElectiveCategory(elective.category)}
               className="w-full text-left"
               style={{
                 padding: '12px 16px',
-                background: '#fff',
-                border: '1px solid #e2e8f0',
+                border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 transition: 'all 150ms',
@@ -909,22 +878,27 @@ export function ManualElectivePicker({
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
                     {elective.label}
                   </p>
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
                     {elective.selectionUnitCredits || 0.5} credits per selection
                   </p>
+                  {otherTermElectiveCounts[elective.category] && (
+                    <p className="planned-other-term">{otherTermElectiveCounts[elective.category].count} already selected for {getTermLabel(otherTermElectiveCounts[elective.category].term)}</p>
+                  )}
                 </div>
                 <span style={{
                   fontSize: '13px',
-                  color: '#64748b',
+                  color: 'var(--muted-foreground)',
                   fontWeight: 500
                 }}>
-                  {selectedCount} selected
+                  <span className="elective-count">{selectedCount > 0 ? `${selectedCount} selected` : <><Plus size={14} /> Add</>}</span>
                 </span>
               </div>
             </button>
+            <ElectiveRemoveButton category={elective.category} label={elective.label} selectedCourses={selectedCourses} onRemoveCourse={onRemoveCourse} />
+            </div>
           );
         })}
       </div>
@@ -933,6 +907,7 @@ export function ManualElectivePicker({
 }
 
 interface SelectedCoursesPanelProps {
+  prerequisiteOverrides: string[];
   selectedCourses: string[];
   completedCourses: string[];
   courseDetails: Map<string, Course>;
@@ -941,9 +916,13 @@ interface SelectedCoursesPanelProps {
   onRemoveCourse: (courseCode: string) => void;
   areAllPrerequisitesMet: (courseCode: string) => boolean;
   prerequisiteValidation: Record<string, PrerequisiteValidationResult>;
+  currentTerm: string;
+  onClear: () => void;
+  children?: ReactNode;
 }
 
 export function SelectedCoursesPanel({
+  prerequisiteOverrides,
   selectedCourses,
   completedCourses,
   courseDetails,
@@ -952,45 +931,34 @@ export function SelectedCoursesPanel({
   onRemoveCourse,
   areAllPrerequisitesMet,
   prerequisiteValidation,
+  currentTerm,
+  onClear,
+  children,
 }: SelectedCoursesPanelProps) {
   return (
-    <div 
-      style={{ 
-        background: '#fff', 
-        borderRadius: '12px', 
-        border: '1px solid #e2e8f0',
-        padding: '20px'
-      }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111' }}>
-          Selected Courses
+    <div className="glass-panel selected-plan">
+      <div className="selected-plan-header">
+        <div>
+        <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--foreground)' }}>
+          Your courses <span className="selection-count">{selectedCourses.length}</span>
         </h3>
-        {selectedCourses.length > 0 && (
-          <span style={{ 
-            fontSize: '13px', 
-            fontWeight: 500,
-            color: '#64748b',
-            background: '#f1f5f9',
-            padding: '4px 10px',
-            borderRadius: '12px'
-          }}>
-            {selectedCourses.length}
-          </span>
-        )}
+        <p>{getSelectedCredits(selectedCourses, courseDetails, electiveRequirements)} credits · {getTermLabel(currentTerm)}</p>
+        </div>
+        {selectedCourses.length > 0 && <Button variant="ghost" size="sm" onClick={onClear}>Clear all</Button>}
       </div>
 
       {selectedCourses.length === 0 ? (
-        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#64748b' }}>
-            No courses selected
+        <div className="plan-empty">
+          <BookOpen size={28} />
+          <p style={{ fontSize: '14px', color: 'var(--muted-foreground)' }}>
+            Your plan is empty
           </p>
-          <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>
-            Search or add from your requirements
+          <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
+            Courses and electives you add appear here.
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="selected-plan-list">
           {selectedCourses.map((courseCode) => {
             if (courseCode.startsWith('ELECTIVE:')) {
               const category = getElectiveTokenCategory(courseCode) || courseCode.replace('ELECTIVE:', '');
@@ -1003,22 +971,23 @@ export function SelectedCoursesPanel({
                   key={courseCode}
                   style={{
                     padding: '14px 16px',
-                    background: '#fafafa',
+                    background: 'var(--surface)',
                     borderRadius: '8px',
-                    border: '1px solid #f1f5f9'
+                    border: '1px solid var(--border)'
                   }}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#111' }}>
+                      <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
                         {label}
                       </p>
-                      <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                        {creditInfo} credits &middot; Auto-selected
+                      <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
+                        {creditInfo} credits · Choose course in schedule
                       </p>
                     </div>
                     <button
                       onClick={() => onRemoveCourse(courseCode)}
+                      aria-label={`Remove ${label}`}
                       className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
                     >
                       <X className="w-4 h-4 text-slate-400" />
@@ -1034,40 +1003,41 @@ export function SelectedCoursesPanel({
             const isCompleted = completedCourses.includes(courseCode);
             const validation = prerequisiteValidation[courseCode];
             const hasUnmetPrereqs = isCompleted ? false : !areAllPrerequisitesMet(courseCode);
-            const noSections = course.hasSections === false;
+            const noSections = course.hasSections === false || !course.terms?.includes(currentTerm);
             const prerequisiteExpression = validation?.expressionEvaluated?.trim() || course.prerequisiteExpression?.trim();
-            const prerequisiteSummary = prerequisiteExpression || course.prerequisites.join(', ');
+            const prerequisiteSummary = validation?.requirementExplanation || prerequisiteExpression || course.prerequisites.join(', ');
 
             // Determine if there's a warning
             const hasWarning = noSections || (hasUnmetPrereqs && hasAuditData) || isCompleted;
             let warningText = '';
             if (isCompleted) warningText = 'Already completed';
-            else if (noSections) warningText = 'No sections available';
-            else if (hasUnmetPrereqs && hasAuditData) warningText = 'Prerequisites not met';
+            else if (noSections) warningText = 'Not in this term';
+            else if (hasUnmetPrereqs && hasAuditData) warningText = prerequisiteOverrides.includes(courseCode) ? 'Prerequisite override · planning only' : 'Prerequisites not met';
 
             return (
               <div
                 key={courseCode}
                 style={{
                   padding: '14px 16px',
-                  background: '#fff',
+                  background: 'var(--surface)',
                   borderRadius: '8px',
                   border: '1px solid',
-                  borderColor: hasWarning ? '#fef3c7' : '#e2e8f0'
+                  borderColor: hasWarning ? 'var(--warning-border)' : 'var(--border)'
                 }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>
+                    <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)' }}>
                         {course.code}
                       </span>
+                      <HalfTermCourseTag code={course.code} credits={course.credits} />
                       {hasWarning && (
                         <span style={{ 
                           fontSize: '11px', 
                           fontWeight: 500,
-                          color: '#92400e',
-                          background: '#fef3c7',
+                          color: 'var(--warning)',
+                          background: 'var(--warning-soft)',
                           padding: '2px 6px',
                           borderRadius: '4px'
                         }}>
@@ -1075,33 +1045,33 @@ export function SelectedCoursesPanel({
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                    <p style={{ fontSize: '13px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
                       {course.name}
                     </p>
 
                     {!isCompleted && prerequisiteSummary && (
-                      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                            Prerequisite Logic:
+                      <details className="prerequisite-details">
+                        <summary>
+                          <span style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>
+                            Prerequisites
                           </span>
                           <span
                             style={{
                               fontSize: '11px',
                               fontWeight: 600,
-                              color: hasUnmetPrereqs ? '#b91c1c' : '#047857',
-                              background: hasUnmetPrereqs ? '#fef2f2' : '#ecfdf5',
+                              color: !hasAuditData ? 'var(--muted-foreground)' : hasUnmetPrereqs ? 'var(--danger)' : 'var(--success)',
+                              background: !hasAuditData ? 'var(--surface)' : hasUnmetPrereqs ? 'var(--danger-soft)' : 'var(--success-soft)',
                               padding: '2px 6px',
                               borderRadius: '9999px'
                             }}
                           >
-                            {hasUnmetPrereqs ? 'Not met' : 'Met'}
+                            {!hasAuditData ? 'No audit' : hasUnmetPrereqs ? 'Not met' : validation?.plannedPrerequisites?.length ? 'Planned earlier' : 'Met'}
                           </span>
-                        </div>
+                        </summary>
                         <p
                           style={{
                             fontSize: '12px',
-                            color: hasUnmetPrereqs ? '#dc2626' : '#059669',
+                            color: hasUnmetPrereqs ? 'var(--danger)' : 'var(--success)',
                             marginTop: '6px',
                             fontFamily: 'monospace',
                             whiteSpace: 'pre-wrap',
@@ -1110,6 +1080,7 @@ export function SelectedCoursesPanel({
                         >
                           {prerequisiteSummary}
                         </p>
+                        {validation?.plannedPrerequisites?.length ? <p className="prerequisite-override-explanation">{validation.plannedPrerequisites.join(', ')} scheduled in an earlier term. Planning assumes you pass with any required grade.</p> : null}
                         {!prerequisiteExpression && course.prerequisites.length > 0 && (
                           <div style={{ marginTop: '6px' }}>
                             {course.prerequisites.map((prereq, index) => {
@@ -1120,24 +1091,25 @@ export function SelectedCoursesPanel({
                                     style={{
                                       fontSize: '12px',
                                       fontWeight: 500,
-                                      color: status === 'met' ? '#059669' : status === 'not-met' ? '#dc2626' : '#64748b',
+                                      color: status === 'met' ? 'var(--success)' : status === 'not-met' ? 'var(--danger)' : 'var(--muted-foreground)',
                                     }}
                                   >
                                     {prereq}
                                   </span>
                                   {index < course.prerequisites.length - 1 && (
-                                    <span style={{ color: '#94a3b8' }}>, </span>
+                                    <span style={{ color: 'var(--muted-foreground)' }}>, </span>
                                   )}
                                 </span>
                               );
                             })}
                           </div>
                         )}
-                      </div>
+                      </details>
                     )}
                   </div>
                   <button
                     onClick={() => onRemoveCourse(courseCode)}
+                    aria-label={`Remove ${courseCode}`}
                     className="p-1.5 rounded-md hover:bg-slate-100 transition-colors ml-3"
                   >
                     <X className="w-4 h-4 text-slate-400" />
@@ -1148,8 +1120,17 @@ export function SelectedCoursesPanel({
           })}
         </div>
       )}
+      {children}
     </div>
   );
+}
+
+function getSelectedCredits(selectedCourses: string[], courseDetails: Map<string, Course>, electives: ElectiveRequirement[]) {
+  return selectedCourses.reduce((sum, code) => {
+    const category = getElectiveTokenCategory(code);
+    const elective = category ? electives.find(item => item.category === category) : undefined;
+    return sum + (elective ? getSelectionUnitCredits(elective) : courseDetails.get(code)?.credits || 0);
+  }, 0);
 }
 
 interface GenerateScheduleSidebarProps {
@@ -1159,6 +1140,8 @@ interface GenerateScheduleSidebarProps {
   hasAuditData: boolean;
   onGenerateSchedules: () => void;
   getTermLabel: (term: string) => string;
+  isGenerating: boolean;
+  error: string | null;
 }
 
 export function GenerateScheduleSidebar({
@@ -1168,51 +1151,32 @@ export function GenerateScheduleSidebar({
   hasAuditData,
   onGenerateSchedules,
   getTermLabel,
+  isGenerating,
+  error,
 }: GenerateScheduleSidebarProps) {
   const canGenerate = selectedCourses.length > 0;
   
   return (
-    <div className="space-y-4">
-      <div 
-        style={{ 
-          background: '#fff', 
-          borderRadius: '12px', 
-          border: '1px solid #e2e8f0',
-          padding: '20px',
-          position: 'sticky',
-          top: '24px'
-        }}
-      >
-        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '8px' }}>
-          Generate Schedule
-        </h3>
-        <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', lineHeight: 1.5 }}>
+    <div className="plan-actions">
+        <p className="plan-status" aria-live="polite">
           {selectedCourses.length === 0
-            ? 'Select courses to get started'
+            ? 'Add courses to find a timetable.'
             : `${coursesWithSectionsCount} course${coursesWithSectionsCount !== 1 ? 's' : ''} ready for ${getTermLabel(currentTerm)}`
           }
         </p>
         <Button
           onClick={onGenerateSchedules}
-          disabled={!canGenerate}
+          disabled={!canGenerate || isGenerating}
           className="w-full"
           style={{ height: '44px', fontSize: '14px' }}
         >
-          Generate Schedules
+          {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} {isGenerating ? 'Finding schedules…' : 'Find schedules'}
         </Button>
-      </div>
-
+      {error && <p role="alert" className="inline-error">{error}</p>}
       {!hasAuditData && (
-        <div 
-          style={{ 
-            padding: '16px',
-            background: '#f8fafc',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0'
-          }}
-        >
-          <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-            Upload your Academic Audit on the previous page to see prerequisite validation and degree requirements.
+        <div>
+          <p className="plan-audit-hint">
+            An imported audit lets us check your prerequisites.
           </p>
         </div>
       )}

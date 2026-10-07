@@ -13,12 +13,14 @@ import { promisify } from 'util'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import crypto from 'crypto'
 import { getElectiveCategoryLookup } from '../lib/electives'
+import { authenticateToken, requireRole } from '../middleware/auth'
 
 const execAsync = promisify(exec)
 
 const router = Router()
+
+router.use(authenticateToken)
 
 // File upload configuration - store files in memory temporarily
 const storage = multer.memoryStorage()
@@ -38,7 +40,7 @@ const upload = multer({
 })
 
 // Upload endpoint - saves parsed audit data to database
-router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+router.post('/upload', requireRole('ADMIN'), upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -96,41 +98,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
     }
 
-    // Generate hash for deduplication
-    const fileHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex')
-
     // Save student data
     await saveStudentAuditData({
       ...auditData,
       completedCourses: validCourses
     })
-
-    // Store the raw audit file for the team if not a duplicate for this student
-    const dbStudent = await prisma.student.findUnique({
-      where: { studentId: auditData.studentId }
-    })
-
-    if (dbStudent) {
-      const existingAudit = await prisma.savedAudit.findUnique({
-        where: {
-          studentId_fileHash: {
-            studentId: dbStudent.id,
-            fileHash: fileHash
-          }
-        }
-      })
-
-      if (!existingAudit) {
-        await prisma.savedAudit.create({
-          data: {
-            studentId: dbStudent.id,
-            fileName: req.file.originalname,
-            fileHash: fileHash,
-            content: req.file.mimetype === 'application/pdf' ? 'PDF_CONTENT_STORED_IN_FILESYSTEM_OR_BLOB' : req.file.buffer.toString('utf-8')
-          }
-        })
-      }
-    }
 
     res.json({
       success: true,
@@ -208,7 +180,12 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
       currentCourses: auditData.currentCourses,
       remainingCourses: remainingCourses,
       electiveRequirements: electiveRequirements,
-      requirements: auditData.requirements,
+      requirements: auditData.requirements.map(requirement => ({
+        ...requirement,
+        expandedOptions: Array.from(new Set(requirement.courseOptions.flatMap(option =>
+          electiveCategoryLookup[option]?.courses || [option]
+        )))
+      })),
       completedCount: auditData.completedCourses.length,
       currentCount: auditData.currentCourses.length,
       remainingCount: remainingCourses.length

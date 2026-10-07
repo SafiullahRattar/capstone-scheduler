@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { validatePrerequisites } from '../../cli/prerequisite-validator'
 import { fetchSectionMeetings } from './section-meetings'
+import { matchesDeliveryPreference, normalizeDeliveryMode, type DeliveryMode, type DeliveryPreference } from '../../shared/delivery-mode'
 
 export interface TimeSlot {
   day: string
@@ -18,8 +19,11 @@ export interface Section {
   location: string | null
   capacity: number | null
   enrolled: number | null
+  deliveryMode: DeliveryMode
   timeSlots: TimeSlot[]
 }
+
+type CourseSections = { courseId: string; sections: Section[] }
 
 export interface ScheduleSelection {
   courseId: string
@@ -37,6 +41,8 @@ export interface GeneratedSchedule {
       reason?: string
       missingCourses?: string[]
       expressionEvaluated: string
+      requirementExplanation?: string
+      plannedPrerequisites?: string[]
     }
   }
 }
@@ -46,7 +52,11 @@ export interface GenerateSchedulesOptions {
   term?: string
   maxSchedules: number
   completedCourses?: string[]
+  plannedCourses?: string[]
+  courseGrades?: Record<string, string>
   includePrerequisites?: boolean
+  deliveryPreference?: DeliveryPreference
+  lockedSectionIds?: Record<string, string[]>
 }
 
 export function parseDays(daysStr: string | null): string[] {
@@ -67,7 +77,7 @@ export function hasTimeConflict(slot1: TimeSlot, slot2: TimeSlot): boolean {
   if (slot1.day !== slot2.day) return false
 
   const parseTime = (time: string): number => {
-    const padded = time.padStart(4, '0')
+    const padded = time.replace(':', '').padStart(4, '0')
     const hours = parseInt(padded.substring(0, 2))
     const minutes = parseInt(padded.substring(2, 4))
     return hours * 60 + minutes
@@ -82,7 +92,7 @@ export function hasTimeConflict(slot1: TimeSlot, slot2: TimeSlot): boolean {
 }
 
 function getTimeSlots(section: Section): TimeSlot[] {
-  return section.timeSlots
+  return section.deliveryMode === 'ONLINE_ASYNC' ? [] : section.timeSlots
 }
 
 function hasConflictWithSelections(
@@ -261,7 +271,8 @@ export async function loadCourseSectionsForScheduling(
         location: section.location,
         capacity: section.capacity,
         enrolled: section.enrolled,
-        timeSlots: (meetingsBySection.get(section.id) || []).flatMap((meeting) => {
+        deliveryMode: normalizeDeliveryMode(section.deliveryMode),
+        timeSlots: normalizeDeliveryMode(section.deliveryMode) === 'ONLINE_ASYNC' ? [] : (meetingsBySection.get(section.id) || []).flatMap((meeting) => {
           if (!meeting.days || !meeting.startTime || !meeting.endTime) {
             return []
           }
@@ -282,19 +293,65 @@ export async function loadCourseSectionsForScheduling(
   )
 }
 
+/**
+ * Keeps only sections matching the delivery preference. When a course has no matching
+ * section of some type (e.g. its labs are only on campus), that type uses its hybrid
+ * sections, or all of them if there are none, and the course is reported in `fallbacks`.
+ */
+export function applyDeliveryPreference(
+  courseSections: CourseSections[],
+  preference: DeliveryPreference = 'any'
+): { courseSections: CourseSections[]; fallbacks: string[] } {
+  if (preference === 'any') return { courseSections, fallbacks: [] }
+  const fallbacks: string[] = []
+  const filtered = courseSections.map(course => {
+    const sections = Object.values(groupSectionsByType(course.sections)).flatMap(group => {
+      const matching = group.filter(section => matchesDeliveryPreference(section.deliveryMode, preference))
+      if (matching.length > 0) return matching
+      if (!fallbacks.includes(course.courseId)) fallbacks.push(course.courseId)
+      // Hybrid is the closest substitute for either strict choice.
+      const hybrid = group.filter(section => section.deliveryMode === 'HYBRID')
+      return hybrid.length > 0 ? hybrid : group
+    })
+    return { ...course, sections }
+  })
+  return { courseSections: filtered, fallbacks }
+}
+
+/** A pinned bundle must include exactly one section of every required type. */
+export function applyLockedSections(courseSections: CourseSections[], locks: Record<string, string[]> = {}): CourseSections[] {
+  return courseSections.map(course => {
+    const ids = locks[course.courseId];
+    if (!ids) return course;
+    const requested = new Set(ids);
+    const selected = course.sections.filter(section => requested.has(section.id));
+    const types = new Set(course.sections.map(section => section.sectionType));
+    if (requested.size !== ids.length || selected.length !== ids.length || selected.length !== types.size || new Set(selected.map(section => section.sectionType)).size !== types.size) {
+      throw new Error(`Selected sections are no longer a complete available bundle for ${course.courseId}`);
+    }
+    return { ...course, sections: selected };
+  });
+}
+
 export async function generateSchedulesForCourses(
   prisma: PrismaClient,
   options: GenerateSchedulesOptions
-): Promise<GeneratedSchedule[]> {
+): Promise<{ schedules: GeneratedSchedule[]; deliveryFallbacks: string[] }> {
   const {
     courseIds,
     term,
     maxSchedules,
     completedCourses = [],
-    includePrerequisites = true
+    plannedCourses = [],
+    courseGrades = {},
+    includePrerequisites = true,
+    deliveryPreference = 'any',
+    lockedSectionIds = {}
   } = options
 
-  const courseSections = await loadCourseSectionsForScheduling(prisma, courseIds, term)
+  const loaded = await loadCourseSectionsForScheduling(prisma, courseIds, term)
+  const { courseSections: preferredSections, fallbacks: deliveryFallbacks } = applyDeliveryPreference(loaded, deliveryPreference)
+  const courseSections = applyLockedSections(preferredSections, lockedSectionIds)
 
   const coursesWithoutSections = courseSections.filter(cs => cs.sections.length === 0)
   if (coursesWithoutSections.length > 0) {
@@ -305,11 +362,13 @@ export async function generateSchedulesForCourses(
   generateSchedulesRecursive(courseSections, 0, [], maxSchedules, schedules)
 
   if (!includePrerequisites) {
-    return schedules
+    return { schedules, deliveryFallbacks }
   }
 
   const transcript = {
     completedCourses: completedCourses.map((c: string) => c.toUpperCase()),
+    plannedCourses: plannedCourses.map(c => c.toUpperCase()),
+    courseGrades,
     currentYear: 'FOURTH_YEAR' as const
   }
 
@@ -322,6 +381,8 @@ export async function generateSchedulesForCourses(
         isValid: result.isValid,
         reason: result.reason,
         missingCourses: result.missingCourses,
+        plannedPrerequisites: result.plannedPrerequisites,
+        requirementExplanation: result.requirementExplanation,
         expressionEvaluated: result.expressionEvaluated
       }
     }
@@ -329,11 +390,82 @@ export async function generateSchedulesForCourses(
     schedule.prerequisiteInfo = prerequisiteInfo
   }
 
-  return schedules
+  return { schedules, deliveryFallbacks }
 }
 
 export function estimateCourseBranching(sections: Section[]): number {
   const sectionsByType = groupSectionsByType(sections)
   const combinations = generateSectionCombinations(sectionsByType)
   return combinations.filter(combo => !hasInternalConflicts(combo)).length
+}
+
+
+export interface ElectiveFitResult {
+  fits: Record<string, boolean>
+  blocks: Record<string, string[]>
+  pairwiseComplete: boolean
+}
+
+function hasAnySchedule(courseSections: CourseSections[]): boolean {
+  // Most constrained courses first, so impossible sets fail fast.
+  const ordered = [...courseSections].sort((a, b) => estimateCourseBranching(a.sections) - estimateCourseBranching(b.sections))
+  const result: GeneratedSchedule[] = []
+  generateSchedulesRecursive(ordered, 0, [], 1, result)
+  return result.length > 0
+}
+
+/**
+ * For each candidate elective, checks whether some conflict-free timetable exists
+ * alongside the fixed courses, with every course free to use any of its sections.
+ * With `pairwise`, also lists which other fitting candidates each one rules out.
+ */
+export function evaluateElectiveFit(
+  fixed: CourseSections[],
+  candidates: CourseSections[],
+  pairwise: boolean,
+  budgetMs = 3000
+): ElectiveFitResult {
+  const fits: Record<string, boolean> = {}
+  const blocks: Record<string, string[]> = {}
+
+  for (const candidate of candidates) {
+    fits[candidate.courseId] = candidate.sections.length > 0 && hasAnySchedule([...fixed, candidate])
+    blocks[candidate.courseId] = []
+  }
+
+  if (!pairwise) return { fits, blocks, pairwiseComplete: true }
+
+  const fitting = candidates.filter(candidate => fits[candidate.courseId])
+  const deadline = Date.now() + budgetMs
+  for (let i = 0; i < fitting.length; i++) {
+    for (let j = i + 1; j < fitting.length; j++) {
+      if (Date.now() > deadline) return { fits, blocks, pairwiseComplete: false }
+      const a = fitting[i]
+      const b = fitting[j]
+      if (!hasAnySchedule([...fixed, a, b])) {
+        blocks[a.courseId].push(b.courseId)
+        blocks[b.courseId].push(a.courseId)
+      }
+    }
+  }
+
+  return { fits, blocks, pairwiseComplete: true }
+}
+
+export async function checkElectiveFit(
+  prisma: PrismaClient,
+  options: { fixedCourseIds: string[]; candidateIds: string[]; term?: string; pairwise: boolean; deliveryPreference?: DeliveryPreference; lockedSectionIds?: Record<string, string[]> }
+): Promise<ElectiveFitResult> {
+  const fixedIds = options.fixedCourseIds.map(id => id.toUpperCase())
+  const candidateIds = Array.from(new Set(options.candidateIds.map(id => id.toUpperCase()))).filter(id => !fixedIds.includes(id))
+  const [fixed, candidates] = await Promise.all([
+    loadCourseSectionsForScheduling(prisma, fixedIds, options.term),
+    loadCourseSectionsForScheduling(prisma, candidateIds, options.term),
+  ])
+  const preference = options.deliveryPreference || 'any'
+  return evaluateElectiveFit(
+    applyLockedSections(applyDeliveryPreference(fixed.filter(course => course.sections.length > 0), preference).courseSections, options.lockedSectionIds),
+    applyDeliveryPreference(candidates, preference).courseSections,
+    options.pairwise
+  )
 }

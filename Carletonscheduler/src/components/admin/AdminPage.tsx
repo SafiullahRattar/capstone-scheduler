@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { SectionUpload } from './SectionUpload';
 import { CourseEditor } from './CourseEditor';
 import { ElectiveManager } from './ElectiveManager';
-import { API_BASE_URL } from '../../config/constants';
+import { API_BASE_URL, authenticatedFetch } from '../../config/constants';
 
 type AdminTab = 'sections' | 'courses' | 'electives';
 
@@ -23,7 +23,7 @@ export function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/stats`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/stats`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -48,40 +48,26 @@ export function AdminPage() {
   };
 
   const tabs: { id: AdminTab; label: string }[] = [
-    { id: 'sections', label: 'Section Data' },
-    { id: 'courses', label: 'Courses & Prerequisites' },
+    { id: 'sections', label: 'Timetable' },
+    { id: 'courses', label: 'Courses' },
     { id: 'electives', label: 'Electives' },
   ];
 
   return (
-    <div className="min-h-screen" style={{ background: '#f8fafc' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 24px' }}>
+    <main className="scheduler-page page-container">
         {/* Header */}
-        <div style={{ marginBottom: '40px' }}>
-          <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: 600, 
-            color: '#111', 
-            letterSpacing: '-0.02em',
-            marginBottom: '8px'
-          }}>
-            Admin
+        <div className="page-heading">
+          <h1>
+            Catalogue management
           </h1>
-          <p style={{ fontSize: '15px', color: '#64748b' }}>
-            Manage section data, courses, and prerequisites
+          <p>
+            Timetable imports, course prerequisites, and elective categories.
           </p>
         </div>
 
         {/* Stats Cards */}
         {!loadingStats && stats && (
-          <div 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-              marginBottom: '32px'
-            }}
-          >
+          <div className="admin-stats">
             <StatCard label="Total Courses" value={stats.courses.toLocaleString()} />
             <StatCard label="Total Sections" value={stats.sections.toLocaleString()} />
             {stats.recentTerms.length > 0 && (
@@ -95,32 +81,25 @@ export function AdminPage() {
         )}
 
         {/* Tab Navigation */}
-        <div 
-          style={{ 
-            display: 'flex',
-            gap: '4px',
-            padding: '4px',
-            background: '#f1f5f9',
-            borderRadius: '10px',
-            width: 'fit-content',
-            marginBottom: '24px'
-          }}
-        >
+        <div className="admin-tabs" role="tablist" aria-label="Catalogue management">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: '10px 20px',
-                fontSize: '14px',
-                fontWeight: 500,
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 150ms',
-                background: activeTab === tab.id ? '#fff' : 'transparent',
-                color: activeTab === tab.id ? '#111' : '#64748b',
-                boxShadow: activeTab === tab.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+              role="tab"
+              id={`admin-tab-${tab.id}`}
+              aria-selected={activeTab === tab.id}
+              aria-controls="admin-content"
+              tabIndex={activeTab === tab.id ? 0 : -1}
+              onKeyDown={(event) => {
+                const index = tabs.findIndex(item => item.id === activeTab);
+                const nextIndex = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+                  : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+                  : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+                if (nextIndex < 0) return;
+                event.preventDefault();
+                setActiveTab(tabs[nextIndex].id);
+                document.getElementById(`admin-tab-${tabs[nextIndex].id}`)?.focus();
               }}
             >
               {tab.label}
@@ -129,14 +108,7 @@ export function AdminPage() {
         </div>
 
         {/* Tab Content */}
-        <div 
-          style={{ 
-            background: '#fff',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden'
-          }}
-        >
+        <div className="glass-panel admin-content" id="admin-content" role="tabpanel" aria-labelledby={`admin-tab-${activeTab}`}>
           {activeTab === 'sections' && (
             <SectionUpload onUploadComplete={fetchStats} />
           )}
@@ -147,8 +119,7 @@ export function AdminPage() {
             <ElectiveManager />
           )}
         </div>
-      </div>
-    </div>
+    </main>
   );
 }
 
@@ -162,23 +133,16 @@ function StatCard({
   sublabel?: string;
 }) {
   return (
-    <div
-      style={{
-        padding: '20px 24px',
-        background: '#fff',
-        borderRadius: '12px',
-        border: '1px solid #e2e8f0'
-      }}
-    >
-      <div style={{ fontSize: '28px', fontWeight: 600, color: '#111', lineHeight: 1 }}>
+    <div className="glass-panel admin-stat">
+      <div className="admin-stat-value">
         {value}
         {sublabel && (
-          <span style={{ fontSize: '14px', fontWeight: 400, color: '#94a3b8', marginLeft: '6px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--muted-foreground)', marginLeft: '6px' }}>
             {sublabel}
           </span>
         )}
       </div>
-      <div style={{ fontSize: '14px', color: '#64748b', marginTop: '6px' }}>
+      <div className="admin-stat-label">
         {label}
       </div>
     </div>

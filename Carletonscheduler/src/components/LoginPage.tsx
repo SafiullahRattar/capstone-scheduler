@@ -178,7 +178,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <input
                 id="email"
                 type="text"
-                placeholder="test"
+                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -224,7 +224,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="test"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -325,16 +325,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
 
-            <p
-              style={{
-                textAlign: 'center',
-                fontSize: '0.75rem',
-                color: 'rgba(255,255,255,0.45)',
-                marginTop: '20px',
-              }}
-            >
-              Authorized access only. Use <span style={{ color: 'rgba(255,255,255,0.7)' }}>test</span> / <span style={{ color: 'rgba(255,255,255,0.7)' }}>test</span> for demo.
-            </p>
           </form>
         </div>
       </div>
