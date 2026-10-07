@@ -398,7 +398,7 @@ Bachelor of Engineering - Software Engineering<br/>
 <div id="audit">
 <div id="auditHeader">
 <div class="includeTopText preformatted">
-Email: ${(first + last).toUpperCase()}@cmail.carleton.ca
+Email: ${(first + last).toUpperCase()}@example.com
 Admit Term: ${startYear}  Fall
 Your program is in the Faculty:Engineering &amp; Design
 </div>
@@ -582,7 +582,7 @@ Bachelor of Engineering - Software Engineering<br>
 <div id="audit" dprog="BENG-8P" catlyt="${startYear}30" includeip="false" includeplanned="false">
 <div id="auditHeader">
 <div class="includeTopText preformatted">
-Email: ${(first + last).toUpperCase()}@cmail.carleton.ca
+Email: ${(first + last).toUpperCase()}@example.com
 Admit Term: ${startYear}  Fall
 Your program is in the Faculty:Engineering &amp; Design
 *** Academic Continuation Code Legend ***

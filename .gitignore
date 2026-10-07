@@ -11,7 +11,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Next.js
+# Build output
 .next/
 out/
 build/
@@ -34,10 +34,15 @@ dist/
 docs/
 PRESENTATION.md
 
-# Local student data and generated project material
+# Real student audits. Anything named like an audit download is ignored, including
+# "Name_audit.html" and the "_files" folder a browser saves next to it.
+# The made-up fixtures below are the only exceptions.
 /*[Aa]udit*.pdf
 /*[Aa]udit*.txt
-/*-audit.html
+/*[Aa]udit*.html
+/*[Aa]udit*_files/
+!/test-audit.html
+!/mock-audit.html
 /final_report*
 /G67*
 /*presentation*
