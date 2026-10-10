@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Laptop, Loader2, Search } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react';
+import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Laptop, Loader2, Search, X } from 'lucide-react';
 import { COURSE_COLORS, TIMETABLE_CONFIG } from '../../config/constants';
 import { hasTimeConflict, type GeneratedSchedule, type ScheduleHoverPreview } from '../../utils/scheduleGenerator';
 import { Button } from '../ui/button';
@@ -9,6 +9,12 @@ import { DELIVERY_LABELS, isOnlineMode, type DeliveryMode } from '../../utils/de
 import { sectionRequirements } from '../../utils/sectionRequirements';
 import { CourseTermTags } from './CourseTermTags';
 import { HalfTermCourseTag } from '../HalfTermCourseTag';
+import { slotKey } from '../../utils/scheduleDiff';
+import type { ScheduleChange } from '../../utils/useScheduleChange';
+// Heights needed to show the title plus the section/time line, and the delivery mode line too.
+const TWO_LINE_EVENT_PX = 38;
+const THREE_LINE_EVENT_PX = 50;
+const SECTION_TYPE_LABELS: Record<string, string> = { LEC: 'Lecture', LAB: 'Lab', TUT: 'Tutorial', SEM: 'Seminar', IND: 'Independent project' };
 
 interface ElectiveCourseInfo {
   prerequisiteOverride?: boolean;
@@ -153,6 +159,54 @@ export function ElectiveBlockDialog({
   );
 }
 
+/** What changed from the option shown before, so similar-looking options are easy to tell apart. */
+export function OptionPanel({ optionCount, summary }: { optionCount: number; summary: string[] }) {
+  if (optionCount < 2 && !summary.length) return null;
+  return (
+    <section className="glass-panel option-panel" aria-label="What changed">
+      <h2>What changed</h2>
+      <p className="schedule-change-summary" role="status">{summary.length > 0 ? summary.join(' · ') : 'Switch options with the arrows under the calendar to see what differs.'}</p>
+    </section>
+  );
+}
+
+/** Lets the student pick between sections that meet at exactly the same times; they don't count as separate options. */
+export function SectionChoicesPanel({
+  currentSchedule,
+  onChooseSection,
+}: {
+  currentSchedule: GeneratedSchedule;
+  onChooseSection?: (courseCode: string, sectionType: string, sectionCode: string) => void;
+}) {
+  const choosable = currentSchedule.selections.filter(selection => (selection.alternatives?.length || 0) > 1);
+  if (!choosable.length) return null;
+  // Same colour assignment as the calendar: by first appearance of each course.
+  const courseCodes = Array.from(new Set(currentSchedule.selections.map(selection => selection.courseCode)));
+  return (
+    <section className="glass-panel section-choices" aria-label="Sections at the same time">
+      <h2>Same time, different section</h2>
+      <p>These classes have other sections at the exact same times. Pick the one you want to register in.</p>
+      {choosable.map(selection => {
+        const colors = COURSE_COLORS[courseCodes.indexOf(selection.courseCode) % COURSE_COLORS.length];
+        const label = `${selection.courseCode} ${SECTION_TYPE_LABELS[selection.section.type] || selection.section.type}`;
+        return (
+          <label key={`${selection.courseCode}-${selection.section.type}`}>
+            <i style={{ background: colors.border }} />
+            <span>{label}<small>{selection.alternatives!.length} options</small></span>
+            <select aria-label={`Choose ${label} section`} value={selection.section.sectionCode} disabled={!onChooseSection} onChange={event => onChooseSection?.(selection.courseCode, selection.section.type, event.target.value)}>
+              {selection.alternatives!.map(alternative => (
+                <option key={alternative.sectionCode} value={alternative.sectionCode}>
+                  {alternative.sectionCode}{alternative.instructor && alternative.instructor !== 'TBA' ? ` · ${alternative.instructor}` : ''}{alternative.capacity ? ` · ${Math.max(0, alternative.capacity - alternative.enrolled)} seats left` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      })}
+    </section>
+  );
+}
+
 export function ScheduleCalendarSection({
   schedules,
   currentIndex,
@@ -163,7 +217,9 @@ export function ScheduleCalendarSection({
   onBack,
   onPrevious,
   onNext,
-  onSelectSchedule,
+  change,
+  onRemoveOption,
+  onUndoRemove,
   onInspectCourse,
   hoverPreview,
 }: {
@@ -176,7 +232,12 @@ export function ScheduleCalendarSection({
   onBack: () => void;
   onPrevious: () => void;
   onNext: () => void;
-  onSelectSchedule: (index: number) => void;
+  /** What changed from the previously shown option, while its animation runs. */
+  change: ScheduleChange | null;
+  /** Drops the option being shown, leaving fewer to choose between. */
+  onRemoveOption?: () => void;
+  /** Set while the last removed option can be restored. */
+  onUndoRemove?: () => void;
   onInspectCourse: (course: string) => void;
   hoverPreview?: ScheduleHoverPreview | null;
 }) {
@@ -203,6 +264,7 @@ export function ScheduleCalendarSection({
     calendar.current.scrollTop = lower <= upper ? Math.max(lower, Math.min(upper, calendar.current.scrollTop)) : upper;
     return () => { if (calendar.current) calendar.current.style.maxHeight = ''; };
   }, [hoverPreview, visibleTimeSlots.join('|'), hourPx]);
+
   const groupedCourses = new Map<string, typeof currentSchedule.selections>();
   currentSchedule.selections.forEach(selection => {
     if (!groupedCourses.has(selection.courseCode)) groupedCourses.set(selection.courseCode, []);
@@ -255,15 +317,26 @@ export function ScheduleCalendarSection({
                     .map((slot, slotIdx) => {
                       const { top, height } = getPos(slot.startTime, slot.endTime);
                       const previewOverlap = previewSlots.some(previewSlot => hasTimeConflict(slot, previewSlot));
+                      const isChanged = change?.changedSlots.has(slotKey(selection, slot)) ?? false;
+                      const movedFrom = change?.changedSlots.get(slotKey(selection, slot));
+                      // Moved blocks start at their old spot: whole day columns across, and the time difference down.
+                      const moveStyle = movedFrom ? {
+                        '--from-x': `calc(${TIMETABLE_CONFIG.DAYS.indexOf(movedFrom.day) - TIMETABLE_CONFIG.DAYS.indexOf(day)} * (100% + 6px))`,
+                        '--from-y': `${getPos(movedFrom.startTime, movedFrom.endTime).top - top}px`,
+                      } as CSSProperties : {};
+                      // Short meetings (e.g. a 50-minute tutorial on a small screen) can't fit two lines, so they get one.
+                      const compact = height < TWO_LINE_EVENT_PX;
+                      const optionCount = selection.alternatives?.length || 0;
                       return (
                         <button
-                          className={`schedule-event${isOnlineMode(selection.section.deliveryMode) ? ' is-online' : ''}${selection.section.deliveryMode === 'HYBRID' ? ' is-hybrid' : ''}${previewOverlap ? ' preview-overlap' : ''}`}
+                          className={`schedule-event${isOnlineMode(selection.section.deliveryMode) ? ' is-online' : ''}${selection.section.deliveryMode === 'HYBRID' ? ' is-hybrid' : ''}${previewOverlap ? ' preview-overlap' : ''}${isChanged ? ' is-changed' : ''}${compact ? ' is-compact' : ''}`}
                           type="button"
                           aria-label={`Inspect conflicts for ${selection.courseCode}, ${selection.section.type} ${selection.section.sectionCode}, ${day} ${slot.startTime}`}
                           onClick={() => onInspectCourse(selection.courseCode)}
                           title={`${selection.courseCode} · ${selection.section.type} ${selection.section.sectionCode} · ${slot.startTime}–${slot.endTime} · CRN ${selection.section.crn}`}
                           key={`${selection.courseCode}-${selection.section.sectionCode}-${slotIdx}`}
                           style={{
+                            ...moveStyle,
                             position: 'absolute',
                             left: '2px',
                             right: previewOverlap ? '50%' : '2px',
@@ -273,7 +346,7 @@ export function ScheduleCalendarSection({
                             border: `1px solid ${colors.border}`,
                             color: colors.text,
                             borderRadius: '6px',
-                            padding: '4px 6px',
+                            padding: compact ? '1px 6px' : '4px 6px',
                             overflow: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
@@ -281,13 +354,15 @@ export function ScheduleCalendarSection({
                             textAlign: 'left',
                           }}
                         >
-                          <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                            {selection.courseCode}
+                          <p className="schedule-event-title">
+                            <span>{selection.courseCode}</span>
+                            {compact && <span className="schedule-event-section schedule-event-inline">{selection.section.type} {selection.section.sectionCode} · {slot.startTime}</span>}
+                            {optionCount > 1 && <span className="schedule-event-options" title={`${optionCount} sections at this time`}>{compact ? optionCount : `${optionCount} options`}</span>}
                           </p>
-                          <p style={{ fontSize: '11px', opacity: 0.7, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                            {selection.section.type} {selection.section.sectionCode} · {slot.startTime}-{slot.endTime}
-                          </p>
-                          {selection.section.deliveryMode !== 'IN_PERSON' && (
+                          {!compact && <p style={{ fontSize: '11px', opacity: 0.7, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                            <span className="schedule-event-section">{selection.section.type} {selection.section.sectionCode}</span> · {slot.startTime}-{slot.endTime}
+                          </p>}
+                          {selection.section.deliveryMode !== 'IN_PERSON' && height >= THREE_LINE_EVENT_PX && (
                             <p className="schedule-event-mode">{selection.section.deliveryMode === 'HYBRID' ? 'Hybrid' : <><Laptop size={10} /> Online</>}</p>
                           )}
                         </button>
@@ -321,14 +396,13 @@ export function ScheduleCalendarSection({
       {!currentSchedule.selections.some(selection => selection.section.timeSlots.length > 0) && asyncSelections.length === 0 && <p className="timetable-note">{currentSchedule.selections.length ? 'These courses have no fixed meeting times. Their registration details appear beside the calendar.' : 'Your calendar starts empty. Add a course above or choose an elective to begin.'}</p>}
       <div className="calendar-controls calendar-controls-bottom">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft size={16} /> Edit courses</Button>
-        <div className="timetable-legend">
-          {Array.from(courseColorMap.entries()).map(([code, colors]) => <span key={code}><i style={{ background: colors.border }} />{code}</span>)}
+        <div className="option-removal">
+          {onRemoveOption && schedules.length > 1 && <Button variant="outline" size="sm" className="remove-option-button" onClick={onRemoveOption} title="Keyboard shortcut: X"><X size={14} /> Remove this option</Button>}
+          {onUndoRemove && <p className="option-removed" role="status">Option removed. <button type="button" onClick={onUndoRemove}>Undo</button></p>}
         </div>
         <div className="schedule-pagination">
+          <span aria-live="polite">Option {currentIndex + 1} of {schedules.length}</span>
           <Button variant="outline" size="icon" onClick={onPrevious} disabled={schedules.length < 2} aria-label="Previous schedule"><ChevronLeft size={16} /></Button>
-          <select aria-label="Choose schedule option" value={currentIndex} onChange={event => onSelectSchedule(Number(event.target.value))}>
-            {schedules.map((schedule, index) => <option key={schedule.id} value={index}>Option {index + 1} of {schedules.length}</option>)}
-          </select>
           <Button variant="outline" size="icon" onClick={onNext} disabled={schedules.length < 2} aria-label="Next schedule"><ChevronRight size={16} /></Button>
         </div>
       </div>

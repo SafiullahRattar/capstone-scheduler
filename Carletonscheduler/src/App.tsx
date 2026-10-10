@@ -6,11 +6,13 @@ import { LoginPage } from './components/LoginPage';
 import { AppShell } from './components/AppShell';
 import { AdminPage } from './components/admin';
 import { generateSchedules, type GeneratedSchedule } from './utils/scheduleGenerator';
+import { carryOverSectionChoices, chooseEquivalentSection } from './utils/sectionChoices';
 import { API_BASE_URL, authenticatedFetch } from './config/constants';
 import { getDefaultActiveTerm, getTermLabel } from './utils/termUtils';
 import type { ElectiveRequirement } from './types/electives';
 import { normalizeDeliveryMode, type DeliveryPreference } from './utils/deliveryMode';
 import type { AuditRequirement, RequirementChoices } from './types/audit';
+import type { BlockedTime } from '@shared/blocked-times';
 import { collectRequestedElectiveCounts, getElectiveTokenCategory, getSelectionUnitCredits } from './utils/electiveUtils';
 import { fetchElectiveCatalog } from './utils/electiveCatalog';
 import { mergeElectiveRequirements } from './utils/electiveRequirements';
@@ -93,6 +95,7 @@ interface AppState {
   courseGrades: Record<string, string>;
   completedCourseCredits?: Record<string, number>;
   deliveryPreference?: DeliveryPreference;
+  blockedTimes?: BlockedTime[];
   generatedCourses?: string[];
   deliveryFallbacks?: string[];
   termPlans?: Record<string, TermPlan>;
@@ -187,6 +190,8 @@ export default function App() {
   const [courseGrades, setCourseGrades] = useState<Record<string, string>>(savedState?.courseGrades || {});
   const [completedCourseCredits, setCompletedCourseCredits] = useState<Record<string, number>>(savedState?.completedCourseCredits || {});
   const [deliveryPreference, setDeliveryPreference] = useState<DeliveryPreference>(savedState?.deliveryPreference || 'any');
+  // Shared by every term, like a work shift the student has to plan around.
+  const [blockedTimes, setBlockedTimes] = useState<BlockedTime[]>(savedState?.blockedTimes || []);
   // Courses the current schedules were generated from, so they can be regenerated with a new delivery preference.
   const [generatedCourses, setGeneratedCourses] = useState<string[]>(savedState?.generatedCourses || []);
   const [deliveryFallbacks, setDeliveryFallbacks] = useState<string[]>(savedState?.deliveryFallbacks || []);
@@ -204,6 +209,15 @@ export default function App() {
     setSelectedElectives({});
     setSelectedElectiveCredits({});
   }, [chosenCourses]);
+
+  const handleBlockedTimesChange = (next: BlockedTime[]) => {
+    setBlockedTimes(next);
+    // The current timetable may use sections in the newly blocked times, so it is rebuilt from scratch.
+    setGeneratedSchedules([]);
+    setGeneratedCourses([]);
+    setDeliveryFallbacks([]);
+    setSelectedElectives({});
+  };
 
   // Removing a course from the plan also removes its requirement associations.
   useEffect(() => {
@@ -265,12 +279,13 @@ export default function App() {
       courseGrades,
       completedCourseCredits,
       deliveryPreference,
+      blockedTimes,
       generatedCourses,
       deliveryFallbacks,
       termPlans,
     };
     saveState(state);
-  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, selectedElectiveCredits, activeTerm, chosenCourses, prerequisiteOverrides, hasEnteredPlanner, auditRequirements, requirementChoices, courseGrades, completedCourseCredits, deliveryPreference, generatedCourses, deliveryFallbacks, termPlans]);
+  }, [currentPage, hasAuditData, completedCourses, currentCourses, remainingCourses, electiveRequirements, studentInfo, generatedSchedules, selectedElectives, selectedElectiveCredits, activeTerm, chosenCourses, prerequisiteOverrides, hasEnteredPlanner, auditRequirements, requirementChoices, courseGrades, completedCourseCredits, deliveryPreference, blockedTimes, generatedCourses, deliveryFallbacks, termPlans]);
 
   // Sync URL with current page on mount
   useEffect(() => {
@@ -308,6 +323,7 @@ export default function App() {
     setRequirementChoices({});
     setCourseGrades({});
     setCompletedCourseCredits({});
+    setBlockedTimes([]);
     setGeneratedCourses([]);
     setDeliveryFallbacks([]);
     setStudentInfo(undefined);
@@ -483,9 +499,9 @@ export default function App() {
       setSelectedElectives(electiveState);
       return;
     }
-    const { schedules, deliveryFallbacks: fallbacks } = await generateSchedules(courseIds, completedCourses, activeTerm, deliveryPreference, {}, priorScheduledCourses, courseGrades);
-    if (!schedules.length) throw new Error('No complete section combination fits all selected courses. Remove a course to make room.');
-    setGeneratedSchedules(schedules);
+    const { schedules, deliveryFallbacks: fallbacks } = await generateSchedules(courseIds, completedCourses, activeTerm, deliveryPreference, {}, priorScheduledCourses, courseGrades, blockedTimes);
+    if (!schedules.length) throw new Error(`No complete section combination fits all selected courses. ${blockedTimes.length ? 'Remove a course or a blocked time' : 'Remove a course'} to make room.`);
+    setGeneratedSchedules(previous => carryOverSectionChoices(previous, schedules));
     setGeneratedCourses(courseIds);
     setDeliveryFallbacks(fallbacks);
     setSelectedElectives(electiveState);
@@ -499,13 +515,17 @@ export default function App() {
       setDeliveryPreference(preference);
       return;
     }
-    const { schedules, deliveryFallbacks: fallbacks } = await generateSchedules(courses, completedCourses, activeTerm, preference, {}, priorScheduledCourses, courseGrades);
+    const { schedules, deliveryFallbacks: fallbacks } = await generateSchedules(courses, completedCourses, activeTerm, preference, {}, priorScheduledCourses, courseGrades, blockedTimes);
     if (schedules.length === 0) {
       throw new Error(`No conflict-free schedule works with ${preference === 'online' ? 'online' : 'in-person'} sections. Try another delivery option.`);
     }
     setDeliveryPreference(preference);
-    setGeneratedSchedules(schedules);
+    setGeneratedSchedules(previous => carryOverSectionChoices(previous, schedules));
     setDeliveryFallbacks(fallbacks);
+  };
+
+  const handleChooseSection = (courseCode: string, sectionType: string, sectionCode: string) => {
+    setGeneratedSchedules(previous => chooseEquivalentSection(previous, courseCode, sectionType, sectionCode));
   };
 
   const handleBackToCourseSelection = () => {
@@ -558,11 +578,14 @@ export default function App() {
           activeTerm={activeTerm}
           onChangeTerm={handleScheduleTermChange}
           deliveryPreference={deliveryPreference}
+          blockedTimes={blockedTimes}
           deliveryFallbacks={deliveryFallbacks}
           plannedInOtherTerms={plannedInOtherTerms}
           plannedCoreCourses={chosenCourses.filter(code => !code.startsWith('ELECTIVE:'))}
           onScheduledCoursesChange={updateScheduledCourses}
           onDeliveryPreferenceChange={handleDeliveryPreferenceChange}
+          onChooseSection={handleChooseSection}
+          onSchedulesChange={setGeneratedSchedules}
           onElectiveChange={async (category: string, courseCodes: string[], allSelectedCourses: string[]) => {
             await updateScheduledCourses(allSelectedCourses, { ...selectedElectives, [category]: courseCodes });
           }}
@@ -590,6 +613,8 @@ export default function App() {
           onElectiveRequirementsChange={setElectiveRequirements}
           studentInfo={studentInfo}
           onGenerateSchedules={handleGenerateSchedules}
+          blockedTimes={blockedTimes}
+          onBlockedTimesChange={handleBlockedTimesChange}
           activeTerm={activeTerm}
           onChangeTerm={handleTermChange}
           plannedInOtherTerms={plannedInOtherTerms}

@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express'
 import { prisma } from '../index'
 import { checkElectiveFit, generateSchedulesForCourses } from '../lib/schedule-generation'
 import type { DeliveryPreference } from '../../shared/delivery-mode'
+import { parseBlockedTimes } from '../../shared/blocked-times'
 import { inspectCourseConflicts } from '../lib/course-conflicts'
 import type { UnmetCourseCategory } from '../../shared/conflict-eligibility'
 
@@ -25,7 +26,7 @@ function parseSectionLocks(value: unknown): Record<string, string[]> {
 
 router.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { courseIds, term, maxSchedules = 50, completedCourses = [], plannedCourses = [], courseGrades = {}, deliveryPreference, lockedSectionIds } = req.body
+    const { courseIds, term, maxSchedules = 50, completedCourses = [], plannedCourses = [], courseGrades = {}, deliveryPreference, lockedSectionIds, blockedTimes } = req.body
     if (!Array.isArray(plannedCourses) || plannedCourses.length > 5000 || plannedCourses.some(code => typeof code !== 'string' || !/^[A-Z]{3,4}\d{4}$/.test(code)) || !courseGrades || typeof courseGrades !== 'object' || Array.isArray(courseGrades) || Object.values(courseGrades).some(grade => typeof grade !== 'string')) return res.status(400).json({ message: 'Valid planned prerequisites and course grades are required' })
 
     if (!courseIds || !Array.isArray(courseIds) || courseIds.length === 0) {
@@ -51,7 +52,8 @@ router.post('/generate', async (req: Request, res: Response) => {
       courseGrades,
       includePrerequisites: true,
       deliveryPreference: parseDeliveryPreference(deliveryPreference),
-      lockedSectionIds: parseSectionLocks(lockedSectionIds)
+      lockedSectionIds: parseSectionLocks(lockedSectionIds),
+      blockedTimes: parseBlockedTimes(blockedTimes)
     })
 
     res.json({
@@ -63,8 +65,11 @@ router.post('/generate', async (req: Request, res: Response) => {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to generate schedules'
-    if (message === 'Invalid selected section bundles' || message.startsWith('Selected sections are no longer')) {
+    if (message === 'Invalid selected section bundles' || message === 'Invalid blocked times' || message.startsWith('Selected sections are no longer')) {
       return res.status(400).json({ error: 'Bad Request', message })
+    }
+    if (message.startsWith('Every section option meets during your blocked times')) {
+      return res.status(409).json({ error: 'Conflict', message })
     }
     const isMissingSections = message.startsWith('No sections found for courses:')
     if (isMissingSections) {
@@ -84,7 +89,7 @@ router.post('/generate', async (req: Request, res: Response) => {
 
 router.post('/elective-fit', async (req: Request, res: Response) => {
   try {
-    const { fixedCourseIds = [], candidateIds, term, pairwise = false, deliveryPreference, lockedSectionIds } = req.body
+    const { fixedCourseIds = [], candidateIds, term, pairwise = false, deliveryPreference, lockedSectionIds, blockedTimes } = req.body
 
     if (!Array.isArray(fixedCourseIds) || !Array.isArray(candidateIds) || candidateIds.length === 0) {
       return res.status(400).json({
@@ -106,11 +111,15 @@ router.post('/elective-fit', async (req: Request, res: Response) => {
       term,
       pairwise: Boolean(pairwise) && fixedCourseIds.length <= 6,
       deliveryPreference: parseDeliveryPreference(deliveryPreference),
-      lockedSectionIds: parseSectionLocks(lockedSectionIds)
+      lockedSectionIds: parseSectionLocks(lockedSectionIds),
+      blockedTimes: parseBlockedTimes(blockedTimes)
     })
 
     res.json(result)
   } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid blocked times') {
+      return res.status(400).json({ error: 'Bad Request', message: error.message })
+    }
     console.error('Elective fit error:', error)
     res.status(500).json({
       error: 'Internal Server Error',
@@ -120,7 +129,7 @@ router.post('/elective-fit', async (req: Request, res: Response) => {
 })
 
 router.post('/course-conflicts', async (req: Request, res: Response) => {
-  const { courseId, term, sectionIds = [], crns = [], deliveryPreference, hasAuditData = false, unmetCategories = [], completedCourses = [], priorScheduledCourses = [], courseGrades = {}, completedCourseCredits = {}, excludedCourseIds = [], calendarSlots = [] } = req.body
+  const { courseId, term, sectionIds = [], crns = [], deliveryPreference, hasAuditData = false, unmetCategories = [], completedCourses = [], priorScheduledCourses = [], courseGrades = {}, completedCourseCredits = {}, excludedCourseIds = [], calendarSlots = [], blockedTimes } = req.body
   if (typeof courseId !== 'string' || !/^[A-Z]{3,4}\d{4}$/.test(courseId) || typeof term !== 'string' || !/^\d{6}$/.test(term)
     || !Array.isArray(sectionIds) || !Array.isArray(crns) || sectionIds.length + crns.length > 40
     || (!sectionIds.length && !crns.length) || [...sectionIds, ...crns].some(value => typeof value !== 'string' || !value)) {
@@ -139,10 +148,16 @@ router.post('/course-conflicts', async (req: Request, res: Response) => {
     || new Set(unmetCategories.flatMap(category => category.courseOptions)).size > 5000) {
     return res.status(400).json({ message: 'Valid unmet audit categories and completed-course information are required' })
   }
+  let parsedBlockedTimes
+  try {
+    parsedBlockedTimes = parseBlockedTimes(blockedTimes)
+  } catch {
+    return res.status(400).json({ message: 'Invalid blocked times' })
+  }
   try {
     res.json(await inspectCourseConflicts(prisma, {
       courseId, term, sectionIds, crns, deliveryPreference: parseDeliveryPreference(deliveryPreference),
-      hasAuditData, unmetCategories: unmetCategories as UnmetCourseCategory[], completedCourses, priorScheduledCourses, courseGrades, completedCourseCredits, excludedCourseIds, calendarSlots,
+      hasAuditData, unmetCategories: unmetCategories as UnmetCourseCategory[], completedCourses, priorScheduledCourses, courseGrades, completedCourseCredits, excludedCourseIds, calendarSlots, blockedTimes: parsedBlockedTimes,
     }))
   } catch (error) {
     console.error('Course conflict inspection error:', error)

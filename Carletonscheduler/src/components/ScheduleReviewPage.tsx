@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo, useCallback, type Dispatch, type SetStateAction } from 'react';
-import { CalendarDays, Clock3, BookOpen, Loader2, Plus, Check, ChevronRight, Lock } from 'lucide-react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { AlertTriangle, CalendarDays, Clock3, BookOpen, Loader2, Plus, Check, ChevronRight } from 'lucide-react';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 import { checkElectiveFit, inspectScheduledCourse, hasTimeConflict, type CourseConflictReport, type ElectiveFitResult, type GeneratedSchedule, type ScheduleHoverPreview } from '../utils/scheduleGenerator';
 import { TIMETABLE_CONFIG, COURSE_COLORS } from '../config/constants';
 import { getCourseByCode, getCourseSections, type CourseSection } from '../utils/courseData';
@@ -12,7 +13,9 @@ import { CourseTermTags } from './schedule-review/CourseTermTags';
 import { TermTabs } from './TermTabs';
 import {
   ElectiveBlockDialog,
+  OptionPanel,
   ScheduleCalendarSection,
+  SectionChoicesPanel,
   ScheduleSidebar,
 } from './schedule-review/ScheduleReviewSections';
 import { CourseConflictDialog } from './schedule-review/CourseConflictDialog';
@@ -22,6 +25,9 @@ import { validatePrerequisitesFromTree, type PrerequisiteValidationResult } from
 import { describePrerequisiteIssues } from '@shared/prerequisite-reasons';
 import { PrerequisiteOverrideDialog } from './PrerequisiteOverrideDialog';
 import { HalfTermCourseTag } from './HalfTermCourseTag';
+import type { BlockedTime } from '@shared/blocked-times';
+import { useDragScroll } from '../utils/useDragScroll';
+import { useScheduleChange } from '../utils/useScheduleChange';
 
 interface ScheduleReviewPageProps {
   priorScheduledCourses: string[];
@@ -37,8 +43,13 @@ interface ScheduleReviewPageProps {
   activeTerm: string;
   onChangeTerm: (term: string) => void;
   deliveryPreference?: DeliveryPreference;
+  /** Times the student asked to keep free; sections meeting then are never offered. */
+  blockedTimes?: BlockedTime[];
   deliveryFallbacks?: string[];
   onDeliveryPreferenceChange?: (preference: DeliveryPreference) => Promise<void>;
+  /** Swaps a course to another section meeting at the same times. */
+  onChooseSection?: (courseCode: string, sectionType: string, sectionCode: string) => void;
+  onSchedulesChange?: (schedules: GeneratedSchedule[]) => void;
   /** Courses planned in other terms, mapped to that term. */
   plannedInOtherTerms?: Record<string, string>;
   plannedCoreCourses?: string[];
@@ -69,6 +80,11 @@ interface ElectiveFitMeta {
   nextPickThisTerm: boolean;
 }
 
+// Hour rows shrink to fit the screen, but not so far that a one-hour class can't show its code and time.
+const MIN_HOUR_PX = 34;
+const MAX_HOUR_PX = 64;
+const FIT_BOTTOM_GAP_PX = 16;
+
 export function ScheduleReviewPage({
   priorScheduledCourses,
   prerequisiteOverrides,
@@ -83,6 +99,9 @@ export function ScheduleReviewPage({
   activeTerm,
   onChangeTerm,
   deliveryPreference = 'any',
+  blockedTimes = [],
+  onChooseSection,
+  onSchedulesChange,
   plannedInOtherTerms = {},
   plannedCoreCourses = [],
   onScheduledCoursesChange,
@@ -94,6 +113,9 @@ export function ScheduleReviewPage({
   completedCourseCredits = {},
 }: ScheduleReviewPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const [hourPx, setHourPx] = useState(48);
+  const courseButtonsRef = useDragScroll<HTMLDivElement>();
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [interactionError, setInteractionError] = useState<string | null>(null);
   const [electiveCourseDetails, setElectiveCourseDetails] = useState<Record<string, ElectiveCourseInfo[]>>({});
@@ -119,9 +141,11 @@ export function ScheduleReviewPage({
   const inspectCourse = useCallback((code: string) => { setHoverPreview(null); setInspectedCourse(code); }, []);
   const safeIndex = Math.min(currentIndex, schedules.length - 1);
   const currentSchedule = schedules[safeIndex];
+  const { change: scheduleChange, summary: changeSummary } = useScheduleChange(currentSchedule);
   const reviewedSchedule = { ...currentSchedule, prerequisiteInfo: { ...currentSchedule.prerequisiteInfo, ...corePrerequisiteInfo } };
   const scheduledCodes = Array.from(new Set(currentSchedule.selections.map(selection => selection.courseCode)));
-  const trayCourseCodes = Array.from(new Set([...plannedCoreCourses, ...Object.keys(plannedInOtherTerms)]));
+  // Courses picked for another term on the Courses page belong to that term and aren't offered here.
+  const trayCourseCodes = plannedCoreCourses.filter(code => !plannedInOtherTerms[code]);
   const courseColors = new Map(scheduledCodes.map((code, index) => [code, COURSE_COLORS[index % COURSE_COLORS.length]]));
   const builderBusy = changingCore !== null || swappingElective !== null;
   const unmetCategories = useMemo(() => hasAuditData ? conflictCategoriesForTerm(
@@ -137,7 +161,8 @@ export function ScheduleReviewPage({
     ...currentCourses.map(course => course.courseId),
     ...Object.keys(plannedInOtherTerms),
   ])), [currentSchedule, currentCourses, JSON.stringify(plannedInOtherTerms)]);
-  const inspectionContext = useMemo(() => ({ hasAuditData, unmetCategories, completedCourses, priorScheduledCourses, courseGrades, completedCourseCredits, excludedCourseIds }), [hasAuditData, unmetCategories, completedCourses, priorScheduledCourses.join('|'), courseGrades, completedCourseCredits, excludedCourseIds]);
+  const blockedTimesKey = JSON.stringify(blockedTimes);
+  const inspectionContext = useMemo(() => ({ hasAuditData, unmetCategories, completedCourses, priorScheduledCourses, courseGrades, completedCourseCredits, excludedCourseIds, blockedTimes }), [hasAuditData, unmetCategories, completedCourses, priorScheduledCourses.join('|'), courseGrades, completedCourseCredits, excludedCourseIds, blockedTimesKey]);
 
   useEffect(() => {
     setHoverPreview(null);
@@ -178,11 +203,11 @@ export function ScheduleReviewPage({
       setCoreFits(Object.fromEntries(candidates.map(code => [code, false])));
       return;
     }
-    checkElectiveFit(scheduledCodes, candidates, activeTerm, false, deliveryPreference).then(result => {
+    checkElectiveFit(scheduledCodes, candidates, activeTerm, false, deliveryPreference, {}, blockedTimes).then(result => {
       if (!cancelled) setCoreFits(result.fits);
     }).catch(() => { /* The add operation still checks the full bundle if this preview fails. */ });
     return () => { cancelled = true; };
-  }, [plannedCoreCourses.join('|'), currentSchedule, activeTerm, deliveryPreference, JSON.stringify(plannedInOtherTerms)]);
+  }, [plannedCoreCourses.join('|'), currentSchedule, activeTerm, deliveryPreference, blockedTimesKey, JSON.stringify(plannedInOtherTerms)]);
 
   const toggleCoreCourse = async (code: string, overrideConfirmed = false) => {
     if (!onScheduledCoursesChange || builderBusy) return;
@@ -244,7 +269,7 @@ export function ScheduleReviewPage({
       // Only worth checking pairs if the requirement still needs credits after one more pick.
       pairwise: keptCredits + unitCredits < requirement.creditsNeeded,
       nextPickThisTerm: keptCredits + unitCredits < target,
-      key: `${activeTerm}|${deliveryPreference}|${fixedCourseIds.join(',')}|${(selectedElectives[requirement.category] || []).join(',')}|${priorScheduledCourses.join(',')}`,
+      key: `${activeTerm}|${deliveryPreference}|${blockedTimesKey}|${fixedCourseIds.join(',')}|${(selectedElectives[requirement.category] || []).join(',')}|${priorScheduledCourses.join(',')}`,
     };
   };
 
@@ -287,7 +312,7 @@ export function ScheduleReviewPage({
         let fit: ElectiveFitResult | null = null;
         if (candidateIds.length > 0) {
           try {
-            fit = await checkElectiveFit(fixedCourseIds, candidateIds, activeTerm, pairwise, deliveryPreference);
+            fit = await checkElectiveFit(fixedCourseIds, candidateIds, activeTerm, pairwise, deliveryPreference, {}, blockedTimes);
           } catch {
             fit = null;
           }
@@ -340,7 +365,40 @@ export function ScheduleReviewPage({
       };
       loadDetails();
     }
-  }, [activeElectiveRequirements, completedCourses, courseGrades, completedCourseCredits, activeTerm, currentSchedule, electiveRequirements, selectedElectives, selectedElectiveCredits, electiveFitMeta, deliveryPreference, priorScheduledCourses.join('|')]);
+  }, [activeElectiveRequirements, completedCourses, courseGrades, completedCourseCredits, activeTerm, currentSchedule, electiveRequirements, selectedElectives, selectedElectiveCredits, electiveFitMeta, deliveryPreference, blockedTimesKey, priorScheduledCourses.join('|')]);
+
+  // Options can be removed one at a time while browsing, to narrow down to a favourite.
+  const [removedOption, setRemovedOption] = useState<{ schedule: GeneratedSchedule; index: number } | null>(null);
+  const courseSignature = (schedule: GeneratedSchedule) => Array.from(new Set(schedule.selections.map(selection => selection.courseCode))).sort().join(',');
+  // Only offer undo while the options are still for the same courses.
+  const canUndoRemove = removedOption !== null && courseSignature(removedOption.schedule) === courseSignature(currentSchedule);
+  const removeCurrentOption = () => {
+    if (!onSchedulesChange || schedules.length < 2) return;
+    setRemovedOption({ schedule: currentSchedule, index: safeIndex });
+    onSchedulesChange(schedules.filter((_, index) => index !== safeIndex));
+    setCurrentIndex(Math.min(safeIndex, schedules.length - 2));
+  };
+  const undoRemoveOption = () => {
+    if (!removedOption || !onSchedulesChange) return;
+    const restored = [...schedules];
+    restored.splice(removedOption.index, 0, removedOption.schedule);
+    onSchedulesChange(restored);
+    setCurrentIndex(removedOption.index);
+    setRemovedOption(null);
+  };
+  const removeOptionRef = useRef(removeCurrentOption);
+  removeOptionRef.current = removeCurrentOption;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'x' || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+      event.preventDefault();
+      removeOptionRef.current();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handlePrevious = () => setCurrentIndex(prev => (prev > 0 ? prev - 1 : schedules.length - 1));
   const handleNext = () => setCurrentIndex(prev => (prev < schedules.length - 1 ? prev + 1 : 0));
@@ -467,7 +525,27 @@ export function ScheduleReviewPage({
     visibleTimeSlots.push(`${h.toString().padStart(2, '0')}:00`);
   }
 
-  const HOUR_PX = 48;
+  const HOUR_PX = hourPx;
+  // Size the hours so the whole week, with the controls under it, fits on screen without scrolling.
+  useLayoutEffect(() => {
+    const fit = () => {
+      const section = layoutRef.current?.querySelector<HTMLElement>('.schedule-calendar');
+      if (!section || !visibleTimeSlots.length) return;
+      // Hover previews add a line above the calendar for a moment; the hours shouldn't jump for it.
+      const transient = Array.from(section.querySelectorAll<HTMLElement>('.schedule-preview-label, .preview-untimed-course')).reduce((total, element) => {
+        const style = getComputedStyle(element);
+        return total + element.offsetHeight + parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+      }, 0);
+      const chrome = section.offsetHeight - transient - visibleTimeSlots.length * hourPx;
+      const top = section.getBoundingClientRect().top + window.scrollY;
+      const available = window.innerHeight - top - FIT_BOTTOM_GAP_PX - chrome;
+      const next = Math.max(MIN_HOUR_PX, Math.min(MAX_HOUR_PX, Math.floor(available / visibleTimeSlots.length)));
+      setHourPx(previous => previous === next ? previous : next);
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [visibleTimeSlots.length, hourPx, currentSchedule]);
 
   const currentSlots = currentSchedule.selections.flatMap(selection => selection.section.timeSlots);
   const campusDays = new Set(currentSlots.map(slot => slot.day)).size;
@@ -495,35 +573,66 @@ export function ScheduleReviewPage({
             <span><Clock3 size={16} /> {weeklyHours} scheduled hours</span>
           </div>
         </div>
-        <div className="schedule-course-buttons">
+        <div className="schedule-course-buttons" ref={courseButtonsRef}>
           {trayCourseCodes.map(code => {
             const added = scheduledCodes.includes(code);
             const colors = courseColors.get(code);
             const sectionTypes = coreSectionTypes[code] || currentSchedule.selections.filter(selection => selection.courseCode === code).map(selection => selection.section.type);
-            const plannedTerm = plannedInOtherTerms[code];
-            const fits = !plannedTerm && (added || coreFits[code] !== false);
-            return <button key={code} className={`schedule-course-button course-has-term-tags${added ? ' is-added has-course-color' : ''}${!fits ? ' does-not-fit' : ''}`} style={colors ? { background: colors.bg, borderColor: colors.border, color: colors.text } : undefined} aria-label={plannedTerm ? `${code} already selected for ${getTermLabel(plannedTerm)}` : `${added ? 'Remove' : 'Add'} ${code} ${added ? 'from' : 'to'} timetable`} aria-pressed={added} disabled={builderBusy || !fits} onClick={() => toggleCoreCourse(code)}>
-              <CourseTermTags code={code} activeTerm={activeTerm} requiredTypes={sectionTypes} />
-              {changingCore === code ? <Loader2 size={17} className="animate-spin" /> : plannedTerm ? <Lock size={17} /> : added ? <Check size={17} /> : <Plus size={17} />}
-              <span><span className="course-title-row"><strong>{code}</strong><HalfTermCourseTag code={code} />{prerequisiteOverrides.includes(code) && <span className="prerequisite-override-badge" title="Prerequisite override · planning only">Override</span>}</span><small>{plannedTerm ? `Already selected for ${getTermLabel(plannedTerm)}` : !fits ? scheduledCodes.length >= 8 ? 'The timetable already contains 8 courses' : "No timetable fits all selected courses" : coreDetails[code] || 'All required sections'}</small><small>{sectionRequirements(sectionTypes)}</small>{hasAuditData && !plannedTerm && corePrerequisiteInfo[code]?.isValid === false && <small className="prerequisite-override-label">{describePrerequisiteIssues(corePrerequisiteInfo[code]).join(' · ')}</small>}</span>
-            </button>;
+            const fits = added || coreFits[code] !== false;
+            const prerequisiteIssues = hasAuditData && corePrerequisiteInfo[code]?.isValid === false ? describePrerequisiteIssues(corePrerequisiteInfo[code]) : [];
+            const status = !fits ? scheduledCodes.length >= 8 ? 'The timetable already contains 8 courses' : 'No timetable fits all selected courses' : null;
+            return <HoverCard key={code} openDelay={250} closeDelay={80}>
+              <HoverCardTrigger asChild>
+                <button className={`schedule-course-button${added ? ' is-added has-course-color' : ''}${!fits ? ' does-not-fit' : ''}`} style={colors ? { background: colors.bg, borderColor: colors.border, color: colors.text } : undefined} aria-label={`${added ? 'Remove' : 'Add'} ${code}${coreDetails[code] ? `, ${coreDetails[code]},` : ''} ${added ? 'from' : 'to'} timetable`} aria-pressed={added} disabled={builderBusy || !fits} onClick={() => toggleCoreCourse(code)}>
+                  {changingCore === code ? <Loader2 size={15} className="animate-spin" /> : added ? <Check size={15} /> : <Plus size={15} />}
+                  <strong>{code}</strong>
+                  {prerequisiteOverrides.includes(code) && <span className="prerequisite-override-badge" title="Prerequisite override · planning only">Override</span>}
+                  {prerequisiteIssues.length > 0 && <AlertTriangle size={13} className="course-chip-warning" aria-label="Prerequisites not met" />}
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent className="scheduler-popover course-details-popover" side="bottom" align="start">
+                <div className="course-details-heading"><strong>{code}</strong><HalfTermCourseTag code={code} /></div>
+                {coreDetails[code] && <p>{coreDetails[code]}</p>}
+                {sectionTypes.length > 0 && <p className="course-details-muted">{sectionRequirements(sectionTypes)}</p>}
+                <CourseTermTags code={code} activeTerm={activeTerm} requiredTypes={sectionTypes} />
+                {status && <p className="course-details-muted">{status}</p>}
+                {prerequisiteIssues.length > 0 && <p className="prerequisite-override-label">{prerequisiteIssues.join(' · ')}</p>}
+              </HoverCardContent>
+            </HoverCard>;
           })}
           {activeElectiveRequirements.map(requirement => {
             const picks = (selectedElectives[requirement.category] || []).filter(code => scheduledCodes.includes(code));
             const added = picks.length > 0;
             const colors = courseColors.get(picks[0]);
             const busy = swappingElective !== null && (selectedElectives[requirement.category] || []).includes(swappingElective);
-            return <button key={requirement.category} className={`schedule-course-button is-elective${added ? ' is-added has-course-color course-has-term-tags' : ''}`} style={colors ? { background: colors.bg, borderColor: colors.border, color: colors.text, ...(picks.length > 1 ? { paddingTop: picks.length * 22 + 12 } : {}) } : undefined} aria-pressed={added} disabled={builderBusy} onClick={() => { closeInspection(); setActiveElectiveCategory(requirement.category); document.getElementById('schedule-elective-picker')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}>
-              {picks.length === 1 && <CourseTermTags code={picks[0]} activeTerm={activeTerm} requiredTypes={currentSchedule.selections.filter(selection => selection.courseCode === picks[0]).map(selection => selection.section.type)} />}
-              {picks.length > 1 && <div className="course-multi-term-tags">{picks.map(code => <div key={code}><small>{code}</small><CourseTermTags code={code} activeTerm={activeTerm} requiredTypes={currentSchedule.selections.filter(selection => selection.courseCode === code).map(selection => selection.section.type)} /></div>)}</div>}
-              {busy ? <Loader2 size={17} className="animate-spin" /> : added ? <Check size={17} /> : <BookOpen size={17} />}
-              <span><span className="course-title-row"><strong>{requirement.label}</strong>{picks.some(code => prerequisiteOverrides.includes(code)) && <span className="prerequisite-override-badge" title="Prerequisite override · planning only">Override</span>}</span><small>{selectedElectiveCredits[requirement.category]} credits · {added ? picks.join(', ') : 'Choose a course'}</small>{picks.map(code => <small key={code}>{picks.length > 1 ? `${code} · ` : ''}{sectionRequirements(currentSchedule.selections.filter(selection => selection.courseCode === code).map(selection => selection.section.type))}{' '}<HalfTermCourseTag code={code} /></small>)}</span><ChevronRight size={15} />
-            </button>;
+            return <HoverCard key={requirement.category} openDelay={250} closeDelay={80}>
+              <HoverCardTrigger asChild>
+                <button className={`schedule-course-button is-elective${added ? ' is-added has-course-color' : ''}`} style={colors ? { background: colors.bg, borderColor: colors.border, color: colors.text } : undefined} aria-pressed={added} disabled={builderBusy} onClick={() => { closeInspection(); setActiveElectiveCategory(requirement.category); document.getElementById('schedule-elective-picker')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}>
+                  {busy ? <Loader2 size={15} className="animate-spin" /> : added ? <Check size={15} /> : <BookOpen size={15} />}
+                  <strong>{requirement.label}</strong>
+                  {added && <small>{picks.join(', ')}</small>}
+                  {picks.some(code => prerequisiteOverrides.includes(code)) && <span className="prerequisite-override-badge" title="Prerequisite override · planning only">Override</span>}
+                  <ChevronRight size={14} />
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent className="scheduler-popover course-details-popover" side="bottom" align="start">
+                <div className="course-details-heading"><strong>{requirement.label}</strong></div>
+                <p className="course-details-muted">{selectedElectiveCredits[requirement.category]} credits · {added ? picks.join(', ') : 'Choose a course'}</p>
+                {picks.map(code => {
+                  const types = currentSchedule.selections.filter(selection => selection.courseCode === code).map(selection => selection.section.type);
+                  return <div key={code} className="course-details-pick">
+                    <div className="course-details-heading"><strong>{code}</strong><HalfTermCourseTag code={code} /></div>
+                    <p className="course-details-muted">{sectionRequirements(types)}</p>
+                    <CourseTermTags code={code} activeTerm={activeTerm} requiredTypes={types} />
+                  </div>;
+                })}
+              </HoverCardContent>
+            </HoverCard>;
           })}
         </div>
       </section>
       {interactionError && <p className="inline-error" role="alert">{interactionError}</p>}
-      <div className="schedule-layout">
+      <div className="schedule-layout" ref={layoutRef}>
         <ScheduleCalendarSection
           schedules={schedules}
           currentIndex={safeIndex}
@@ -534,10 +643,15 @@ export function ScheduleReviewPage({
           onBack={onBack}
           onPrevious={handlePrevious}
           onNext={handleNext}
-          onSelectSchedule={setCurrentIndex}
+          change={scheduleChange}
+          onRemoveOption={onSchedulesChange ? removeCurrentOption : undefined}
+          onUndoRemove={canUndoRemove ? undoRemoveOption : undefined}
           onInspectCourse={inspectCourse}
           hoverPreview={hoverPreview}
         />
+        <div className="schedule-side-column">
+        <OptionPanel optionCount={schedules.length} summary={changeSummary} />
+        <SectionChoicesPanel currentSchedule={currentSchedule} onChooseSection={onChooseSection} />
         {inspectedCourse ? <CourseConflictDialog course={inspectedCourse} report={conflictReport} scopeCategories={unmetCategories} loading={loadingConflicts} error={conflictError} term={activeTerm} onClose={closeInspection} onPreview={setHoverPreview} onDeselect={deselectCourse} busy={builderBusy} /> : <ScheduleSidebar
           currentSchedule={reviewedSchedule}
           copiedItem={copiedItem}
@@ -562,6 +676,7 @@ export function ScheduleReviewPage({
           busy={builderBusy}
           onInspectCourse={inspectCourse}
         />}
+        </div>
       </div>
       <ElectiveBlockDialog
         pending={pendingElective}

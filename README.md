@@ -41,6 +41,16 @@ lecture, lab, and tutorial combination to decide whether each option fits. It
 also flags electives that would rule out other options, and asks before adding
 one of those.
 
+Before finding schedules, the student can list times to avoid, such as a work
+shift or every weekday after 5pm. Sections that meet during those times are left
+out of every timetable, fit check, and alternative the planner offers.
+
+Sections of a course that meet at exactly the same times count as one timetable
+option, so the options list only shows timetables that actually differ. The
+calendar marks those classes with the number of sections available, and the
+student picks one from the list beside the option selector. When the student
+switches options, the sections that changed are animated on the calendar.
+
 Sections can be in person, online at a set time, online on the student's own
 schedule, or hybrid. The schedule page can filter by delivery, and asynchronous
 courses sit in their own strip under the weekly calendar.

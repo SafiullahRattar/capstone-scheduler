@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
-import { applyDeliveryPreference, hasTimeConflict, parseDays, type Section, type TimeSlot } from './schedule-generation'
+import { applyBlockedTimes, applyDeliveryPreference, hasTimeConflict, parseDays, type Section, type TimeSlot } from './schedule-generation'
 import { normalizeDeliveryMode, type DeliveryPreference } from '../../shared/delivery-mode'
+import type { BlockedTime } from '../../shared/blocked-times'
 import { eligibleConflictCourseCategories, normalizeConflictTranscript, standingFromEarnedCredits, type UnmetCourseCategory } from '../../shared/conflict-eligibility'
 
 export interface ConflictCourse {
@@ -102,6 +103,7 @@ export async function inspectCourseConflicts(prisma: PrismaClient, options: {
   completedCourseCredits: Record<string, number>;
   priorScheduledCourses?: string[];
   calendarSlots?: TimeSlot[];
+  blockedTimes?: BlockedTime[];
 }) {
   const categories = options.hasAuditData ? options.unmetCategories : []
   const transcript = normalizeConflictTranscript({ completedCourses: options.completedCourses, plannedCourses: options.priorScheduledCourses, courseGrades: options.courseGrades, currentYear: 'FIRST_YEAR', hasSpecialPermission: false })
@@ -138,7 +140,8 @@ export async function inspectCourseConflicts(prisma: PrismaClient, options: {
   const crns = new Set(options.crns)
   const anchor = source.sections.filter(section => ids.size ? ids.has(section.id) : section.crn && crns.has(section.crn))
   if (!anchor.length || (ids.size && anchor.length !== ids.size)) throw new Error('The selected class sections are no longer available')
-  const preferred = applyDeliveryPreference(Array.from(courses.values()), options.deliveryPreference).courseSections
+  // The inspected course's own sections stay as they are; only the alternatives offered must avoid blocked times.
+  const preferred = applyDeliveryPreference(applyBlockedTimes(Array.from(courses.values()), options.blockedTimes).courseSections, options.deliveryPreference).courseSections
   const candidates = preferred.filter(course => eligible.has(course.courseId)).map(course => ({ ...course, name: courses.get(course.courseId)!.name }))
   return {
     courseId: options.courseId,

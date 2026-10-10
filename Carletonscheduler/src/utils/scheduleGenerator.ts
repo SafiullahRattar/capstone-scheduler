@@ -1,6 +1,7 @@
 import { API_BASE_URL, SCHEDULE_CONFIG } from '../config/constants';
 import { normalizeDeliveryMode, type DeliveryMode, type DeliveryPreference } from './deliveryMode';
 import type { UnmetCourseCategory } from '@shared/conflict-eligibility';
+import type { BlockedTime } from '@shared/blocked-times';
 
 export interface TimeSlot {
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
@@ -40,6 +41,8 @@ export interface GeneratedSchedule {
   selections: {
     courseCode: string;
     section: Section;
+    /** Sections meeting at exactly the same times as `section` (itself included); any of them gives this timetable. */
+    alternatives?: Section[];
   }[];
   hasUnmetPrerequisites: boolean;
   prerequisiteInfo?: {
@@ -62,6 +65,7 @@ interface ApiSection {
 interface ApiScheduleSelection {
   courseId: string;
   section: ApiSection;
+  alternatives?: ApiSection[];
 }
 
 interface ApiSchedule {
@@ -83,7 +87,8 @@ export async function generateSchedules(
   deliveryPreference: DeliveryPreference = 'any',
   lockedSectionIds: Record<string, string[]> = {},
   plannedCourses: string[] = [],
-  courseGrades: Record<string, string> = {}
+  courseGrades: Record<string, string> = {},
+  blockedTimes: BlockedTime[] = []
 ): Promise<{ schedules: GeneratedSchedule[]; deliveryFallbacks: string[] }> {
   try {
     const response = await fetch(`${API_BASE_URL}/schedules/generate`, {
@@ -99,6 +104,7 @@ export async function generateSchedules(
         lockedSectionIds,
         plannedCourses,
         courseGrades,
+        blockedTimes,
         ...(activeTerm && { term: activeTerm })
       })
     });
@@ -120,7 +126,8 @@ export async function generateSchedules(
         id: index + 1,
         selections: schedule.selections.map((sel: ApiScheduleSelection) => ({
           courseCode: sel.courseId,
-          section: mapApiSectionToFrontend(sel.section)
+          section: mapApiSectionToFrontend(sel.section),
+          ...(sel.alternatives && { alternatives: sel.alternatives.map(mapApiSectionToFrontend) })
         })),
         hasUnmetPrerequisites: hasPrerequisites || false,
         prerequisiteInfo: schedule.prerequisiteInfo || {}
@@ -183,6 +190,7 @@ export interface ConflictInspectionContext {
   courseGrades: Record<string, string>;
   completedCourseCredits: Record<string, number>;
   excludedCourseIds: string[];
+  blockedTimes: BlockedTime[];
 }
 
 export async function inspectScheduledCourse(courseId: string, schedule: GeneratedSchedule, term: string, deliveryPreference: DeliveryPreference, context: ConflictInspectionContext, signal?: AbortSignal): Promise<CourseConflictReport> {
@@ -208,12 +216,13 @@ export async function checkElectiveFit(
   activeTerm: string,
   pairwise: boolean,
   deliveryPreference: DeliveryPreference = 'any',
-  lockedSectionIds: Record<string, string[]> = {}
+  lockedSectionIds: Record<string, string[]> = {},
+  blockedTimes: BlockedTime[] = []
 ): Promise<ElectiveFitResult> {
   const response = await fetch(`${API_BASE_URL}/schedules/elective-fit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fixedCourseIds, candidateIds, term: activeTerm, pairwise, deliveryPreference, lockedSectionIds }),
+    body: JSON.stringify({ fixedCourseIds, candidateIds, term: activeTerm, pairwise, deliveryPreference, lockedSectionIds, blockedTimes }),
   });
 
   if (!response.ok) {

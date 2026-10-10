@@ -8,6 +8,8 @@ import type { PrerequisiteValidationResult } from '@shared/prerequisite-evaluato
 import type { ElectiveRequirement } from '../../types/electives';
 import { getTermLabel } from '../../utils/termUtils';
 import { HalfTermCourseTag } from '../HalfTermCourseTag';
+import { BlockedTimesEditor } from './BlockedTimesEditor';
+import type { BlockedTime } from '@shared/blocked-times';
 import {
   buildElectiveToken,
   getElectiveSlotCount,
@@ -1143,6 +1145,8 @@ interface GenerateScheduleSidebarProps {
   getTermLabel: (term: string) => string;
   isGenerating: boolean;
   error: string | null;
+  blockedTimes: BlockedTime[];
+  onBlockedTimesChange: (blockedTimes: BlockedTime[]) => void;
 }
 
 export function GenerateScheduleSidebar({
@@ -1154,11 +1158,14 @@ export function GenerateScheduleSidebar({
   getTermLabel,
   isGenerating,
   error,
+  blockedTimes,
+  onBlockedTimesChange,
 }: GenerateScheduleSidebarProps) {
   const canGenerate = selectedCourses.length > 0;
   
   return (
     <div className="plan-actions">
+        <BlockedTimesEditor blockedTimes={blockedTimes} onChange={onBlockedTimesChange} disabled={isGenerating} />
         <p className="plan-status" aria-live="polite">
           {selectedCourses.length === 0
             ? 'Add courses to find a timetable.'

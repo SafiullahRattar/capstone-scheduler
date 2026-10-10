@@ -17,6 +17,7 @@ import { mergeElectiveRequirements } from '../utils/electiveRequirements';
 import { TermTabs } from './TermTabs';
 import { PrerequisiteOverrideDialog } from './PrerequisiteOverrideDialog';
 import { describePrerequisiteIssues } from '@shared/prerequisite-reasons';
+import type { BlockedTime } from '@shared/blocked-times';
 import {
   CourseSelectionHeader,
   GenerateScheduleSidebar,
@@ -43,6 +44,8 @@ interface CourseSelectionPageProps {
     program: string;
   };
   onGenerateSchedules: (courses: string[], termOverride?: string) => Promise<void>;
+  blockedTimes: BlockedTime[];
+  onBlockedTimesChange: (blockedTimes: BlockedTime[]) => void;
   activeTerm: string;
   onChangeTerm: (term: string) => void;
   /** Courses planned in other terms, mapped to that term. */
@@ -69,6 +72,8 @@ export function CourseSelectionPage({
   onElectiveRequirementsChange,
   studentInfo,
   onGenerateSchedules,
+  blockedTimes,
+  onBlockedTimesChange,
   activeTerm,
   onChangeTerm,
   plannedInOtherTerms = {},
@@ -497,6 +502,8 @@ export function CourseSelectionPage({
             getTermLabel={getTermLabel}
             isGenerating={isBuilding}
             error={generationError}
+            blockedTimes={blockedTimes}
+            onBlockedTimesChange={onBlockedTimesChange}
           />
             </SelectedCoursesPanel>
           </aside>

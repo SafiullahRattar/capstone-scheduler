@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { validatePrerequisites } from '../../cli/prerequisite-validator'
 import { fetchSectionMeetings } from './section-meetings'
 import { matchesDeliveryPreference, normalizeDeliveryMode, type DeliveryMode, type DeliveryPreference } from '../../shared/delivery-mode'
+import type { BlockedTime } from '../../shared/blocked-times'
 
 export interface TimeSlot {
   day: string
@@ -28,6 +29,8 @@ type CourseSections = { courseId: string; sections: Section[] }
 export interface ScheduleSelection {
   courseId: string
   section: Section
+  /** Every section of this type meeting at exactly the same times, including `section`, when there is more than one. */
+  alternatives?: Section[]
 }
 
 export interface GeneratedSchedule {
@@ -57,6 +60,7 @@ export interface GenerateSchedulesOptions {
   includePrerequisites?: boolean
   deliveryPreference?: DeliveryPreference
   lockedSectionIds?: Record<string, string[]>
+  blockedTimes?: BlockedTime[]
 }
 
 export function parseDays(daysStr: string | null): string[] {
@@ -318,6 +322,53 @@ export function applyDeliveryPreference(
   return { courseSections: filtered, fallbacks }
 }
 
+/**
+ * Drops sections that meet during any blocked time. A course left without some section
+ * type it needs (e.g. every lab is blocked) gets no sections and is listed in `blockedCourses`.
+ */
+export function applyBlockedTimes(
+  courseSections: CourseSections[],
+  blockedTimes: BlockedTime[] = []
+): { courseSections: CourseSections[]; blockedCourses: string[] } {
+  if (blockedTimes.length === 0) return { courseSections, blockedCourses: [] }
+  const blockedCourses: string[] = []
+  const filtered = courseSections.map(course => {
+    const groups = Object.values(groupSectionsByType(course.sections)).map(group =>
+      group.filter(section => !getTimeSlots(section).some(slot => blockedTimes.some(blocked => hasTimeConflict(slot, blocked))))
+    )
+    if (groups.some(group => group.length === 0)) {
+      blockedCourses.push(course.courseId)
+      return { ...course, sections: [] }
+    }
+    return { ...course, sections: groups.flat() }
+  })
+  return { courseSections: filtered, blockedCourses }
+}
+
+/**
+ * Keeps one section per group of sections of the same course and type that meet at the same
+ * times in the same delivery mode. They are interchangeable, so the rest would only produce
+ * timetables that look identical. Returns the groups so callers can offer the choice back.
+ */
+export function collapseEquivalentSections(courseSections: CourseSections[]): { courseSections: CourseSections[]; alternatives: Map<string, Section[]> } {
+  const alternatives = new Map<string, Section[]>()
+  const collapsed = courseSections.map(course => {
+    const groups = new Map<string, Section[]>()
+    for (const section of course.sections) {
+      const times = getTimeSlots(section).map(slot => `${slot.day} ${slot.startTime}-${slot.endTime}`).sort().join(',')
+      const key = `${section.sectionType}|${section.deliveryMode}|${times}`
+      groups.set(key, [...(groups.get(key) || []), section])
+    }
+    const representatives = Array.from(groups.values()).map(group => {
+      const sorted = [...group].sort((a, b) => a.sectionCode.localeCompare(b.sectionCode, undefined, { numeric: true }))
+      if (sorted.length > 1) alternatives.set(sorted[0].id, sorted)
+      return sorted[0]
+    })
+    return { ...course, sections: representatives }
+  })
+  return { courseSections: collapsed, alternatives }
+}
+
 /** A pinned bundle must include exactly one section of every required type. */
 export function applyLockedSections(courseSections: CourseSections[], locks: Record<string, string[]> = {}): CourseSections[] {
   return courseSections.map(course => {
@@ -346,20 +397,32 @@ export async function generateSchedulesForCourses(
     courseGrades = {},
     includePrerequisites = true,
     deliveryPreference = 'any',
-    lockedSectionIds = {}
+    lockedSectionIds = {},
+    blockedTimes = []
   } = options
 
   const loaded = await loadCourseSectionsForScheduling(prisma, courseIds, term)
-  const { courseSections: preferredSections, fallbacks: deliveryFallbacks } = applyDeliveryPreference(loaded, deliveryPreference)
-  const courseSections = applyLockedSections(preferredSections, lockedSectionIds)
-
-  const coursesWithoutSections = courseSections.filter(cs => cs.sections.length === 0)
+  const coursesWithoutSections = loaded.filter(cs => cs.sections.length === 0)
   if (coursesWithoutSections.length > 0) {
     throw new Error(`No sections found for courses: ${coursesWithoutSections.map(cs => cs.courseId).join(', ')}`)
   }
 
+  const { courseSections: available, blockedCourses } = applyBlockedTimes(loaded, blockedTimes)
+  if (blockedCourses.length > 0) {
+    throw new Error(`Every section option meets during your blocked times for: ${blockedCourses.join(', ')}`)
+  }
+  // Blocked times are a hard limit, so the delivery preference only chooses among what is left.
+  const { courseSections: preferredSections, fallbacks: deliveryFallbacks } = applyDeliveryPreference(available, deliveryPreference)
+  const { courseSections, alternatives } = collapseEquivalentSections(applyLockedSections(preferredSections, lockedSectionIds))
+
   const schedules: GeneratedSchedule[] = []
   generateSchedulesRecursive(courseSections, 0, [], maxSchedules, schedules)
+  for (const schedule of schedules) {
+    schedule.selections = schedule.selections.map(selection => {
+      const options = alternatives.get(selection.section.id)
+      return options ? { ...selection, alternatives: options } : selection
+    })
+  }
 
   if (!includePrerequisites) {
     return { schedules, deliveryFallbacks }
@@ -454,7 +517,7 @@ export function evaluateElectiveFit(
 
 export async function checkElectiveFit(
   prisma: PrismaClient,
-  options: { fixedCourseIds: string[]; candidateIds: string[]; term?: string; pairwise: boolean; deliveryPreference?: DeliveryPreference; lockedSectionIds?: Record<string, string[]> }
+  options: { fixedCourseIds: string[]; candidateIds: string[]; term?: string; pairwise: boolean; deliveryPreference?: DeliveryPreference; lockedSectionIds?: Record<string, string[]>; blockedTimes?: BlockedTime[] }
 ): Promise<ElectiveFitResult> {
   const fixedIds = options.fixedCourseIds.map(id => id.toUpperCase())
   const candidateIds = Array.from(new Set(options.candidateIds.map(id => id.toUpperCase()))).filter(id => !fixedIds.includes(id))
@@ -463,9 +526,10 @@ export async function checkElectiveFit(
     loadCourseSectionsForScheduling(prisma, candidateIds, options.term),
   ])
   const preference = options.deliveryPreference || 'any'
+  const usable = (courses: CourseSections[]) => applyDeliveryPreference(applyBlockedTimes(courses, options.blockedTimes).courseSections, preference).courseSections
   return evaluateElectiveFit(
-    applyLockedSections(applyDeliveryPreference(fixed.filter(course => course.sections.length > 0), preference).courseSections, options.lockedSectionIds),
-    applyDeliveryPreference(candidates, preference).courseSections,
+    applyLockedSections(usable(fixed.filter(course => course.sections.length > 0)), options.lockedSectionIds),
+    usable(candidates),
     options.pairwise
   )
 }
